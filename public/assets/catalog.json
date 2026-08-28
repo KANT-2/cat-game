@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "bundles": {
+    "home": [],
+    "study": [],
+    "common-ui": []
+  }
+}

@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+dist-ssr/
+dev-dist/
+*.tsbuildinfo
+
+# Tool and test caches
+.vite/
+.vitest/
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+blob-report/
+
+# Local environment variables
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local editor settings
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*~
+
+# Operating system files
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Local agent metadata; repository instructions live in AGENTS.md
+/.agents/
+/.codex/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
