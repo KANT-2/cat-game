@@ -214,6 +214,10 @@ export class RoomView extends Container {
       rotation: this.placementRotation,
     });
     if (!result.ok) {
+      if (result.reason === "not-owned") {
+        this.onToast(message("furniture.notOwned"));
+        return;
+      }
       this.onToast(message(result.reason === "outside-room" ? "furniture.outsideRoom" : "furniture.invalidPlacement"));
       return;
     }

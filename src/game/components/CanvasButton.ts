@@ -7,6 +7,8 @@ export type CanvasButtonOptions = {
   width: number;
   height: number;
   color?: number;
+  textColor?: number;
+  borderColor?: number;
   onPress: () => void;
 };
 
@@ -17,29 +19,31 @@ export class CanvasButton extends Container {
   constructor(options: CanvasButtonOptions) {
     super();
     this.baseColor = options.color ?? 0xd4a16b;
-    this.drawBackground(false, options.width, options.height);
+    this.drawBackground(false, options.width, options.height, options.borderColor);
 
-    const label = new Text({ text: options.label, style: textStyle(17, 0x3c2a21, "700") });
+    const label = new Text({ text: options.label, style: textStyle(17, options.textColor ?? 0x3c2a21, "700") });
     label.anchor.set(0.5);
     label.position.set(options.width / 2, options.height / 2);
     this.addChild(this.background, label);
 
     this.eventMode = "static";
     this.cursor = "pointer";
-    this.on("pointerover", () => this.drawBackground(true, options.width, options.height));
-    this.on("pointerout", () => this.drawBackground(false, options.width, options.height));
+    this.on("pointerover", () => this.drawBackground(true, options.width, options.height, options.borderColor));
+    this.on("pointerout", () => this.drawBackground(false, options.width, options.height, options.borderColor));
     this.on("pointertap", (event: FederatedPointerEvent) => {
       event.stopPropagation();
       options.onPress();
     });
   }
 
-  private drawBackground(hovered: boolean, width: number, height: number): void {
+  private drawBackground(hovered: boolean, width: number, height: number, borderColor = 0x67442f): void {
     this.background
       .clear()
+      .roundRect(0, 5, width, height, Math.min(20, height / 2))
+      .fill({ color: 0x5a351f, alpha: 0.22 })
       .roundRect(0, 0, width, height, Math.min(20, height / 2))
       .fill(hovered ? lighten(this.baseColor, 0.12) : this.baseColor)
-      .stroke({ color: 0x67442f, width: 4 });
+      .stroke({ color: borderColor, width: 3 });
   }
 }
 
