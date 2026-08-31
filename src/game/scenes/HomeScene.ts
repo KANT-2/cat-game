@@ -6,15 +6,15 @@ import { DAILY_QUIZ_ID } from "../../domain/study";
 import { CanvasButton } from "../components/CanvasButton";
 import { ToastLayer } from "../components/ToastLayer";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
+import { ForestClearingView } from "../forest/ForestClearingView";
 import { furniturePresentation } from "../presentation/furniturePresentation";
-import { RoomView } from "../room/RoomView";
 import { StudyModal } from "./StudyModal";
 
 export class HomeScene extends Container {
   private state: GameState;
   private readonly gameClient: GameClient;
-  private readonly roomViewport = new Container();
-  private readonly room: RoomView;
+  private readonly clearingViewport = new Container();
+  private readonly clearing: ForestClearingView;
   private readonly uiLayer = new Container();
   private readonly modalLayer = new Container();
   private readonly toastLayer = new ToastLayer();
@@ -37,14 +37,14 @@ export class HomeScene extends Container {
     super();
     this.gameClient = gameClient;
     this.state = gameClient.getSnapshot();
-    this.room = new RoomView({
+    this.clearing = new ForestClearingView({
       getFurniture: () => this.state.furniture,
       onPlace: (command) => this.gameClient.placeFurniture(command),
       onRemove: (instanceId) => this.gameClient.removeFurniture(instanceId),
       onToast: (message) => this.notify(message),
     });
-    this.roomViewport.addChild(this.room);
-    this.addChild(this.roomViewport, this.uiLayer, this.modalLayer, this.toastLayer);
+    this.clearingViewport.addChild(this.clearing);
+    this.addChild(this.clearingViewport, this.uiLayer, this.modalLayer, this.toastLayer);
 
     this.buildProfile();
     this.coinText = this.buildCurrency();
@@ -64,16 +64,19 @@ export class HomeScene extends Container {
 
   update(deltaSeconds: number): void {
     if (!this.studyModal) {
-      this.room.update(deltaSeconds);
+      this.clearing.update(deltaSeconds);
     }
   }
 
   layout(width: number, height: number): void {
     this.screenWidth = width;
     this.screenHeight = height;
-    const roomScale = Math.min(width / BASE_WIDTH, height / BASE_HEIGHT) * 1.04;
-    this.roomViewport.scale.set(roomScale);
-    this.room.position.set(width / roomScale / 2 + 35, height / roomScale / 2 - 95);
+    const clearingScale = Math.min(width / BASE_WIDTH, height / BASE_HEIGHT);
+    this.clearingViewport.scale.set(clearingScale);
+    this.clearingViewport.position.set(
+      (width - BASE_WIDTH * clearingScale) / 2,
+      (height - BASE_HEIGHT * clearingScale) / 2,
+    );
 
     this.profilePanel.position.set(28, 24);
     this.currencyPanel.position.set(width - 420, 24);
@@ -257,7 +260,7 @@ export class HomeScene extends Container {
   }
 
   private syncPlacementMode(): void {
-    this.room.setPlacementMode(this.editMode, this.selectedFurniture, this.placementRotation);
+    this.clearing.setPlacementMode(this.editMode, this.selectedFurniture, this.placementRotation);
   }
 
   private openStudy(): void {
@@ -290,6 +293,6 @@ export class HomeScene extends Container {
   private syncState(snapshot: GameState): void {
     this.state = snapshot;
     this.coinText.text = snapshot.coins.toLocaleString();
-    this.room.syncFurniture();
+    this.clearing.syncFurniture();
   }
 }

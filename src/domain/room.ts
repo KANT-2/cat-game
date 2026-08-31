@@ -11,7 +11,7 @@ export type FurnitureDefinition = {
   height: number;
 };
 
-/** 방에 배치된 단일 가구 인스턴스의 저장 형식이다. */
+/** 개인 숲 공터에 배치된 단일 가구 인스턴스의 저장 형식이다. */
 export type PlacedFurniture = {
   id: string;
   kind: FurnitureKind;
@@ -78,16 +78,16 @@ export function rotatedSize(definition: FurnitureDefinition, rotation: 0 | 1): {
 }
 
 /**
- * 지정한 직사각형 셀이 방 안에 있고 기존 가구와 겹치지 않는지 검사한다.
+ * 지정한 직사각형 셀이 공터 격자 안에 있고 기존 가구와 겹치지 않는지 검사한다.
  *
- * @param furniture - 현재 방에 배치된 가구 인스턴스 전체.
- * @param gridWidth - 방의 논리 셀 너비.
- * @param gridHeight - 방의 논리 셀 높이.
+ * @param furniture - 현재 공터에 배치된 가구 인스턴스 전체.
+ * @param gridWidth - 공터의 논리 셀 너비.
+ * @param gridHeight - 공터의 논리 셀 높이.
  * @param x - 검사할 영역의 좌측 논리 셀 X 좌표.
  * @param y - 검사할 영역의 상단 논리 셀 Y 좌표.
  * @param width - 검사할 영역이 점유하는 셀 너비.
  * @param height - 검사할 영역이 점유하는 셀 높이.
- * @returns 모든 셀이 방 안에 있고 기존 가구와 겹치지 않으면 `true`.
+ * @returns 모든 셀이 공터 안에 있고 기존 가구와 겹치지 않으면 `true`.
  *
  * @remarks
  * 서로의 경계만 맞닿은 직사각형은 겹친 것으로 처리하지 않는다. `width`와 `height`는

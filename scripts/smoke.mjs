@@ -41,6 +41,21 @@ if (!savedState) {
   throw new Error("game state was not persisted");
 }
 
+const compactPage = await browser.newPage({ viewport: { width: 1024, height: 640 } });
+compactPage.on("console", (message) => {
+  if (message.type() === "error") {
+    errors.push(`compact console: ${message.text()}`);
+  }
+});
+compactPage.on("pageerror", (error) => errors.push(`compact page: ${error.message}`));
+await compactPage.goto(process.env.GAME_URL ?? "http://127.0.0.1:5173/", { waitUntil: "networkidle" });
+await compactPage.locator("canvas").waitFor({ state: "visible" });
+const compactBox = await compactPage.locator("canvas").boundingBox();
+if (compactBox?.width !== 1024 || compactBox.height !== 640) {
+  throw new Error(`unexpected compact canvas bounds: ${JSON.stringify(compactBox)}`);
+}
+await compactPage.screenshot({ path: "/tmp/cat-game-home-compact.png" });
+
 await browser.close();
 
 if (errors.length > 0) {
@@ -48,4 +63,6 @@ if (errors.length > 0) {
 }
 
 console.log("Canvas smoke test passed");
-console.log("screenshots: /tmp/cat-game-home.png, /tmp/cat-game-study.png, /tmp/cat-game-edit.png");
+console.log(
+  "screenshots: /tmp/cat-game-home.png, /tmp/cat-game-study.png, /tmp/cat-game-edit.png, /tmp/cat-game-home-compact.png",
+);

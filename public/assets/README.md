@@ -5,10 +5,10 @@
 ```text
 assets/
   catalog.json
-  room/
-    floors/
-    walls/
-    furniture/
+  forest/
+    backgrounds/
+    environment/
+  furniture/
   cats/
   ui/
   effects/
@@ -20,7 +20,7 @@ assets/
 {
   "id": "furniture.sofa.green.01",
   "kind": "furniture",
-  "src": "/assets/room/furniture/sofa-green-01.webp",
+  "src": "/assets/furniture/sofa-green-01.webp",
   "anchor": { "x": 0.5, "y": 0.88 },
   "tags": ["sofa", "green"]
 }

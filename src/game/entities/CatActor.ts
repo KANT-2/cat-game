@@ -38,6 +38,25 @@ export class CatActor extends Container {
     this.rotation = 0;
   }
 
+  /**
+   * 공터에서 고양이가 걸어갈 빈 논리 셀을 지정한다.
+   *
+   * @param x - 공터의 좌우 셀 좌표.
+   * @param y - 공터의 깊이 셀 좌표. 값이 클수록 화면 앞쪽이다.
+   * @returns 대상 셀이 이동 가능해 목표가 바뀌면 `true`, 가구가 점유한 셀이면 `false`.
+   *
+   * @remarks 이동 중인 좌표는 화면 표현 상태이며 현재 `GameState` 저장 형식에는 포함하지 않는다.
+   */
+  walkTo(x: number, y: number): boolean {
+    if (!this.canWalk(x, y)) {
+      return false;
+    }
+    this.targetX = x;
+    this.targetY = y;
+    this.wait = 1.5;
+    return true;
+  }
+
   update(deltaSeconds: number): void {
     if (this.paused) {
       return;
@@ -82,9 +101,9 @@ export class CatActor extends Container {
   }
 
   private syncPosition(): void {
-    const point = this.projectGrid(this.gridX + 0.5, this.gridY + 0.5);
-    this.position.set(point.x, point.y + 19);
-    this.zIndex = Math.round((this.gridX + this.gridY + 1) * 100 + 20);
+    const point = this.projectGrid(this.gridX + 0.5, this.gridY + 1);
+    this.position.set(point.x, point.y - 20);
+    this.zIndex = Math.round((this.gridY + 1) * 100 + 20);
   }
 }
 

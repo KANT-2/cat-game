@@ -19,11 +19,11 @@ src/
   assets/              리소스 카탈로그 로딩 계약
   content/             사용자 노출 문구 JSON과 메시지 키 변환
   core/                UI가 호출하는 GameClient와 상태 전이 구현
-  domain/              방·학습 상태와 순수 게임 규칙
+  domain/              꾸미기·학습 상태와 순수 게임 규칙
   game/
     components/        재사용 가능한 Canvas UI
     entities/          고양이 같은 갱신 가능한 액터
-    room/              타일 방과 가구 렌더링
+    forest/            벨트뷰 숲 공터와 배치 오브젝트 렌더링
     scenes/            홈과 Study 등 화면 단위 조립
   pwa/                 설치 이벤트와 service worker 등록
   services/            저장소 등 외부 상태 접근

@@ -1,5 +1,5 @@
 /** 런타임이 구분하는 리소스의 시각적 용도다. */
-export type AssetKind = "floor" | "wall" | "furniture" | "cat" | "ui" | "effect";
+export type AssetKind = "background" | "environment" | "furniture" | "cat" | "ui" | "effect";
 
 /** 애니메이션 또는 상태별 단일 프레임 파일이다. */
 export type AssetFrame = {

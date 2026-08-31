@@ -14,14 +14,14 @@ export class FurnitureView extends Container {
     const definition = furnitureDefinitions[item.kind];
     const presentation = furniturePresentation[item.kind];
     const size = rotatedSize(definition, item.rotation);
-    const center = project(item.x + size.width / 2, item.y + size.height / 2);
-    this.position.set(center.x, center.y + 4);
-    this.zIndex = Math.round((item.x + size.width + item.y + size.height) * 100);
+    const groundPoint = project(item.x + size.width / 2, item.y + size.height);
+    this.position.set(groundPoint.x, groundPoint.y - 17);
+    this.zIndex = Math.round((item.y + size.height) * 100);
     this.eventMode = "static";
     this.cursor = "pointer";
 
-    const shadowWidth = Math.max(42, (size.width + size.height) * 30);
-    this.addChild(new Graphics().ellipse(0, 17, shadowWidth, 17).fill({ color: 0x4c3426, alpha: 0.22 }));
+    const shadowWidth = Math.max(42, size.width * 38);
+    this.addChild(new Graphics().ellipse(0, 17, shadowWidth, 17).fill({ color: 0x284326, alpha: 0.22 }));
 
     if (item.kind === "plant") {
       this.addChild(drawPlant(presentation.color, presentation.accent));

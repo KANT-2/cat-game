@@ -1,8 +1,14 @@
 export const BASE_WIDTH = 1600;
 export const BASE_HEIGHT = 900;
-export const TILE_WIDTH = 112;
-export const TILE_HEIGHT = 56;
-export const WALL_HEIGHT = 214;
+export const CLEARING_GRID = {
+  columns: 10,
+  rows: 8,
+  centerX: 800,
+  farY: 392,
+  nearY: 832,
+  farWidth: 1240,
+  nearWidth: 1560,
+} as const;
 export const FONT_FAMILY = "Noto Sans KR, Malgun Gothic, sans-serif";
 
 /**

@@ -95,13 +95,15 @@ UI command
 
 `getSnapshot()`과 구독 결과는 복제본이므로 UI에서 객체를 변경해도 시스템 상태가 바뀌지 않는다. 저장 구조가 바뀌면 `GameStateStore.load()`에서 이전 데이터를 읽는 마이그레이션을 제공한다.
 
-## 방 좌표와 배치
+## 숲 공터 좌표와 배치
 
-- 방 상태는 `10 × 8` 논리 격자를 사용한다.
-- `x`, `y`는 픽셀이 아니라 논리 셀 좌표다.
+- 공터의 배치 상태는 `10 × 8` 논리 격자를 사용한다.
+- `x`, `y`는 픽셀이 아니라 논리 셀 좌표다. `x`는 좌우, `y`는 먼 곳에서 화면 앞쪽으로 이어지는 깊이다.
 - 회전값 `0`은 원본 점유 크기, `1`은 너비와 높이를 바꾼 크기다.
-- `isPlacementFree()`는 방 경계와 기존 가구의 직사각형 겹침을 검사한다.
+- `isPlacementFree()`는 공터 경계와 기존 가구의 직사각형 겹침을 검사한다.
 - `gridToScreen()`과 `screenToGrid()`만 논리 좌표와 Canvas 좌표를 변환한다.
+
+화면 투영은 먼 쪽 가로 폭이 좁고 가까운 쪽 가로 폭이 넓은 사다리꼴 벨트뷰다. 일반 플레이에서는 격자를 숨기고 꾸미기 모드에서만 배치 셀을 표시한다. 오브젝트 표시 순서는 `x + y`가 아니라 발 또는 바닥 접점의 `y` 깊이를 기준으로 정한다.
 
 배치 미리보기는 UI 반응성을 위해 같은 순수 규칙을 읽지만, 최종 성공 여부는 항상 `GameClient.placeFurniture()` 결과를 따른다.
 
@@ -131,7 +133,7 @@ message("furniture.placed", { item: message("furniture.bed") });
 {
   "id": "furniture.sofa.green.01",
   "kind": "furniture",
-  "src": "/assets/room/furniture/sofa-green-01.webp",
+  "src": "/assets/furniture/sofa-green-01.webp",
   "anchor": { "x": 0.5, "y": 0.88 }
 }
 ```
