@@ -22,10 +22,12 @@ export type PlacedFurniture = {
 
 /** 로컬 또는 원격 저장소로 직렬화할 수 있는 게임 스냅샷이다. */
 export type GameState = {
+  economyVersion: 1;
   coins: number;
   gems: number;
   completedQuizIds: string[];
   furniture: PlacedFurniture[];
+  inventory: Record<FurnitureKind, number>;
 };
 
 export const furnitureDefinitions: Record<FurnitureKind, FurnitureDefinition> = {
@@ -55,10 +57,12 @@ export const defaultFurniture: PlacedFurniture[] = [
  */
 export function createDefaultState(): GameState {
   return {
-    coins: 120,
+    economyVersion: 1,
+    coins: 1_000_000,
     gems: 8,
     completedQuizIds: [],
     furniture: defaultFurniture.map((item) => ({ ...item })),
+    inventory: { sofa: 0, desk: 0, plant: 1, catTree: 0, bed: 0 },
   };
 }
 

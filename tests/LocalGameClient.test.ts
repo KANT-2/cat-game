@@ -56,7 +56,7 @@ describe("LocalGameClient", () => {
       firstCompletion: false,
       coinsAwarded: 0,
     });
-    expect(client.getSnapshot().coins).toBe(145);
+    expect(client.getSnapshot().coins).toBe(1_000_025);
   });
 
   it("keeps answer validation and rewards inside the game system", () => {
@@ -69,5 +69,42 @@ describe("LocalGameClient", () => {
       coinsAwarded: 0,
     });
     expect(repository.save).not.toHaveBeenCalled();
+  });
+
+  it("buys furniture and consumes one owned item when placed", () => {
+    const repository = new MemoryRepository();
+    repository.state.furniture = [];
+    repository.state.inventory.sofa = 0;
+    const client = new LocalGameClient(repository);
+
+    expect(client.buyShopItem("furniture.sofa")).toMatchObject({ ok: true, furnitureKind: "sofa" });
+    expect(client.getSnapshot().coins).toBe(995_200);
+    expect(client.getSnapshot().inventory.sofa).toBe(1);
+
+    expect(client.placeFurniture({ kind: "sofa", x: 2, y: 2, rotation: 0 })).toMatchObject({ ok: true });
+    expect(client.getSnapshot().inventory.sofa).toBe(0);
+  });
+
+  it("rejects purchases and placement when the player cannot afford or own the item", () => {
+    const repository = new MemoryRepository();
+    repository.state.coins = 0;
+    repository.state.inventory.sofa = 0;
+    const client = new LocalGameClient(repository);
+
+    expect(client.buyShopItem("furniture.sofa")).toEqual({ ok: false, reason: "insufficient-coins" });
+    expect(client.placeFurniture({ kind: "sofa", x: 0, y: 0, rotation: 0 })).toEqual({
+      ok: false,
+      reason: "not-owned",
+    });
+    expect(repository.save).not.toHaveBeenCalled();
+  });
+
+  it("returns removed furniture to the owned inventory", () => {
+    const repository = new MemoryRepository();
+    repository.state.inventory.plant = 0;
+    const client = new LocalGameClient(repository);
+
+    expect(client.removeFurniture("plant-1")).toBe(true);
+    expect(client.getSnapshot().inventory.plant).toBe(1);
   });
 });

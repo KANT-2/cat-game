@@ -6,6 +6,7 @@ import {
   ROOM_GRID_WIDTH,
   rotatedSize,
 } from "../domain/room";
+import { type ShopItemId, shopItemDefinitions } from "../domain/shop";
 import { quizDefinitions } from "../domain/study";
 import type {
   GameClient,
@@ -13,6 +14,7 @@ import type {
   GameStateRepository,
   PlacementCommand,
   PlacementResult,
+  PurchaseResult,
   QuizAnswerResult,
   QuizView,
 } from "./GameClient";
@@ -35,6 +37,9 @@ export class LocalGameClient implements GameClient {
   }
 
   placeFurniture(command: PlacementCommand): PlacementResult {
+    if (this.state.inventory[command.kind] <= 0) {
+      return { ok: false, reason: "not-owned" };
+    }
     const definition = furnitureDefinitions[command.kind];
     const size = rotatedSize(definition, command.rotation);
     if (
@@ -63,19 +68,55 @@ export class LocalGameClient implements GameClient {
     this.state = {
       ...this.state,
       furniture: [...this.state.furniture, { id: instanceId, ...command }],
+      inventory: { ...this.state.inventory, [command.kind]: this.state.inventory[command.kind] - 1 },
     };
     this.commit();
     return { ok: true, instanceId };
   }
 
   removeFurniture(instanceId: string): boolean {
-    const furniture = this.state.furniture.filter((item) => item.id !== instanceId);
-    if (furniture.length === this.state.furniture.length) {
+    const removed = this.state.furniture.find((item) => item.id === instanceId);
+    if (!removed) {
       return false;
     }
-    this.state = { ...this.state, furniture };
+    const furniture = this.state.furniture.filter((item) => item.id !== instanceId);
+    this.state = {
+      ...this.state,
+      furniture,
+      inventory: { ...this.state.inventory, [removed.kind]: this.state.inventory[removed.kind] + 1 },
+    };
     this.commit();
     return true;
+  }
+
+  buyShopItem(itemId: ShopItemId): PurchaseResult {
+    const item = shopItemDefinitions[itemId];
+    if (!item) {
+      return { ok: false, reason: "item-not-found" };
+    }
+    if (item.currency === "coins" && this.state.coins < item.price) {
+      return { ok: false, reason: "insufficient-coins" };
+    }
+    if (item.currency === "gems" && this.state.gems < item.price) {
+      return { ok: false, reason: "insufficient-gems" };
+    }
+    this.state = {
+      ...this.state,
+      coins: item.currency === "coins" ? this.state.coins - item.price : this.state.coins,
+      gems: item.currency === "gems" ? this.state.gems - item.price : this.state.gems,
+      inventory: {
+        ...this.state.inventory,
+        [item.furnitureKind]: this.state.inventory[item.furnitureKind] + 1,
+      },
+    };
+    this.commit();
+    return {
+      ok: true,
+      itemId,
+      furnitureKind: item.furnitureKind,
+      remainingCoins: this.state.coins,
+      remainingGems: this.state.gems,
+    };
   }
 
   getQuiz(quizId: string): QuizView | null {
@@ -149,6 +190,7 @@ function cloneState(state: GameState): GameState {
     ...state,
     completedQuizIds: [...state.completedQuizIds],
     furniture: state.furniture.map((item) => ({ ...item })),
+    inventory: { ...state.inventory },
   };
 }
 

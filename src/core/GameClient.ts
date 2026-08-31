@@ -1,5 +1,6 @@
 import type { MessageId } from "../content/messages";
 import type { FurnitureKind, GameState } from "../domain/room";
+import type { ShopItemId } from "../domain/shop";
 import type { QuizChoice } from "../domain/study";
 
 /** 가구 배치를 요청할 때 UI가 게임 시스템에 전달하는 직렬화 가능한 명령이다. */
@@ -11,7 +12,13 @@ export type PlacementCommand = {
 };
 
 /** 가구 배치의 성공 결과 또는 UI가 처리할 수 있는 실패 이유다. */
-export type PlacementResult = { ok: true; instanceId: string } | { ok: false; reason: "outside-room" | "occupied" };
+export type PlacementResult =
+  | { ok: true; instanceId: string }
+  | { ok: false; reason: "outside-room" | "occupied" | "not-owned" };
+
+export type PurchaseResult =
+  | { ok: true; itemId: ShopItemId; furnitureKind: FurnitureKind; remainingCoins: number; remainingGems: number }
+  | { ok: false; reason: "item-not-found" | "insufficient-coins" | "insufficient-gems" };
 
 /** 게임 시스템이 UI에 공개하는 퀴즈 표시 모델이다. 정답은 의도적으로 포함하지 않는다. */
 export type QuizView = {
@@ -107,6 +114,16 @@ export interface GameClient {
    * 추가되면 이 명령은 소유권을 유지한 채 공터 배치만 회수해야 하며, 성공한 경우에만 상태를 커밋한다.
    */
   removeFurniture(instanceId: string): boolean;
+
+  /**
+   * 상점 상품의 가격과 잔액을 검증하고 구매한 가구를 보유함에 추가한다.
+   *
+   * @param itemId - 게임 시스템이 소유하는 안정적인 상점 상품 ID.
+   * @returns 성공 시 가구 종류와 남은 재화, 실패 시 처리 가능한 실패 이유.
+   *
+   * @remarks 성공한 구매만 상태를 저장하고 구독자에게 새 스냅샷을 알린다.
+   */
+  buyShopItem(itemId: ShopItemId): PurchaseResult;
 
   /**
    * UI가 렌더링할 수 있는 퀴즈 표시 모델을 조회한다.

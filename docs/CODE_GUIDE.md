@@ -153,3 +153,28 @@ message("furniture.placed", { item: message("furniture.bed") });
 | 구현체 연결 | `src/app` |
 
 공개 함수의 동작이나 `GameClient` JSON 형태가 바뀌면 같은 변경에서 TSDoc과 이 문서의 예시도 함께 갱신한다.
+
+## 상점 구매와 보유 가구
+
+구매 요청은 안정적인 상품 ID만 전달한다.
+
+```json
+{
+  "itemId": "furniture.sofa"
+}
+```
+
+성공 결과는 구매한 가구 종류와 남은 재화를 함께 보장한다.
+
+```json
+{
+  "ok": true,
+  "itemId": "furniture.sofa",
+  "furnitureKind": "sofa",
+  "remainingCoins": 995200,
+  "remainingGems": 8
+}
+```
+
+UI는 가격이나 잔액을 판정하지 않고 `buyShopItem()` 결과를 따른다. 성공한 가구는 `inventory`에 추가된다.
+`placeFurniture()`는 배치할 때 보유 수량 한 개를 사용하고 `removeFurniture()`는 회수한 가구 한 개를 보유함에 돌려놓는다.
