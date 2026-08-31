@@ -87,7 +87,7 @@ export interface GameClient {
   subscribe(listener: GameStateListener): () => void;
 
   /**
-   * 방 경계와 기존 가구의 점유 셀을 검증한 뒤 가구 인스턴스를 배치한다.
+   * 공터 경계와 기존 가구의 점유 셀을 검증한 뒤 가구 인스턴스를 배치한다.
    *
    * @param command - 가구 원형, 논리 격자 좌표와 회전 상태를 담은 배치 명령.
    * @returns 성공 시 새 인스턴스 ID, 실패 시 `outside-room` 또는 `occupied` 이유.
@@ -97,14 +97,14 @@ export interface GameClient {
   placeFurniture(command: PlacementCommand): PlacementResult;
 
   /**
-   * 배치된 가구 인스턴스를 방 상태에서 제거한다.
+   * 배치된 가구 인스턴스를 공터 상태에서 제거한다.
    *
    * @param instanceId - `PlacedFurniture.id` 또는 성공한 배치 결과로 받은 ID.
    * @returns 인스턴스를 찾아 제거했으면 `true`, 존재하지 않아 상태가 그대로이면 `false`.
    *
    * @remarks
    * 현재 로컬 프로토타입은 인벤토리 소유권을 별도로 저장하지 않는다. 서버 인벤토리가
-   * 추가되면 이 명령은 소유권을 유지한 채 방 배치만 회수해야 하며, 성공한 경우에만 상태를 커밋한다.
+   * 추가되면 이 명령은 소유권을 유지한 채 공터 배치만 회수해야 하며, 성공한 경우에만 상태를 커밋한다.
    */
   removeFurniture(instanceId: string): boolean;
 

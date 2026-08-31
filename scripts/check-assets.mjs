@@ -4,7 +4,7 @@ import path from "node:path";
 const workspace = process.cwd();
 const catalogPath = path.join(workspace, "public/assets/catalog.json");
 const catalog = JSON.parse(await readFile(catalogPath, "utf8"));
-const allowedKinds = new Set(["floor", "wall", "furniture", "cat", "ui", "effect"]);
+const allowedKinds = new Set(["background", "environment", "furniture", "cat", "ui", "effect"]);
 const forbiddenKeys = new Set(["price", "footprint", "collision", "reward", "rarity"]);
 const ids = new Set();
 const errors = [];
