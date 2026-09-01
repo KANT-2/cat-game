@@ -1,7 +1,7 @@
 :root {
   font-family: "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
   color: #3d2b22;
-  background: #f6dfba;
+  background: #3b251c;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
@@ -21,8 +21,8 @@ body,
 
 body {
   background:
-    radial-gradient(circle at 50% 35%, rgba(255, 251, 232, 0.95), transparent 54%),
-    linear-gradient(135deg, #f8e7c9, #f0c996);
+    radial-gradient(circle at 50% 35%, rgba(143, 94, 55, 0.86), transparent 54%),
+    linear-gradient(135deg, #3b251c, #241713);
 }
 
 canvas {
