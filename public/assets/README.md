@@ -2,6 +2,8 @@
 
 게임 장면 이미지는 이 디렉터리에 추가하고 `catalog.json`에 등록한다. UI 담당자가 TypeScript 파일에 이미지 경로를 직접 하드코딩하지 않도록 한다. PWA 앱 아이콘처럼 게임 장면에서 사용하지 않는 플랫폼 셸 리소스는 이 카탈로그의 대상이 아니다.
 
+동영상에서 애니메이션을 제작할 때는 [동영상 스프라이트 제작 워크플로우](../../docs/VIDEO_SPRITE_WORKFLOW.md)를 따른다.
+
 ```text
 assets/
   catalog.json
@@ -34,3 +36,30 @@ assets/
 - 글자는 이미지에 굽지 않는다.
 - 가격, 점유 셀, 충돌, 보상 값은 리소스 카탈로그에 넣지 않는다.
 - PR 전에 `npm run assets:check`를 실행한다.
+
+## 스프라이트 시트
+
+같은 크기의 애니메이션 프레임은 왼쪽 위부터 행 우선으로 배치하고 `spriteSheet`에 재생 정보를 등록한다.
+
+```json
+{
+  "id": "cat.fluffy.idle.01",
+  "kind": "cat",
+  "src": "/assets/cats/fluffy-white/fluffy-white-idle-01.png",
+  "anchor": { "x": 0.5, "y": 0.9 },
+  "spriteSheet": {
+    "frameWidth": 256,
+    "frameHeight": 256,
+    "columns": 5,
+    "frameCount": 10,
+    "framesPerSecond": 10,
+    "playback": "loop"
+  }
+}
+```
+
+- `frameCount` 이후의 빈 칸은 재생하지 않는다.
+- `playback`은 반복하는 `loop`, 한 번 재생하는 `once`, 마지막 프레임을 유지하는 `hold` 중 하나다.
+- 프레임마다 바닥 접점이 흔들리지 않도록 같은 크기와 anchor를 사용한다.
+- 배경색을 넣은 contact sheet와 GIF는 검수용으로만 사용하고 `catalog.json`에는 투명 PNG 또는 WebP 시트만 등록한다.
+- 현재 실제 고양이는 `cats/fluffy-white/`의 12개 동작이며 `cat.fluffy.<동작>.01` ID로 불러온다.

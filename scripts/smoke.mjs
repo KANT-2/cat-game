@@ -11,9 +11,14 @@ page.on("console", (message) => {
 });
 page.on("pageerror", (error) => errors.push(`page: ${error.message}`));
 
-await page.goto(process.env.GAME_URL ?? "http://127.0.0.1:5173/", { waitUntil: "networkidle" });
+await page.goto(process.env.GAME_URL ?? "http://127.0.0.1:5173/", { waitUntil: "domcontentloaded" });
 await page.locator("canvas").waitFor({ state: "visible" });
+await page.waitForTimeout(800);
+await page.screenshot({ path: "/tmp/cat-game-loading.png" });
 await page.waitForTimeout(1200);
+await page.screenshot({ path: "/tmp/cat-game-loading-tip.png" });
+await page.waitForLoadState("networkidle");
+await page.waitForTimeout(2600);
 
 const canvas = page.locator("canvas");
 const box = await canvas.boundingBox();
@@ -64,5 +69,5 @@ if (errors.length > 0) {
 
 console.log("Canvas smoke test passed");
 console.log(
-  "screenshots: /tmp/cat-game-home.png, /tmp/cat-game-study.png, /tmp/cat-game-edit.png, /tmp/cat-game-home-compact.png",
+  "screenshots: /tmp/cat-game-loading.png, /tmp/cat-game-loading-tip.png, /tmp/cat-game-home.png, /tmp/cat-game-study.png, /tmp/cat-game-edit.png, /tmp/cat-game-home-compact.png",
 );

@@ -1,4 +1,4 @@
-import { Container, Graphics, Text } from "pixi.js";
+import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { message } from "../../content/messages";
 import type { GameClient } from "../../core/GameClient";
 import type { FurnitureKind, GameState } from "../../domain/room";
@@ -6,6 +6,7 @@ import { DAILY_QUIZ_ID } from "../../domain/study";
 import { CanvasButton } from "../components/CanvasButton";
 import { ToastLayer } from "../components/ToastLayer";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
+import type { CatAnimationSet } from "../entities/CatAnimations";
 import { ForestClearingView } from "../forest/ForestClearingView";
 import { furniturePresentation } from "../presentation/furniturePresentation";
 import { StudyModal } from "./StudyModal";
@@ -13,6 +14,7 @@ import { StudyModal } from "./StudyModal";
 export class HomeScene extends Container {
   private state: GameState;
   private readonly gameClient: GameClient;
+  private readonly catAnimations: CatAnimationSet;
   private readonly clearingViewport = new Container();
   private readonly clearing: ForestClearingView;
   private readonly uiLayer = new Container();
@@ -33,15 +35,17 @@ export class HomeScene extends Container {
   private screenWidth = BASE_WIDTH;
   private screenHeight = BASE_HEIGHT;
 
-  constructor(gameClient: GameClient) {
+  constructor(gameClient: GameClient, catAnimations: CatAnimationSet) {
     super();
     this.gameClient = gameClient;
+    this.catAnimations = catAnimations;
     this.state = gameClient.getSnapshot();
     this.clearing = new ForestClearingView({
       getFurniture: () => this.state.furniture,
       onPlace: (command) => this.gameClient.placeFurniture(command),
       onRemove: (instanceId) => this.gameClient.removeFurniture(instanceId),
       onToast: (message) => this.notify(message),
+      catAnimations,
     });
     this.clearingViewport.addChild(this.clearing);
     this.addChild(this.clearingViewport, this.uiLayer, this.modalLayer, this.toastLayer);
@@ -119,18 +123,12 @@ export class HomeScene extends Container {
         .roundRect(0, 0, 154, 116, 25)
         .fill({ color: 0xfff4db, alpha: 0.96 })
         .stroke({ color: 0x69432c, width: 5 }),
-      new Graphics()
-        .circle(49, 49, 29)
-        .fill(0xe58c44)
-        .stroke({ color: 0x503528, width: 3 })
-        .poly([28, 35, 31, 13, 44, 28])
-        .poly([54, 27, 69, 12, 68, 39])
-        .fill(0xe58c44)
-        .stroke({ color: 0x503528, width: 3 })
-        .circle(41, 48, 2.4)
-        .circle(56, 48, 2.4)
-        .fill(0x3a2921),
     );
+    const portrait = new Sprite(this.catAnimations.idle.textures[0]);
+    portrait.anchor.set(this.catAnimations.idle.anchor.x, this.catAnimations.idle.anchor.y);
+    portrait.scale.set(0.29);
+    portrait.position.set(49, 89);
+    this.profilePanel.addChild(portrait);
     const level = new Text({ text: message("home.level", { level: 10 }), style: textStyle(17, 0x3d2b22, "700") });
     level.anchor.set(0.5);
     level.position.set(111, 51);
