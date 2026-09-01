@@ -3,6 +3,7 @@ import type { LoadedSpriteSheet } from "../../assets/SpriteSheetLoader";
 import type { CatAction, CatAnimationSet } from "./CatAnimations";
 import { type CatBehaviorCommand, CatBehaviorStateMachine, type CatGait } from "./CatBehaviorStateMachine";
 import { createCatGroundShadow, setCatGroundShadowClip } from "./CatGroundShadow";
+import { normalizeCycleProgress, planCatMovementTiming } from "./CatMovementTiming";
 
 type CatActorOptions = {
   project: (x: number, y: number) => Point;
@@ -23,9 +24,10 @@ export class CatActor extends Container {
   private readonly behavior = new CatBehaviorStateMachine();
   private readonly shadow: AnimatedSprite;
   private readonly sprite: AnimatedSprite;
-  private arrivalPending = false;
   private currentAction: CatAction = "idle";
   private currentAnimationReversed = false;
+  private movementCycleProgress = 0;
+  private movementProgressPerGridUnit = 0;
   private reactionPending = false;
 
   constructor(options: CatActorOptions) {
@@ -55,7 +57,8 @@ export class CatActor extends Container {
   setPaused(paused: boolean): void {
     this.paused = paused;
     if (paused) {
-      this.arrivalPending = false;
+      this.movementCycleProgress = 0;
+      this.movementProgressPerGridUnit = 0;
       this.reactionPending = false;
       this.behavior.reset();
       this.setAnimation("idle");
@@ -93,8 +96,11 @@ export class CatActor extends Container {
     }
     this.targetX = x;
     this.targetY = y;
-    this.arrivalPending = false;
-    if (!this.behavior.canStartMovementImmediately || this.behavior.isMoving) {
+    if (!this.behavior.canStartMovementImmediately) {
+      return true;
+    }
+    if (this.behavior.isMoving) {
+      this.planMovementToTarget();
       return true;
     }
     this.startExistingMovement("walk");
@@ -114,19 +120,28 @@ export class CatActor extends Container {
     }
 
     const distance = Math.hypot(this.targetX - this.gridX, this.targetY - this.gridY);
-    if (distance > 0.02) {
-      this.updateFacingDirection();
-      const speed = Math.min(distance, deltaSeconds * this.behavior.movementSpeed);
-      this.gridX += ((this.targetX - this.gridX) / distance) * speed;
-      this.gridY += ((this.targetY - this.gridY) / distance) * speed;
-      this.syncPosition();
+    if (distance <= 0.02) {
+      this.finishMovement();
       return;
     }
 
-    this.gridX = this.targetX;
-    this.gridY = this.targetY;
+    this.updateFacingDirection();
+    const maximumTravel = this.reactionPending
+      ? Math.min(deltaSeconds * this.behavior.movementSpeed, this.distanceToStrideBoundary())
+      : deltaSeconds * this.behavior.movementSpeed;
+    const travel = Math.min(distance, maximumTravel);
+    this.gridX += ((this.targetX - this.gridX) / distance) * travel;
+    this.gridY += ((this.targetY - this.gridY) / distance) * travel;
+    this.advanceMovementAnimation(travel);
     this.syncPosition();
-    this.arrivalPending = true;
+
+    if (this.reactionPending && this.movementCycleProgress === 0) {
+      this.startPendingReaction();
+      return;
+    }
+    if (travel >= distance - 0.000_001) {
+      this.finishMovement();
+    }
   }
 
   private chooseTarget(gait: CatGait): boolean {
@@ -182,12 +197,14 @@ export class CatActor extends Container {
     setCatGroundShadowClip(this.shadow, clip);
     this.sprite.textures = clip.textures;
     this.sprite.anchor.set(clip.anchor.x, clip.anchor.y);
-    this.configurePlayback(clip);
-    this.sprite.gotoAndPlay(0);
-
-    if (clip.playback === "loop") {
-      this.sprite.onLoop = () => this.finishMovementAtLoopBoundary();
+    const movementDriven = action === "walk" || action === "run";
+    this.configurePlayback(clip, movementDriven);
+    if (movementDriven) {
+      this.showMovementFrame();
+    } else {
+      this.sprite.gotoAndPlay(0);
     }
+
     if (clip.playback !== "loop") {
       this.sprite.onComplete = () => {
         if (this.currentAction !== action) {
@@ -203,13 +220,14 @@ export class CatActor extends Container {
 
   private applyBehaviorCommand(command: CatBehaviorCommand): void {
     if (command.kind === "play") {
-      this.arrivalPending = false;
       this.setAnimation(command.action, true, command.reverse ?? false);
       return;
     }
     if (command.kind === "move") {
       if (this.chooseTarget(command.gait)) {
+        this.movementCycleProgress = 0;
         this.setAnimation(command.gait, true);
+        this.planMovementToTarget();
         return;
       }
       this.applyBehaviorCommand(this.behavior.movementRejected());
@@ -223,14 +241,16 @@ export class CatActor extends Container {
   }
 
   private startExistingMovement(gait: CatGait): void {
-    this.arrivalPending = false;
+    this.movementCycleProgress = 0;
     this.behavior.requestMovement(gait);
     this.setAnimation(gait, true);
+    this.planMovementToTarget();
   }
 
-  private configurePlayback(clip: LoadedSpriteSheet): void {
+  private configurePlayback(clip: LoadedSpriteSheet, manuallyDriven = false): void {
     this.sprite.animationSpeed = clip.framesPerSecond / 60;
     this.sprite.loop = clip.playback === "loop";
+    this.sprite.autoUpdate = !manuallyDriven;
     this.sprite.onComplete = undefined;
     this.sprite.onLoop = undefined;
   }
@@ -251,23 +271,57 @@ export class CatActor extends Container {
     return true;
   }
 
-  private finishMovementAtLoopBoundary(): void {
-    if (!this.behavior.isMoving) {
-      return;
+  private planMovementToTarget(): void {
+    const distance = Math.hypot(this.targetX - this.gridX, this.targetY - this.gridY);
+    const clip = this.animations[this.behavior.currentAction];
+    const cycleDuration = clip.textures.length / clip.framesPerSecond;
+    const nominalCycleDistance = this.behavior.movementSpeed * cycleDuration;
+    const timing = planCatMovementTiming(distance, this.movementCycleProgress, nominalCycleDistance);
+    this.movementProgressPerGridUnit = timing.cycleProgressPerGridUnit;
+  }
+
+  private advanceMovementAnimation(distance: number): void {
+    this.movementCycleProgress = normalizeCycleProgress(
+      this.movementCycleProgress + distance * this.movementProgressPerGridUnit,
+    );
+    this.showMovementFrame();
+  }
+
+  private showMovementFrame(): void {
+    const frame = Math.min(
+      this.sprite.totalFrames - 1,
+      Math.floor(this.movementCycleProgress * this.sprite.totalFrames),
+    );
+    this.sprite.gotoAndStop(frame);
+  }
+
+  private distanceToStrideBoundary(): number {
+    if (this.movementProgressPerGridUnit <= 0) {
+      return 0;
     }
+    const progressToBoundary = this.movementCycleProgress > 0 ? 1 - this.movementCycleProgress : 1;
+    return progressToBoundary / this.movementProgressPerGridUnit;
+  }
+
+  private startPendingReaction(): void {
+    this.reactionPending = false;
+    this.behavior.movementFinished();
+    const command = this.behavior.requestReaction();
+    if (command) {
+      this.applyBehaviorCommand(command);
+    }
+  }
+
+  private finishMovement(): void {
+    this.gridX = this.targetX;
+    this.gridY = this.targetY;
+    this.movementCycleProgress = 0;
+    this.movementProgressPerGridUnit = 0;
+    this.syncPosition();
     if (this.reactionPending) {
-      this.reactionPending = false;
-      this.behavior.movementFinished();
-      const command = this.behavior.requestReaction();
-      if (command) {
-        this.applyBehaviorCommand(command);
-      }
+      this.startPendingReaction();
       return;
     }
-    if (!this.arrivalPending) {
-      return;
-    }
-    this.arrivalPending = false;
     this.applyBehaviorCommand(this.behavior.movementFinished());
   }
 
