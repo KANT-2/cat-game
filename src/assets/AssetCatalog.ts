@@ -7,6 +7,16 @@ export type AssetFrame = {
   src: string;
 };
 
+/** 한 이미지에 같은 크기의 프레임을 행 우선으로 배치한 애니메이션 정보다. */
+export type SpriteSheetMetadata = {
+  frameWidth: number;
+  frameHeight: number;
+  columns: number;
+  frameCount: number;
+  framesPerSecond: number;
+  playback: "loop" | "once" | "hold";
+};
+
 /** 리소스 작업자가 `catalog.json`에 등록하는 단일 항목이다. */
 export type AssetEntry = {
   id: string;
@@ -14,6 +24,7 @@ export type AssetEntry = {
   src: string;
   anchor?: { x: number; y: number };
   frames?: AssetFrame[];
+  spriteSheet?: SpriteSheetMetadata;
   tags?: string[];
 };
 
