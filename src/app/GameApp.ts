@@ -1,7 +1,9 @@
 import { Application } from "pixi.js";
+import { loadAssetCatalog } from "../assets/AssetCatalog";
 import { LocalGameClient } from "../core/LocalGameClient";
 import { HomeScene } from "../game/scenes/HomeScene";
 import { GameStateStore } from "../services/gameStateStore";
+import { loadCatAnimations } from "./loadCatAnimations";
 
 export class GameApp {
   private readonly renderer: Application;
@@ -23,8 +25,10 @@ export class GameApp {
     });
     mount.appendChild(renderer.canvas);
 
+    const assetCatalog = await loadAssetCatalog();
+    const catAnimations = await loadCatAnimations(assetCatalog, undefined, "fluffy");
     const gameClient = new LocalGameClient(new GameStateStore());
-    const home = new HomeScene(gameClient);
+    const home = new HomeScene(gameClient, catAnimations);
     renderer.stage.addChild(home);
     const game = new GameApp(renderer, home);
     game.layout();
