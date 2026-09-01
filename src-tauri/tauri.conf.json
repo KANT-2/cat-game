@@ -1,0 +1,35 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "{ 냥 }",
+  "version": "0.1.0",
+  "identifier": "com.nyang.game",
+  "build": {
+    "beforeDevCommand": "npm run dev -- --host 127.0.0.1",
+    "devUrl": "http://127.0.0.1:5173",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "widget",
+        "title": "{ 냥 }",
+        "width": 1120,
+        "height": 630,
+        "minWidth": 800,
+        "minHeight": 450,
+        "center": true,
+        "resizable": true,
+        "fullscreen": false,
+        "alwaysOnTop": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": false,
+    "icon": ["../public/assets/loading/game-logo-01.png"]
+  }
+}

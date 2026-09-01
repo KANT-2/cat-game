@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "widget-capability",
+  "description": "Minimum capability for the desktop widget window",
+  "windows": ["widget"],
+  "permissions": ["core:default"]
+}

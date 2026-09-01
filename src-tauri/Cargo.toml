@@ -1,0 +1,16 @@
+[package]
+name = "nyang-desktop"
+version = "0.1.0"
+description = "Desktop overlay host for the Nyang PWA game"
+authors = ["Nyang contributors"]
+edition = "2021"
+
+[lib]
+name = "nyang_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.6.3", features = [] }
+
+[dependencies]
+tauri = { version = "2.11.5", features = [] }
