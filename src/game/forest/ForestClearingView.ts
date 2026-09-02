@@ -10,9 +10,9 @@ import {
   ROOM_GRID_WIDTH,
   rotatedSize,
 } from "../../domain/room";
-import { gridCellPolygon, gridToScreen } from "../belt";
+import { gridCellPolygon, gridToScreen, screenToGrid } from "../belt";
 import { CLEARING_GRID, textStyle } from "../config";
-import { CatActor } from "../entities/CatActor";
+import { CatActor, type CatDropTarget } from "../entities/CatActor";
 import type { CatAnimationSet } from "../entities/CatAnimations";
 import { furniturePresentation } from "../presentation/furniturePresentation";
 import { FurnitureView } from "./FurnitureView";
@@ -23,6 +23,9 @@ type ForestClearingViewOptions = {
   onRemove: (instanceId: string) => boolean;
   onToast: (message: string) => void;
   catAnimations: CatAnimationSet;
+  desktopWidget: boolean;
+  onCatFocusRequest: () => void;
+  onCatInteractionRegionChange: (region: { x: number; y: number; width: number; height: number }) => void;
 };
 
 export class ForestClearingView extends Container {
@@ -30,13 +33,17 @@ export class ForestClearingView extends Container {
   private readonly groundHitLayer = new Container({ label: "forest-ground-input" });
   private readonly gridLayer = new Container({ label: "forest-edit-grid" });
   private readonly selectionLayer = new Container({ label: "forest-selection" });
+  private readonly catDropLayer = new Container({ label: "forest-cat-drop" });
   private readonly entityLayer = new Container({ label: "forest-entities" });
   private readonly foregroundLayer = new Container({ label: "forest-foreground" });
   private readonly getFurniture: ForestClearingViewOptions["getFurniture"];
   private readonly onPlace: ForestClearingViewOptions["onPlace"];
   private readonly onRemove: ForestClearingViewOptions["onRemove"];
   private readonly onToast: ForestClearingViewOptions["onToast"];
+  private readonly desktopWidget: boolean;
+  private readonly onCatInteractionRegionChange: ForestClearingViewOptions["onCatInteractionRegionChange"];
   private readonly cat: CatActor;
+  private lastCatInteractionRegion = "";
   private editMode = false;
   private selectedFurniture: FurnitureKind | null = null;
   private placementRotation: 0 | 1 = 0;
@@ -50,23 +57,32 @@ export class ForestClearingView extends Container {
     this.onPlace = options.onPlace;
     this.onRemove = options.onRemove;
     this.onToast = options.onToast;
+    this.desktopWidget = options.desktopWidget;
+    this.onCatInteractionRegionChange = options.onCatInteractionRegionChange;
     this.entityLayer.sortableChildren = true;
     this.addChild(
       this.backgroundLayer,
       this.groundHitLayer,
       this.gridLayer,
       this.selectionLayer,
+      this.catDropLayer,
       this.entityLayer,
       this.foregroundLayer,
     );
 
-    this.drawForest();
-    this.buildGroundGrid();
-    this.rebuildFurniture();
+    if (!this.desktopWidget) {
+      this.drawForest();
+      this.buildGroundGrid();
+      this.rebuildFurniture();
+    }
 
     this.cat = new CatActor({
       project: (x, y) => this.project(x, y),
+      unproject: (x, y) => screenToGrid(CLEARING_GRID, x, y),
       canWalk: (x, y) => this.isAreaFree(x, y, 1, 1),
+      onFocusRequest: options.onCatFocusRequest,
+      onLiftStart: () => this.removeCatBubble(),
+      onDragTargetChange: (target) => this.updateCatDropTarget(target),
       onTap: () => this.showCatBubble(),
       animations: options.catAnimations,
     });
@@ -75,6 +91,7 @@ export class ForestClearingView extends Container {
 
   update(deltaSeconds: number): void {
     this.cat.update(deltaSeconds);
+    this.syncCatInteractionRegion();
     if (this.catBubble) {
       this.catBubble.position.set(this.cat.x, this.cat.y - 130);
     }
@@ -93,12 +110,34 @@ export class ForestClearingView extends Container {
   }
 
   syncFurniture(): void {
+    if (this.desktopWidget) {
+      return;
+    }
     this.rebuildFurniture();
     this.updateSelection();
   }
 
   private project(x: number, y: number) {
     return gridToScreen(CLEARING_GRID, x, y);
+  }
+
+  private syncCatInteractionRegion(): void {
+    if (!this.desktopWidget) {
+      return;
+    }
+    const bounds = this.cat.getPointerInteractionRegion();
+    const region = {
+      x: Math.floor(bounds.x),
+      y: Math.floor(bounds.y),
+      width: Math.ceil(bounds.width),
+      height: Math.ceil(bounds.height),
+    };
+    const regionKey = `${region.x}:${region.y}:${region.width}:${region.height}`;
+    if (regionKey === this.lastCatInteractionRegion) {
+      return;
+    }
+    this.lastCatInteractionRegion = regionKey;
+    this.onCatInteractionRegionChange(region);
   }
 
   private drawForest(): void {
@@ -270,7 +309,32 @@ export class ForestClearingView extends Container {
   }
 
   private isAreaFree(x: number, y: number, width: number, height: number): boolean {
+    if (this.desktopWidget) {
+      return x >= 0 && y >= 0 && x + width <= ROOM_GRID_WIDTH && y + height <= ROOM_GRID_HEIGHT;
+    }
     return isPlacementFree(this.getFurniture(), ROOM_GRID_WIDTH, ROOM_GRID_HEIGHT, x, y, width, height);
+  }
+
+  private updateCatDropTarget(target: CatDropTarget | null): void {
+    this.catDropLayer.removeChildren().forEach((child) => {
+      child.destroy();
+    });
+    if (
+      this.desktopWidget ||
+      !target ||
+      target.x < 0 ||
+      target.y < 0 ||
+      target.x >= ROOM_GRID_WIDTH ||
+      target.y >= ROOM_GRID_HEIGHT
+    ) {
+      return;
+    }
+    this.catDropLayer.addChild(
+      new Graphics()
+        .poly(gridCellPolygon(CLEARING_GRID, target.x, target.y))
+        .fill({ color: target.valid ? 0x78c96f : 0xd96e62, alpha: 0.5 })
+        .stroke({ color: target.valid ? 0x315f3a : 0x8b322c, width: 3 }),
+    );
   }
 
   private updateSelection(): void {

@@ -20,6 +20,7 @@ public/assets/            빌드에 포함되는 이미지와 카탈로그
 src/assets/               카탈로그를 읽는 기술 계약
 src/content/              메시지 ID 타입과 Canvas 런타임 문구
 src/pwa/                  설치와 service worker 연결
+src-tauri/                후속 데스크톱 창 기능을 격리한 선택적 호스트
 ```
 
 허용되는 방향은 바깥쪽 구현에서 안쪽 규칙을 향한다. `domain`은 렌더링·플랫폼 계층을 모르며 사용자 문장 대신 `content`의 `MessageId` 타입만 참조할 수 있다. `core`는 PixiJS와 브라우저 API를 모른다. `game`은 `LocalGameClient`나 `localStorage`를 직접 사용하지 않는다.
@@ -76,3 +77,9 @@ npm run build
 ```
 
 `structure:check`는 금지된 계층 import를, `assets:check`는 카탈로그 형식과 파일 누락을 검사한다.
+
+## 선택적 데스크톱 호스트
+
+`src-tauri/`는 동일한 Vite 빌드를 WebView에 표시하는 플랫폼 어댑터다. Windows의 항상 위·투명·무테
+창과 트레이 같은 운영체제 정책을 소유하며 게임 규칙이나 PixiJS 장면을 복제하지 않는다. 현재 범위와
+실행 방법은 `docs/DESKTOP_HOST.md`에 기록한다.

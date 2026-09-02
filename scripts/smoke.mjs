@@ -28,6 +28,16 @@ if (box?.width !== 1600 || box.height !== 900) {
 
 await page.screenshot({ path: "/tmp/cat-game-home.png" });
 
+await page.mouse.move(728, 590);
+await page.mouse.down();
+await page.mouse.move(930, 560, { steps: 8 });
+await page.waitForTimeout(650);
+await page.screenshot({ path: "/tmp/cat-game-lift.png" });
+await page.mouse.move(1150, 545, { steps: 8 });
+await page.mouse.up();
+await page.waitForTimeout(900);
+await page.screenshot({ path: "/tmp/cat-game-drop.png" });
+
 await page.mouse.click(1483, 145);
 await page.waitForTimeout(250);
 await page.screenshot({ path: "/tmp/cat-game-study.png" });
@@ -69,5 +79,5 @@ if (errors.length > 0) {
 
 console.log("Canvas smoke test passed");
 console.log(
-  "screenshots: /tmp/cat-game-loading.png, /tmp/cat-game-loading-tip.png, /tmp/cat-game-home.png, /tmp/cat-game-study.png, /tmp/cat-game-edit.png, /tmp/cat-game-home-compact.png",
+  "screenshots: /tmp/cat-game-loading.png, /tmp/cat-game-loading-tip.png, /tmp/cat-game-home.png, /tmp/cat-game-lift.png, /tmp/cat-game-drop.png, /tmp/cat-game-study.png, /tmp/cat-game-edit.png, /tmp/cat-game-home-compact.png",
 );

@@ -17,13 +17,20 @@
     "assets:check": "node scripts/check-assets.mjs",
     "test": "vitest run",
     "smoke": "node scripts/smoke.mjs",
-    "smoke:pwa": "node scripts/pwa-smoke.mjs"
+    "smoke:desktop": "node scripts/desktop-smoke.mjs",
+    "smoke:pwa": "node scripts/pwa-smoke.mjs",
+    "desktop:config:check": "node scripts/check-desktop-config.mjs",
+    "desktop:check": "npm run desktop:config:check && cargo check --manifest-path src-tauri/Cargo.toml",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.11.1",
     "pixi.js": "^8.20.1"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.11",
+    "@tauri-apps/cli": "^2.11.4",
     "playwright": "^1.62.1",
     "typescript": "^7.0.2",
     "vite": "^8.2.2",

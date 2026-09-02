@@ -35,7 +35,15 @@ export class HomeScene extends Container {
   private screenWidth = BASE_WIDTH;
   private screenHeight = BASE_HEIGHT;
 
-  constructor(gameClient: GameClient, catAnimations: CatAnimationSet) {
+  constructor(
+    gameClient: GameClient,
+    catAnimations: CatAnimationSet,
+    options: {
+      desktopWidget?: boolean;
+      onCatFocusRequest?: () => void;
+      onCatInteractionRegionChange?: (region: { x: number; y: number; width: number; height: number }) => void;
+    } = {},
+  ) {
     super();
     this.gameClient = gameClient;
     this.catAnimations = catAnimations;
@@ -46,6 +54,9 @@ export class HomeScene extends Container {
       onRemove: (instanceId) => this.gameClient.removeFurniture(instanceId),
       onToast: (message) => this.notify(message),
       catAnimations,
+      desktopWidget: options.desktopWidget ?? false,
+      onCatFocusRequest: options.onCatFocusRequest ?? (() => {}),
+      onCatInteractionRegionChange: options.onCatInteractionRegionChange ?? (() => {}),
     });
     this.clearingViewport.addChild(this.clearing);
     this.addChild(this.clearingViewport, this.uiLayer, this.modalLayer, this.toastLayer);
@@ -63,6 +74,11 @@ export class HomeScene extends Container {
     this.modeText = new Text({ text: "", style: textStyle(17, 0x6b4932, "700") });
     this.modeText.anchor.set(0.5);
     this.uiLayer.addChild(this.profilePanel, this.currencyPanel, this.sideMenu, this.editButton, this.modeText);
+    if (options.desktopWidget) {
+      this.uiLayer.visible = false;
+      this.modalLayer.visible = false;
+      this.toastLayer.visible = false;
+    }
     this.gameClient.subscribe((snapshot) => this.syncState(snapshot));
   }
 
