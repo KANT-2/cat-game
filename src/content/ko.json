@@ -1,4 +1,18 @@
 {
+  "loading.progress": "{progress}%",
+  "loading.tip.paws": "고양이가 앞발을 가지런히 모으는 중…",
+  "loading.tip.tail": "고양이가 꼬리 끝을 살랑살랑 흔드는 중…",
+  "loading.tip.ears": "고양이가 두 귀를 쫑긋 세우는 중…",
+  "loading.tip.whiskers": "고양이가 수염을 한 올씩 정돈하는 중…",
+  "loading.tip.wash": "고양이가 앞발로 얼굴을 깨끗이 씻는 중…",
+  "loading.tip.stretch": "고양이가 등을 둥글게 말아 기지개 켜는 중…",
+  "loading.tip.sleep": "고양이가 가장 포근한 낮잠 자세를 찾는 중…",
+  "loading.tip.walk": "고양이가 사뿐사뿐 걸음을 맞추는 중…",
+  "loading.tip.scratch": "고양이가 발톱을 조심조심 다듬는 중…",
+  "loading.tip.dust": "고양이가 방금 본 척한 먼지를 다시 찾는 중…",
+  "loading.tip.calm": "고양이가 아무 일도 없었다는 표정을 연습하는 중…",
+  "loading.tip.blink": "고양이가 눈을 가늘게 뜨고 졸음을 부르는 중…",
+  "loading.error": "게임 리소스를 불러오지 못했어요. 새로고침해 주세요.",
   "home.decorate": "▦  꾸미기",
   "home.install": "앱 설치",
   "home.level": "Lv. {level}",
@@ -200,6 +214,6 @@
   "study.rewardAlreadyClaimed": "{feedback} 이 문제의 최초 완료 보상은 이미 받았어요.",
   "study.close": "방으로 돌아가기",
   "pwa.installStarted": "앱 설치를 시작했어요.",
-  "pwa.installed": "코지 코드 캣이 설치되었어요.",
+  "pwa.installed": "{ 냥 }이 설치되었어요.",
   "pwa.offlineReady": "오프라인에서도 게임 화면을 열 수 있어요."
 }

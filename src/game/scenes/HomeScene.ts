@@ -1,4 +1,4 @@
-import { Container, Graphics, Text } from "pixi.js";
+import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { message } from "../../content/messages";
 import type { GameClient } from "../../core/GameClient";
 import type { FurnitureKind, GameState } from "../../domain/room";
@@ -8,7 +8,8 @@ import { CanvasButton } from "../components/CanvasButton";
 import { HomeMenuButton, type HomeMenuIcon } from "../components/HomeMenuButton";
 import { ToastLayer } from "../components/ToastLayer";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
-import { RoomView } from "../room/RoomView";
+import type { CatAnimationSet } from "../entities/CatAnimations";
+import { ForestClearingView } from "../forest/ForestClearingView";
 import { DailyQuestScene } from "./DailyQuestScene";
 import { GachaScene } from "./GachaScene";
 import { RankingScene } from "./RankingScene";
@@ -18,8 +19,9 @@ import { StudyModal } from "./StudyModal";
 export class HomeScene extends Container {
   private state: GameState;
   private readonly gameClient: GameClient;
-  private readonly roomViewport = new Container();
-  private readonly room: RoomView;
+  private readonly catAnimations: CatAnimationSet;
+  private readonly clearingViewport = new Container();
+  private readonly clearing: ForestClearingView;
   private readonly uiLayer = new Container();
   private readonly modalLayer = new Container();
   private readonly toastLayer = new ToastLayer();
@@ -41,18 +43,20 @@ export class HomeScene extends Container {
   private screenWidth = BASE_WIDTH;
   private screenHeight = BASE_HEIGHT;
 
-  constructor(gameClient: GameClient) {
+  constructor(gameClient: GameClient, catAnimations: CatAnimationSet) {
     super();
     this.gameClient = gameClient;
+    this.catAnimations = catAnimations;
     this.state = gameClient.getSnapshot();
-    this.room = new RoomView({
+    this.clearing = new ForestClearingView({
       getFurniture: () => this.state.furniture,
       onPlace: (command) => this.gameClient.placeFurniture(command),
       onRemove: (instanceId) => this.gameClient.removeFurniture(instanceId),
       onToast: (message) => this.notify(message),
+      catAnimations,
     });
-    this.roomViewport.addChild(this.room);
-    this.addChild(this.roomViewport, this.vignette, this.uiLayer, this.modalLayer, this.toastLayer);
+    this.clearingViewport.addChild(this.clearing);
+    this.addChild(this.clearingViewport, this.vignette, this.uiLayer, this.modalLayer, this.toastLayer);
 
     this.buildProfile();
     const currencyTexts = this.buildCurrency();
@@ -65,7 +69,7 @@ export class HomeScene extends Container {
 
   update(deltaSeconds: number): void {
     if (!this.studyModal && !this.shopScene && !this.dailyQuestScene && !this.gachaScene && !this.rankingScene) {
-      this.room.update(deltaSeconds);
+      this.clearing.update(deltaSeconds);
     }
   }
 
@@ -78,9 +82,12 @@ export class HomeScene extends Container {
       .fill({ color: 0xfff0d0, alpha: 0.08 })
       .roundRect(12, 12, width - 24, height - 24, 34)
       .stroke({ color: 0x8a5a38, width: 3, alpha: 0.32 });
-    const roomScale = Math.min(width / BASE_WIDTH, height / BASE_HEIGHT) * 1.04;
-    this.roomViewport.scale.set(roomScale);
-    this.room.position.set(width / roomScale / 2 + 35, height / roomScale / 2 - 95);
+    const clearingScale = Math.min(width / BASE_WIDTH, height / BASE_HEIGHT);
+    this.clearingViewport.scale.set(clearingScale);
+    this.clearingViewport.position.set(
+      (width - BASE_WIDTH * clearingScale) / 2,
+      (height - BASE_HEIGHT * clearingScale) / 2,
+    );
 
     this.profilePanel.position.set(30, 24);
     this.currencyPanel.position.set(width - 420, 24);
@@ -121,35 +128,20 @@ export class HomeScene extends Container {
   }
 
   private buildProfile(): void {
-    const card = new Graphics()
-      .roundRect(4, 6, 170, 112, 25)
-      .fill({ color: 0x68412b, alpha: 0.2 })
-      .roundRect(0, 0, 170, 112, 25)
-      .fill({ color: 0xfff3d8, alpha: 0.97 })
-      .stroke({ color: 0x69432c, width: 4 });
-    const portrait = new Graphics()
-      .circle(55, 47, 37)
-      .fill(0xffe4b6)
-      .stroke({ color: 0x7a4b30, width: 4 })
-      .circle(55, 48, 26)
-      .fill(0xe8964e)
-      .stroke({ color: 0x503528, width: 3 })
-      .poly([34, 36, 38, 14, 50, 32])
-      .poly([61, 31, 75, 14, 76, 40])
-      .fill(0xe8964e)
-      .stroke({ color: 0x503528, width: 3 })
-      .circle(47, 48, 2.5)
-      .circle(63, 48, 2.5)
-      .fill(0x38271f)
-      .circle(55, 57, 2.5)
-      .fill(0x70432e);
-    const levelPlate = new Graphics()
-      .roundRect(20, 78, 70, 27, 13)
-      .fill(0xffd08a)
-      .stroke({ color: 0x7a4b30, width: 3 });
-    const level = new Text({ text: message("home.level", { level: 10 }), style: textStyle(16, 0x3d2b22, "800") });
+    this.profilePanel.addChild(
+      new Graphics()
+        .roundRect(0, 0, 154, 116, 25)
+        .fill({ color: 0xfff4db, alpha: 0.96 })
+        .stroke({ color: 0x69432c, width: 5 }),
+    );
+    const portrait = new Sprite(this.catAnimations.idle.textures[0]);
+    portrait.anchor.set(this.catAnimations.idle.anchor.x, this.catAnimations.idle.anchor.y);
+    portrait.scale.set(0.29);
+    portrait.position.set(49, 89);
+    this.profilePanel.addChild(portrait);
+    const level = new Text({ text: message("home.level", { level: 10 }), style: textStyle(17, 0x3d2b22, "700") });
     level.anchor.set(0.5);
-    level.position.set(55, 91);
+    level.position.set(111, 51);
     const paw = new Graphics()
       .circle(126, 48, 13)
       .fill(0xefad62)
@@ -157,7 +149,7 @@ export class HomeScene extends Container {
       .circle(124, 27, 6)
       .circle(138, 34, 6)
       .fill(0xefad62);
-    this.profilePanel.addChild(card, portrait, levelPlate, level, paw);
+    this.profilePanel.addChild(level, paw);
   }
 
   private buildCurrency(): { coins: Text; gems: Text } {
@@ -341,7 +333,7 @@ export class HomeScene extends Container {
   private startPlacement(kind: FurnitureKind): void {
     this.stopPlacement();
     this.selectedFurniture = kind;
-    this.room.setPlacementMode(true, kind, 0);
+    this.clearing.setPlacementMode(true, kind, 0);
     const panel = new Container();
     panel.addChild(
       new Graphics().roundRect(-300, -42, 600, 84, 24).fill(0xfff3dc).stroke({ color: 0x68442f, width: 4 }),
@@ -365,7 +357,7 @@ export class HomeScene extends Container {
 
   private stopPlacement(): void {
     this.selectedFurniture = null;
-    this.room.setPlacementMode(false, null, 0);
+    this.clearing.setPlacementMode(false, null, 0);
     if (!this.placementPanel) {
       return;
     }
@@ -405,7 +397,7 @@ export class HomeScene extends Container {
     this.state = snapshot;
     this.coinText.text = snapshot.coins.toLocaleString();
     this.gemText.text = String(snapshot.gems);
-    this.room.syncFurniture();
+    this.clearing.syncFurniture();
     if (this.selectedFurniture && snapshot.inventory[this.selectedFurniture] <= 0) {
       this.stopPlacement();
     }

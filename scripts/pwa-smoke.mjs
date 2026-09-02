@@ -25,7 +25,7 @@ const manifest = await page.evaluate(async () => {
   return response.json();
 });
 
-if (manifest.name !== "코지 코드 캣" || manifest.display !== "standalone") {
+if (manifest.name !== "{ 냥 }" || manifest.display !== "standalone") {
   throw new Error(`unexpected manifest: ${JSON.stringify(manifest)}`);
 }
 

@@ -13,6 +13,7 @@ import {
 import { gridCellPolygon, gridToScreen } from "../belt";
 import { CLEARING_GRID, textStyle } from "../config";
 import { CatActor } from "../entities/CatActor";
+import type { CatAnimationSet } from "../entities/CatAnimations";
 import { furniturePresentation } from "../presentation/furniturePresentation";
 import { FurnitureView } from "./FurnitureView";
 
@@ -21,6 +22,7 @@ type ForestClearingViewOptions = {
   onPlace: (command: PlacementCommand) => PlacementResult;
   onRemove: (instanceId: string) => boolean;
   onToast: (message: string) => void;
+  catAnimations: CatAnimationSet;
 };
 
 export class ForestClearingView extends Container {
@@ -66,6 +68,7 @@ export class ForestClearingView extends Container {
       project: (x, y) => this.project(x, y),
       canWalk: (x, y) => this.isAreaFree(x, y, 1, 1),
       onTap: () => this.showCatBubble(),
+      animations: options.catAnimations,
     });
     this.entityLayer.addChild(this.cat);
   }
@@ -73,7 +76,7 @@ export class ForestClearingView extends Container {
   update(deltaSeconds: number): void {
     this.cat.update(deltaSeconds);
     if (this.catBubble) {
-      this.catBubble.position.set(this.cat.x, this.cat.y - 90);
+      this.catBubble.position.set(this.cat.x, this.cat.y - 130);
     }
   }
 

@@ -1,8 +1,383 @@
 {
   "version": 1,
   "bundles": {
-    "home": [],
+    "home": [
+      {
+        "id": "cat.fluffy.idle.01",
+        "kind": "cat",
+        "src": "/assets/cats/fluffy-white/fluffy-white-idle-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 74,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": ["fluffy", "white", "idle", "ping-pong", "active-cat"]
+      },
+      {
+        "id": "cat.fluffy.walk.01",
+        "kind": "cat",
+        "src": "/assets/cats/fluffy-white/fluffy-white-walk-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 20,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": ["fluffy", "white", "walk", "active-cat"]
+      },
+      {
+        "id": "cat.fluffy.run.01",
+        "kind": "cat",
+        "src": "/assets/cats/fluffy-white/fluffy-white-run-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 16,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": ["fluffy", "white", "run", "active-cat"]
+      },
+      {
+        "id": "cat.fluffy.attack.01",
+        "kind": "cat",
+        "src": "/assets/cats/fluffy-white/fluffy-white-attack-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 24,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": ["fluffy", "white", "attack", "active-cat"]
+      },
+      {
+        "id": "cat.fluffy.fall.01",
+        "kind": "cat",
+        "src": "/assets/cats/fluffy-white/fluffy-white-fall-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 39,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": ["fluffy", "white", "fall", "active-cat"]
+      },
+      {
+        "id": "cat.fluffy.groom.01",
+        "kind": "cat",
+        "src": "/assets/cats/fluffy-white/fluffy-white-groom-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 46,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": ["fluffy", "white", "groom", "active-cat"]
+      },
+      {
+        "id": "cat.fluffy.hit.01",
+        "kind": "cat",
+        "src": "/assets/cats/fluffy-white/fluffy-white-hit-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 21,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": ["fluffy", "white", "hit", "active-cat"]
+      },
+      {
+        "id": "cat.fluffy.jump.01",
+        "kind": "cat",
+        "src": "/assets/cats/fluffy-white/fluffy-white-jump-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 41,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": ["fluffy", "white", "jump", "active-cat"]
+      },
+      {
+        "id": "cat.fluffy.land.01",
+        "kind": "cat",
+        "src": "/assets/cats/fluffy-white/fluffy-white-land-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 49,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": ["fluffy", "white", "land", "active-cat"]
+      },
+      {
+        "id": "cat.fluffy.scratch.01",
+        "kind": "cat",
+        "src": "/assets/cats/fluffy-white/fluffy-white-scratch-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 33,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": ["fluffy", "white", "scratch", "active-cat"]
+      },
+      {
+        "id": "cat.fluffy.sleep.01",
+        "kind": "cat",
+        "src": "/assets/cats/fluffy-white/fluffy-white-sleep-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 29,
+          "framesPerSecond": 25,
+          "playback": "hold"
+        },
+        "tags": ["fluffy", "white", "sleep", "active-cat"]
+      },
+      {
+        "id": "cat.fluffy.surprise.01",
+        "kind": "cat",
+        "src": "/assets/cats/fluffy-white/fluffy-white-surprise-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 30,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": ["fluffy", "white", "surprise", "active-cat"]
+      },
+      {
+        "id": "cat.ink.idle.01",
+        "kind": "cat",
+        "src": "/assets/cats/ink-black/ink-black-idle-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 38,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": ["ink", "black", "idle"]
+      },
+      {
+        "id": "cat.ink.walk.01",
+        "kind": "cat",
+        "src": "/assets/cats/ink-black/ink-black-walk-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 20,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": ["ink", "black", "walk"]
+      },
+      {
+        "id": "cat.ink.run.01",
+        "kind": "cat",
+        "src": "/assets/cats/ink-black/ink-black-run-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 23,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": ["ink", "black", "run"]
+      },
+      {
+        "id": "cat.ink.attack.01",
+        "kind": "cat",
+        "src": "/assets/cats/ink-black/ink-black-attack-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 37,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": ["ink", "black", "attack"]
+      },
+      {
+        "id": "cat.ink.fall.01",
+        "kind": "cat",
+        "src": "/assets/cats/ink-black/ink-black-fall-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 39,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": ["ink", "black", "fall"]
+      },
+      {
+        "id": "cat.ink.groom.01",
+        "kind": "cat",
+        "src": "/assets/cats/ink-black/ink-black-groom-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 46,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": ["ink", "black", "groom"]
+      },
+      {
+        "id": "cat.ink.hit.01",
+        "kind": "cat",
+        "src": "/assets/cats/ink-black/ink-black-hit-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 34,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": ["ink", "black", "hit"]
+      },
+      {
+        "id": "cat.ink.jump.01",
+        "kind": "cat",
+        "src": "/assets/cats/ink-black/ink-black-jump-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 50,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": ["ink", "black", "jump"]
+      },
+      {
+        "id": "cat.ink.land.01",
+        "kind": "cat",
+        "src": "/assets/cats/ink-black/ink-black-land-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 37,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": ["ink", "black", "land"]
+      },
+      {
+        "id": "cat.ink.scratch.01",
+        "kind": "cat",
+        "src": "/assets/cats/ink-black/ink-black-scratch-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 41,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": ["ink", "black", "scratch"]
+      },
+      {
+        "id": "cat.ink.sleep.01",
+        "kind": "cat",
+        "src": "/assets/cats/ink-black/ink-black-sleep-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 39,
+          "framesPerSecond": 25,
+          "playback": "hold"
+        },
+        "tags": ["ink", "black", "sleep"]
+      },
+      {
+        "id": "cat.ink.surprise.01",
+        "kind": "cat",
+        "src": "/assets/cats/ink-black/ink-black-surprise-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 30,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": ["ink", "black", "surprise"]
+      }
+    ],
     "study": [],
-    "common-ui": []
+    "common-ui": [
+      {
+        "id": "background.loading.cat-study-night.01",
+        "kind": "background",
+        "src": "/assets/loading/cat-study-night-01.png",
+        "tags": ["loading", "study", "night", "watercolor", "cat-style"]
+      },
+      {
+        "id": "ui.logo.game.01",
+        "kind": "ui",
+        "src": "/assets/loading/game-logo-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["logo", "game-title", "transparent", "watercolor"]
+      }
+    ]
   }
 }

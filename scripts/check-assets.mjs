@@ -34,10 +34,25 @@ for (const [bundle, entries] of Object.entries(catalog.bundles ?? {})) {
     if (entry.anchor && (!inUnitRange(entry.anchor.x) || !inUnitRange(entry.anchor.y))) {
       errors.push(`${entry.id}: anchor values must be between 0 and 1`);
     }
+    if (entry.spriteSheet) {
+      checkSpriteSheet(entry.id, entry.spriteSheet, errors);
+    }
     await checkAssetPath(entry.id, entry.src, errors);
     for (const frame of entry.frames ?? []) {
       await checkAssetPath(`${entry.id}/${frame.name}`, frame.src, errors);
     }
+  }
+}
+
+function checkSpriteSheet(id, spriteSheet, errors) {
+  const positiveIntegerKeys = ["frameWidth", "frameHeight", "columns", "frameCount", "framesPerSecond"];
+  for (const key of positiveIntegerKeys) {
+    if (!Number.isInteger(spriteSheet[key]) || spriteSheet[key] <= 0) {
+      errors.push(`${id}: spriteSheet.${key} must be a positive integer`);
+    }
+  }
+  if (!new Set(["loop", "once", "hold"]).has(spriteSheet.playback)) {
+    errors.push(`${id}: spriteSheet.playback must be loop, once, or hold`);
   }
 }
 

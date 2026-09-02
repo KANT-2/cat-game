@@ -9,4 +9,8 @@ describe("message catalog", () => {
   it("interpolates named JSON message parameters", () => {
     expect(message("furniture.placed", { item: "침대" })).toBe("침대를 배치했어요.");
   });
+
+  it("keeps the game-name braces as literal text", () => {
+    expect(message("pwa.installed")).toBe("{ 냥 }이 설치되었어요.");
+  });
 });
