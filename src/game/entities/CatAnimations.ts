@@ -13,6 +13,7 @@ export const CAT_ACTIONS = [
   "scratch",
   "sleep",
   "surprise",
+  "scruffLift",
 ] as const;
 
 export type CatAction = (typeof CAT_ACTIONS)[number];

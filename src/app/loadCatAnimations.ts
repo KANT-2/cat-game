@@ -19,6 +19,7 @@ const CAT_ASSET_IDS: Record<CatVariant, Record<CatAction, string>> = {
     scratch: "cat.fluffy.scratch.01",
     sleep: "cat.fluffy.sleep.01",
     surprise: "cat.fluffy.surprise.01",
+    scruffLift: "cat.fluffy.scruff-lift.01",
   },
   ink: {
     idle: "cat.ink.idle.01",
@@ -33,6 +34,7 @@ const CAT_ASSET_IDS: Record<CatVariant, Record<CatAction, string>> = {
     scratch: "cat.ink.scratch.01",
     sleep: "cat.ink.sleep.01",
     surprise: "cat.ink.surprise.01",
+    scruffLift: "cat.ink.scruff-lift.01",
   },
 };
 
@@ -61,7 +63,7 @@ export async function loadCatAnimations(
   };
 
   const idle = await loadAction("idle");
-  const [walk, run, attack, fall, groom, hit, jump, land, scratch, sleep, surprise] = await Promise.all([
+  const [walk, run, attack, fall, groom, hit, jump, land, scratch, sleep, surprise, scruffLift] = await Promise.all([
     loadAction("walk"),
     loadAction("run"),
     loadAction("attack"),
@@ -73,7 +75,8 @@ export async function loadCatAnimations(
     loadAction("scratch"),
     loadAction("sleep"),
     loadAction("surprise"),
+    loadAction("scruffLift"),
   ]);
 
-  return { idle, walk, run, attack, fall, groom, hit, jump, land, scratch, sleep, surprise };
+  return { idle, walk, run, attack, fall, groom, hit, jump, land, scratch, sleep, surprise, scruffLift };
 }

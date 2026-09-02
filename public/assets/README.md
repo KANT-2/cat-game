@@ -62,4 +62,5 @@ assets/
 - `playback`은 반복하는 `loop`, 한 번 재생하는 `once`, 마지막 프레임을 유지하는 `hold` 중 하나다.
 - 프레임마다 바닥 접점이 흔들리지 않도록 같은 크기와 anchor를 사용한다.
 - 배경색을 넣은 contact sheet와 GIF는 검수용으로만 사용하고 `catalog.json`에는 투명 PNG 또는 WebP 시트만 등록한다.
-- 현재 실제 고양이는 `cats/fluffy-white/`의 12개 동작이며 `cat.fluffy.<동작>.01` ID로 불러온다.
+- 고양이 리소스는 `ink-black`, `fluffy-white`, `siamese-seal`, `orange-tabby` 4종이며, 각 13개 동작을 `catalog.json`에 등록한다.
+- 공통 신규 동작 `scruff-lift`는 시트와 카탈로그 등록까지 완료된 리소스다. 게임 상태 기계에서 사용할 시점에 `CatAction`과 동작 전이 규칙을 별도 연결한다.

@@ -87,4 +87,14 @@ describe("CatBehaviorStateMachine", () => {
     expect(behavior.canStartMovementImmediately).toBe(false);
     expect(behavior.canQueueReaction).toBe(false);
   });
+
+  it("returns to idle after a mouse lift animation finishes", () => {
+    const behavior = new CatBehaviorStateMachine(randomSequence([0, 0]));
+
+    expect(behavior.requestAction("scruffLift")).toEqual({ kind: "play", action: "scruffLift" });
+    expect(behavior.currentAction).toBe("scruffLift");
+    expect(behavior.canStartMovementImmediately).toBe(false);
+    expect(behavior.animationFinished("scruffLift")).toEqual({ kind: "idle" });
+    expect(behavior.currentAction).toBe("idle");
+  });
 });
