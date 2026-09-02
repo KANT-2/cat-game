@@ -37,22 +37,14 @@ export class StudyModal extends Container {
   }
 
   layout(width: number, height: number): void {
-    this.overlay.clear().rect(0, 0, width, height).fill({ color: 0x3c281c, alpha: 0.58 });
-    const scale = Math.min(width / 1450, height / 820, 1);
+    this.overlay.clear().rect(0, 0, width, height).fill(0xf8e7ca);
+    const scale = Math.min(width / 1600, height / 900);
     this.panel.scale.set(scale);
     this.panel.position.set(width / 2, height / 2);
   }
 
   private buildFrame(): void {
-    this.panel.addChild(
-      new Graphics()
-        .roundRect(-696, -376, 1392, 752, 34)
-        .fill(0xf8e5c6)
-        .stroke({ color: 0x69432d, width: 6 })
-        .roundRect(-675, -355, 1350, 710, 25)
-        .fill(0xfff8e9)
-        .stroke({ color: 0xd8ae7f, width: 2 }),
-    );
+    this.panel.addChild(new Graphics().rect(-800, -450, 1600, 900).fill(0xfff8e9));
     const heading = new Text({ text: message("study.screenTitle"), style: textStyle(32, 0x3d2418, "800") });
     heading.position.set(-640, -334);
     this.panel.addChild(heading);

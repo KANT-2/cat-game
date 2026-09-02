@@ -1,15 +1,16 @@
-import { Application } from "pixi.js";
-import { loadAssetCatalog } from "../assets/AssetCatalog";
+import { Application, Assets } from "pixi.js";
+import { assetPath, loadAssetCatalog } from "../assets/AssetCatalog";
 import { findAssetEntry, loadTexture } from "../assets/SpriteSheetLoader";
 import { LocalGameClient } from "../core/LocalGameClient";
-import type { CatAnimationSet } from "../game/entities/CatAnimations";
+import { type CatVariant, catVariants } from "../domain/cats";
+import type { CatAnimationLibrary, CatAnimationSet } from "../game/entities/CatAnimations";
 import { HomeScene } from "../game/scenes/HomeScene";
 import { LoadingScene } from "../game/scenes/LoadingScene";
 import { GameStateStore } from "../services/gameStateStore";
-import { type CatVariant, loadCatAnimations } from "./loadCatAnimations";
+import type { AppDisplayMode } from "./displayMode";
+import { loadCatAnimations } from "./loadCatAnimations";
 
 const MINIMUM_LOADING_TIME_MS = 3400;
-const ACTIVE_CAT_VARIANT: CatVariant = "fluffy";
 
 export class GameApp {
   private readonly renderer: Application;
@@ -20,7 +21,12 @@ export class GameApp {
     this.home = home;
   }
 
-  static async create(mount: HTMLElement): Promise<GameApp> {
+  static async create(
+    mount: HTMLElement,
+    displayMode: AppDisplayMode = "game",
+    onCatFocusRequest: () => void = () => {},
+    onCatInteractionRegionChange: (region: { x: number; y: number; width: number; height: number }) => void = () => {},
+  ): Promise<GameApp> {
     const renderer = new Application();
     await renderer.init({
       resizeTo: window,
@@ -31,8 +37,13 @@ export class GameApp {
     });
     mount.appendChild(renderer.canvas);
 
+    const gameClient = new LocalGameClient(new GameStateStore());
+    const activeCat = gameClient.getSnapshot().activeCat;
+
     const loadingStartedAt = performance.now();
     const loading = new LoadingScene();
+    const showLoadingScene = displayMode === "game";
+    loading.visible = showLoadingScene;
     renderer.stage.addChild(loading);
     const layoutLoading = () => loading.layout(renderer.screen.width, renderer.screen.height);
     const updateLoading = (ticker: { deltaMS: number }) => loading.update(ticker.deltaMS / 1000);
@@ -40,43 +51,81 @@ export class GameApp {
     renderer.ticker.add(updateLoading);
     layoutLoading();
 
-    let catAnimations: CatAnimationSet;
+    let catAnimations: CatAnimationLibrary;
+    let assetCatalog: Awaited<ReturnType<typeof loadAssetCatalog>>;
     try {
-      const assetCatalog = await loadAssetCatalog();
+      assetCatalog = await loadAssetCatalog();
       loading.setProgress(0.06);
-      const [loadingBackground, loadingLogo] = await Promise.all([
-        loadTexture(findAssetEntry(assetCatalog, "background.loading.cat-study-night.01")),
-        loadTexture(findAssetEntry(assetCatalog, "ui.logo.game.01")),
-      ]);
-      loading.setBackground(loadingBackground);
-      loading.setLogo(loadingLogo);
+      if (showLoadingScene) {
+        const [loadingBackground, loadingLogo] = await Promise.all([
+          loadTexture(findAssetEntry(assetCatalog, "background.loading.cat-study-night.01")),
+          loadTexture(findAssetEntry(assetCatalog, "ui.logo.game.01")),
+        ]);
+        loading.setBackground(loadingBackground);
+        loading.setLogo(loadingLogo);
+      }
       loading.setProgress(0.14);
-      catAnimations = await loadCatAnimations(
-        assetCatalog,
-        (progress, action, clip) => {
-          loading.setProgress(0.14 + progress * 0.82);
-          if (action === "idle") {
-            loading.setCatAnimation(clip);
-          }
-        },
-        ACTIVE_CAT_VARIANT,
-      );
+      const loadedCats = new Map<CatVariant, CatAnimationSet>();
+      const loadOrder = [activeCat, ...catVariants.filter((variant) => variant !== activeCat)];
+      for (const [index, variant] of loadOrder.entries()) {
+        const animations = await loadCatAnimations(
+          assetCatalog,
+          (progress, action, clip) => {
+            loading.setProgress(0.14 + ((index + progress) / loadOrder.length) * 0.82);
+            if (showLoadingScene && index === 0 && action === "idle") {
+              loading.setCatAnimation(clip);
+            }
+          },
+          variant,
+        );
+        loadedCats.set(variant, animations);
+      }
+      const requireAnimations = (variant: CatVariant): CatAnimationSet => {
+        const animations = loadedCats.get(variant);
+        if (!animations) {
+          throw new Error(`Cat animations were not loaded: ${variant}`);
+        }
+        return animations;
+      };
+      catAnimations = {
+        fluffy: requireAnimations("fluffy"),
+        ink: requireAnimations("ink"),
+        siamese: requireAnimations("siamese"),
+      };
     } catch (error) {
       loading.showError();
       throw error;
     }
 
-    const gameClient = new LocalGameClient(new GameStateStore());
-    const home = new HomeScene(gameClient, catAnimations);
+    const iconSources = {
+      studyGroup: assetPath(assetCatalog, "ui.home.level-problems.01"),
+      shopGroup: assetPath(assetCatalog, "ui.home.shop.01"),
+      socialGroup: assetPath(assetCatalog, "ui.home.social-group.01"),
+      learning: assetPath(assetCatalog, "ui.home.study.01"),
+      dailyQuest: assetPath(assetCatalog, "ui.home.daily-quest.01"),
+      roomDecor: assetPath(assetCatalog, "ui.home.room-decor.01"),
+      gacha: assetPath(assetCatalog, "ui.home.gacha.01"),
+      ownedCollection: assetPath(assetCatalog, "ui.home.owned-collection.01"),
+      addFriend: assetPath(assetCatalog, "ui.home.add-friend.01"),
+      visitGarden: assetPath(assetCatalog, "ui.home.visit-garden.01"),
+    };
+    await Assets.load(Object.values(iconSources));
+    const home = new HomeScene(gameClient, iconSources, catAnimations, {
+      desktopWidget: displayMode === "desktop-widget",
+      onCatFocusRequest,
+      onCatInteractionRegionChange,
+    });
     renderer.stage.addChildAt(home, 0);
     const game = new GameApp(renderer, home);
     game.layout();
 
-    const loadingElapsed = performance.now() - loadingStartedAt;
-    await delay(Math.max(0, MINIMUM_LOADING_TIME_MS - loadingElapsed));
-    loading.setProgress(1);
-    await delay(220);
-    await loading.fadeOut();
+    if (showLoadingScene) {
+      const loadingElapsed = performance.now() - loadingStartedAt;
+      await delay(Math.max(0, MINIMUM_LOADING_TIME_MS - loadingElapsed));
+      loading.setProgress(1);
+      await delay(220);
+      await loading.fadeOut();
+    }
     renderer.ticker.remove(updateLoading);
     window.removeEventListener("resize", layoutLoading);
     renderer.stage.removeChild(loading);

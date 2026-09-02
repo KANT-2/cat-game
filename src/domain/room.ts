@@ -1,3 +1,6 @@
+import { type CatVariant, DEFAULT_CAT_VARIANT } from "./cats";
+import type { ShopItemId } from "./shop";
+
 /** 현재 프로토타입에서 배치할 수 있는 가구 원형 ID다. */
 export type FurnitureKind = "sofa" | "desk" | "plant" | "catTree" | "bed";
 
@@ -18,16 +21,21 @@ export type PlacedFurniture = {
   x: number;
   y: number;
   rotation: 0 | 1;
+  shopItemId?: ShopItemId;
 };
 
 /** 로컬 또는 원격 저장소로 직렬화할 수 있는 게임 스냅샷이다. */
 export type GameState = {
-  economyVersion: 1;
+  economyVersion: 2;
   coins: number;
   gems: number;
+  ownedCats: CatVariant[];
+  homeCats: CatVariant[];
+  activeCat: CatVariant;
   completedQuizIds: string[];
   furniture: PlacedFurniture[];
   inventory: Record<FurnitureKind, number>;
+  shopInventory: Partial<Record<ShopItemId, number>>;
 };
 
 export const furnitureDefinitions: Record<FurnitureKind, FurnitureDefinition> = {
@@ -57,12 +65,16 @@ export const defaultFurniture: PlacedFurniture[] = [
  */
 export function createDefaultState(): GameState {
   return {
-    economyVersion: 1,
+    economyVersion: 2,
     coins: 1_000_000,
-    gems: 8,
+    gems: 100_000,
+    ownedCats: [DEFAULT_CAT_VARIANT, "siamese"],
+    homeCats: [DEFAULT_CAT_VARIANT],
+    activeCat: DEFAULT_CAT_VARIANT,
     completedQuizIds: [],
     furniture: defaultFurniture.map((item) => ({ ...item })),
     inventory: { sofa: 0, desk: 0, plant: 1, catTree: 0, bed: 0 },
+    shopInventory: {},
   };
 }
 

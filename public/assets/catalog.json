@@ -361,6 +361,684 @@
           "playback": "once"
         },
         "tags": ["ink", "black", "surprise"]
+      },
+      {
+        "id": "ui.home.study.01",
+        "kind": "ui",
+        "src": "/assets/ui/home-menu/study.png",
+        "anchor": { "x": 0.5, "y": 0.5 }
+      },
+      {
+        "id": "ui.home.shop.01",
+        "kind": "ui",
+        "src": "/assets/ui/home-menu/shop.png",
+        "anchor": { "x": 0.5, "y": 0.5 }
+      },
+      {
+        "id": "ui.home.level-problems.01",
+        "kind": "ui",
+        "src": "/assets/ui/home-menu/level-problems.png",
+        "anchor": { "x": 0.5, "y": 0.5 }
+      },
+      {
+        "id": "ui.home.daily-quest.01",
+        "kind": "ui",
+        "src": "/assets/ui/home-menu/daily-quest.png",
+        "anchor": { "x": 0.5, "y": 0.5 }
+      },
+      {
+        "id": "ui.home.room-decor.01",
+        "kind": "ui",
+        "src": "/assets/ui/home-menu/room-decor.png",
+        "anchor": { "x": 0.5, "y": 0.5 }
+      },
+      {
+        "id": "ui.home.gacha.01",
+        "kind": "ui",
+        "src": "/assets/ui/home-menu/gacha.png",
+        "anchor": { "x": 0.5, "y": 0.5 }
+      },
+      {
+        "id": "ui.home.owned-collection.01",
+        "kind": "ui",
+        "src": "/assets/ui/home-menu/owned-collection.png",
+        "anchor": { "x": 0.5, "y": 0.5 }
+      },
+      {
+        "id": "ui.home.social-group.01",
+        "kind": "ui",
+        "src": "/assets/ui/home-menu/social-group.png",
+        "anchor": { "x": 0.5, "y": 0.5 }
+      },
+      {
+        "id": "ui.home.add-friend.01",
+        "kind": "ui",
+        "src": "/assets/ui/home-menu/add-friend.png",
+        "anchor": { "x": 0.5, "y": 0.5 }
+      },
+      {
+        "id": "ui.home.visit-garden.01",
+        "kind": "ui",
+        "src": "/assets/ui/home-menu/visit-garden.png",
+        "anchor": { "x": 0.5, "y": 0.5 }
+      }
+    ],
+    "cats-expanded": [
+      {
+        "id": "cat.ink.scruff-lift.01",
+        "kind": "cat",
+        "src": "/assets/cats/ink-black/ink-black-scruff-lift-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 44,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "ink",
+          "black",
+          "scruff-lift"
+        ]
+      },
+      {
+        "id": "cat.fluffy.scruff-lift.01",
+        "kind": "cat",
+        "src": "/assets/cats/fluffy-white/fluffy-white-scruff-lift-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 44,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "fluffy",
+          "white",
+          "scruff-lift"
+        ]
+      },
+      {
+        "id": "cat.siamese.idle.01",
+        "kind": "cat",
+        "src": "/assets/cats/siamese-seal/siamese-seal-idle-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 74,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": [
+          "siamese",
+          "seal",
+          "idle"
+        ]
+      },
+      {
+        "id": "cat.siamese.walk.01",
+        "kind": "cat",
+        "src": "/assets/cats/siamese-seal/siamese-seal-walk-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 20,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": [
+          "siamese",
+          "seal",
+          "walk"
+        ]
+      },
+      {
+        "id": "cat.siamese.run.01",
+        "kind": "cat",
+        "src": "/assets/cats/siamese-seal/siamese-seal-run-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 16,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": [
+          "siamese",
+          "seal",
+          "run"
+        ]
+      },
+      {
+        "id": "cat.siamese.attack.01",
+        "kind": "cat",
+        "src": "/assets/cats/siamese-seal/siamese-seal-attack-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 45,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "siamese",
+          "seal",
+          "attack"
+        ]
+      },
+      {
+        "id": "cat.siamese.fall.01",
+        "kind": "cat",
+        "src": "/assets/cats/siamese-seal/siamese-seal-fall-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 45,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "siamese",
+          "seal",
+          "fall"
+        ]
+      },
+      {
+        "id": "cat.siamese.groom.01",
+        "kind": "cat",
+        "src": "/assets/cats/siamese-seal/siamese-seal-groom-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 45,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "siamese",
+          "seal",
+          "groom"
+        ]
+      },
+      {
+        "id": "cat.siamese.hit.01",
+        "kind": "cat",
+        "src": "/assets/cats/siamese-seal/siamese-seal-hit-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 38,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "siamese",
+          "seal",
+          "hit"
+        ]
+      },
+      {
+        "id": "cat.siamese.jump.01",
+        "kind": "cat",
+        "src": "/assets/cats/siamese-seal/siamese-seal-jump-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 49,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "siamese",
+          "seal",
+          "jump"
+        ]
+      },
+      {
+        "id": "cat.siamese.land.01",
+        "kind": "cat",
+        "src": "/assets/cats/siamese-seal/siamese-seal-land-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 43,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "siamese",
+          "seal",
+          "land"
+        ]
+      },
+      {
+        "id": "cat.siamese.scratch.01",
+        "kind": "cat",
+        "src": "/assets/cats/siamese-seal/siamese-seal-scratch-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 43,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "siamese",
+          "seal",
+          "scratch"
+        ]
+      },
+      {
+        "id": "cat.siamese.sleep.01",
+        "kind": "cat",
+        "src": "/assets/cats/siamese-seal/siamese-seal-sleep-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 29,
+          "framesPerSecond": 25,
+          "playback": "hold"
+        },
+        "tags": [
+          "siamese",
+          "seal",
+          "sleep"
+        ]
+      },
+      {
+        "id": "cat.siamese.surprise.01",
+        "kind": "cat",
+        "src": "/assets/cats/siamese-seal/siamese-seal-surprise-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 40,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "siamese",
+          "seal",
+          "surprise"
+        ]
+      },
+      {
+        "id": "cat.siamese.scruff-lift.01",
+        "kind": "cat",
+        "src": "/assets/cats/siamese-seal/siamese-seal-scruff-lift-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 56,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "siamese",
+          "seal",
+          "scruff-lift"
+        ]
+      },
+      {
+        "id": "cat.tabby.idle.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby/orange-tabby-idle-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 74,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": [
+          "orange",
+          "tabby",
+          "idle"
+        ]
+      },
+      {
+        "id": "cat.tabby.walk.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby/orange-tabby-walk-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 20,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": [
+          "orange",
+          "tabby",
+          "walk"
+        ]
+      },
+      {
+        "id": "cat.tabby.run.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby/orange-tabby-run-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 16,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": [
+          "orange",
+          "tabby",
+          "run"
+        ]
+      },
+      {
+        "id": "cat.tabby.attack.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby/orange-tabby-attack-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 39,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "orange",
+          "tabby",
+          "attack"
+        ]
+      },
+      {
+        "id": "cat.tabby.fall.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby/orange-tabby-fall-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 51,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "orange",
+          "tabby",
+          "fall"
+        ]
+      },
+      {
+        "id": "cat.tabby.groom.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby/orange-tabby-groom-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 51,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "orange",
+          "tabby",
+          "groom"
+        ]
+      },
+      {
+        "id": "cat.tabby.hit.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby/orange-tabby-hit-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 31,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "orange",
+          "tabby",
+          "hit"
+        ]
+      },
+      {
+        "id": "cat.tabby.jump.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby/orange-tabby-jump-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 50,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "orange",
+          "tabby",
+          "jump"
+        ]
+      },
+      {
+        "id": "cat.tabby.land.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby/orange-tabby-land-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 44,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "orange",
+          "tabby",
+          "land"
+        ]
+      },
+      {
+        "id": "cat.tabby.scratch.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby/orange-tabby-scratch-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 49,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "orange",
+          "tabby",
+          "scratch"
+        ]
+      },
+      {
+        "id": "cat.tabby.sleep.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby/orange-tabby-sleep-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 29,
+          "framesPerSecond": 25,
+          "playback": "hold"
+        },
+        "tags": [
+          "orange",
+          "tabby",
+          "sleep"
+        ]
+      },
+      {
+        "id": "cat.tabby.surprise.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby/orange-tabby-surprise-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 37,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "orange",
+          "tabby",
+          "surprise"
+        ]
+      },
+      {
+        "id": "cat.tabby.scruff-lift.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby/orange-tabby-scruff-lift-01.png",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 57,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "orange",
+          "tabby",
+          "scruff-lift"
+        ]
       }
     ],
     "study": [],

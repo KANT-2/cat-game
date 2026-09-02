@@ -58,3 +58,21 @@ export async function loadAssetCatalog(url = "/assets/catalog.json"): Promise<As
   }
   return catalog;
 }
+
+/**
+ * 카탈로그에서 요청한 안정적인 리소스 ID의 런타임 경로를 찾는다.
+ *
+ * @param catalog - `loadAssetCatalog()`로 검증한 전체 카탈로그.
+ * @param id - 코드와 저장 데이터에서 사용하는 안정적인 asset ID.
+ * @returns ID에 등록된 앱 origin 기준 이미지 경로.
+ * @throws 어떤 번들에도 요청한 ID가 없으면 개발 중 누락을 드러내는 오류를 던진다.
+ */
+export function assetPath(catalog: AssetCatalogData, id: string): string {
+  for (const entries of Object.values(catalog.bundles)) {
+    const entry = entries.find((candidate) => candidate.id === id);
+    if (entry) {
+      return entry.src;
+    }
+  }
+  throw new Error(`Asset ID is not registered: ${id}`);
+}

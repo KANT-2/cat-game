@@ -10,7 +10,7 @@ export type CatBehaviorCommand =
 type SleepPhase = "holding" | "playing" | "waking" | null;
 
 type AmbientBehavior = {
-  action: Exclude<CatAction, "idle" | "fall" | "hit" | "land">;
+  action: Exclude<CatAction, "idle" | "fall" | "hit" | "land" | "scruffLift">;
   weight: number;
 };
 
@@ -46,6 +46,7 @@ const RETURN_DELAYS: Record<CatAction, readonly [minimum: number, range: number]
   scratch: [5, 3],
   sleep: [6, 4],
   surprise: [3, 2],
+  scruffLift: [2.5, 2],
 };
 
 /**

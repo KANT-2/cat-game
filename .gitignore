@@ -60,3 +60,7 @@ $RECYCLE.BIN/
 .cache/
 
 cat-sprite-project/
+
+# Tauri build and generated capability schemas
+/src-tauri/target/
+/src-tauri/gen/schemas/

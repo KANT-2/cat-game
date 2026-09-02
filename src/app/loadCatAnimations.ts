@@ -1,9 +1,10 @@
 import type { AssetCatalogData } from "../assets/AssetCatalog";
 import type { LoadedSpriteSheet } from "../assets/SpriteSheetLoader";
 import { findAssetEntry, loadSpriteSheet } from "../assets/SpriteSheetLoader";
+import type { CatVariant } from "../domain/cats";
 import { CAT_ACTIONS, type CatAction, type CatAnimationSet } from "../game/entities/CatAnimations";
 
-export type CatVariant = "fluffy" | "ink";
+export type { CatVariant } from "../domain/cats";
 
 const CAT_ASSET_IDS: Record<CatVariant, Record<CatAction, string>> = {
   fluffy: {
@@ -19,6 +20,7 @@ const CAT_ASSET_IDS: Record<CatVariant, Record<CatAction, string>> = {
     scratch: "cat.fluffy.scratch.01",
     sleep: "cat.fluffy.sleep.01",
     surprise: "cat.fluffy.surprise.01",
+    scruffLift: "cat.fluffy.scruff-lift.01",
   },
   ink: {
     idle: "cat.ink.idle.01",
@@ -33,6 +35,22 @@ const CAT_ASSET_IDS: Record<CatVariant, Record<CatAction, string>> = {
     scratch: "cat.ink.scratch.01",
     sleep: "cat.ink.sleep.01",
     surprise: "cat.ink.surprise.01",
+    scruffLift: "cat.ink.scruff-lift.01",
+  },
+  siamese: {
+    idle: "cat.siamese.idle.01",
+    walk: "cat.siamese.walk.01",
+    run: "cat.siamese.run.01",
+    attack: "cat.siamese.attack.01",
+    fall: "cat.siamese.fall.01",
+    groom: "cat.siamese.groom.01",
+    hit: "cat.siamese.hit.01",
+    jump: "cat.siamese.jump.01",
+    land: "cat.siamese.land.01",
+    scratch: "cat.siamese.scratch.01",
+    sleep: "cat.siamese.sleep.01",
+    surprise: "cat.siamese.surprise.01",
+    scruffLift: "cat.siamese.scruff-lift.01",
   },
 };
 
@@ -61,7 +79,7 @@ export async function loadCatAnimations(
   };
 
   const idle = await loadAction("idle");
-  const [walk, run, attack, fall, groom, hit, jump, land, scratch, sleep, surprise] = await Promise.all([
+  const [walk, run, attack, fall, groom, hit, jump, land, scratch, sleep, surprise, scruffLift] = await Promise.all([
     loadAction("walk"),
     loadAction("run"),
     loadAction("attack"),
@@ -73,7 +91,8 @@ export async function loadCatAnimations(
     loadAction("scratch"),
     loadAction("sleep"),
     loadAction("surprise"),
+    loadAction("scruffLift"),
   ]);
 
-  return { idle, walk, run, attack, fall, groom, hit, jump, land, scratch, sleep, surprise };
+  return { idle, walk, run, attack, fall, groom, hit, jump, land, scratch, sleep, surprise, scruffLift };
 }

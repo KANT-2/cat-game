@@ -1,16 +1,28 @@
 import { Container, Graphics, Text } from "pixi.js";
-import { message } from "../../content/messages";
+import { type MessageId, message } from "../../content/messages";
+import type { GachaDrawResult, GachaReward } from "../../core/GameClient";
+import type { CatVariant } from "../../domain/cats";
+import { type GachaDrawCount, type GachaRewardId, gachaRewardDefinitions } from "../../domain/gacha";
 import type { GameState } from "../../domain/room";
 import { CanvasButton } from "../components/CanvasButton";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
 
-type GachaSceneOptions = { getState: () => GameState; onBack: () => void; onDraw: () => void };
+type GachaSceneOptions = {
+  getState: () => GameState;
+  onBack: () => void;
+  onDraw: (count: GachaDrawCount) => GachaDrawResult;
+  onSelectCat: (variant: CatVariant) => void;
+};
 
 export class GachaScene extends Container {
   private readonly content = new Container();
+  private readonly resultLayer = new Container();
+  private readonly gemsText = new Text({ text: "", style: textStyle(21, 0x3d2b22, "800") });
+  private readonly options: GachaSceneOptions;
 
   constructor(options: GachaSceneOptions) {
     super();
+    this.options = options;
     this.addChild(this.content);
     this.content.addChild(
       new Graphics().rect(0, 0, BASE_WIDTH, BASE_HEIGHT).fill(0xf8e5c5).rect(0, 680, BASE_WIDTH, 220).fill(0xdca76e),
@@ -19,7 +31,8 @@ export class GachaScene extends Container {
     this.buildPickup();
     this.buildMachine();
     this.buildRewards();
-    this.buildDrawButtons(options.onDraw);
+    this.buildDrawButtons();
+    this.content.addChild(this.resultLayer);
   }
 
   layout(width: number, height: number): void {
@@ -49,17 +62,17 @@ export class GachaScene extends Container {
     const coins = new Text({ text: state.coins.toLocaleString(), style: textStyle(21, 0x3d2b22, "800") });
     coins.anchor.set(1, 0.5);
     coins.position.set(1310, 51);
-    const gems = new Text({ text: String(state.gems), style: textStyle(21, 0x3d2b22, "800") });
-    gems.anchor.set(1, 0.5);
-    gems.position.set(1528, 51);
-    this.content.addChild(back, title, currency, coin, cash, coins, gems);
+    this.gemsText.text = String(state.gems);
+    this.gemsText.anchor.set(1, 0.5);
+    this.gemsText.position.set(1528, 51);
+    this.content.addChild(back, title, currency, coin, cash, coins, this.gemsText);
   }
 
   private buildPickup(): void {
     const panel = new Graphics().roundRect(42, 108, 470, 330, 24).fill(0xfff3dc).stroke({ color: 0x99603b, width: 4 });
     const heading = centeredText(message("gacha.pickup"), 277, 138, 23);
     this.content.addChild(panel, heading);
-    const labels = [message("gacha.blackCat"), message("gacha.pawCushion"), message("gacha.studyDesk")];
+    const labels = [message("gacha.blackCat"), message("gacha.studyDesk"), message("gacha.miniCatTower")];
     labels.forEach((label, index) => {
       const x = 65 + index * 145;
       const card = new Graphics().roundRect(x, 170, 132, 190, 15).fill(0xffe8c3).stroke({ color: 0xc48750, width: 3 });
@@ -125,14 +138,15 @@ export class GachaScene extends Container {
     const heading = centeredText(message("gacha.rewards"), 1372, 140, 22);
     this.content.addChild(panel, heading);
     for (let index = 0; index < 9; index += 1) {
+      const reward = gachaRewardDefinitions[index % gachaRewardDefinitions.length];
       const x = 1215 + (index % 3) * 108;
       const y = 180 + Math.floor(index / 3) * 150;
       const cell = new Graphics().roundRect(x, y, 94, 130, 12).fill(0xffead0).stroke({ color: 0xc38a58, width: 2 });
-      const art = rewardArt(index);
+      const art = rewardArt(reward.id);
       art.scale.set(0.58);
       art.position.set(x + 47, y + 64);
       const rarity = new Text({
-        text: rewardRarity(index),
+        text: reward.rarity,
         style: textStyle(13, 0x70442b, "800"),
       });
       rarity.position.set(x + 7, y + 6);
@@ -140,13 +154,13 @@ export class GachaScene extends Container {
     }
   }
 
-  private buildDrawButtons(onDraw: () => void): void {
+  private buildDrawButtons(): void {
     const once = new CanvasButton({
       label: message("gacha.drawOnce"),
       width: 270,
       height: 84,
       color: 0xcddf91,
-      onPress: onDraw,
+      onPress: () => this.draw(1),
     });
     once.position.set(505, 745);
     const ten = new CanvasButton({
@@ -154,11 +168,108 @@ export class GachaScene extends Container {
       width: 300,
       height: 84,
       color: 0xf3ad54,
-      onPress: onDraw,
+      onPress: () => this.draw(11),
     });
     ten.position.set(825, 745);
     const guarantee = centeredText(message("gacha.guarantee"), 800, 862, 17);
     this.content.addChild(once, ten, guarantee);
+  }
+
+  private draw(count: GachaDrawCount): void {
+    const result = this.options.onDraw(count);
+    if (!result.ok) {
+      this.showFailure();
+      return;
+    }
+    this.gemsText.text = String(result.remainingGems);
+    this.showResults(result);
+  }
+
+  private showFailure(): void {
+    this.clearResults();
+    const panel = new Graphics().roundRect(555, 330, 490, 220, 28).fill(0xfff4df).stroke({ color: 0x7b4b32, width: 5 });
+    const title = centeredText(message("gacha.insufficientGems"), 800, 395, 25);
+    const close = new CanvasButton({
+      label: message("gacha.resultClose"),
+      width: 180,
+      height: 56,
+      color: 0xd7ad7e,
+      onPress: () => this.clearResults(),
+    });
+    close.position.set(710, 455);
+    this.resultLayer.addChild(createBlocker(), panel, title, close);
+  }
+
+  private showResults(result: Extract<GachaDrawResult, { ok: true }>): void {
+    this.clearResults();
+    const blocker = createBlocker();
+    const panel = new Graphics().roundRect(310, 105, 980, 690, 34).fill(0xfff4df).stroke({ color: 0x7b4b32, width: 6 });
+    const title = centeredText(message("gacha.resultTitle", { count: result.rewards.length }), 800, 155, 30);
+    const guide = centeredText(message("gacha.resultStored"), 800, 198, 18);
+    this.resultLayer.addChild(blocker, panel, title, guide);
+
+    result.rewards.forEach((reward, index) => {
+      this.addResultCard(reward, index, result.rewards.length);
+    });
+    const unlockedCat = result.rewards.find(
+      (reward): reward is GachaReward & { catVariant: CatVariant } =>
+        reward.kind === "cat" && Boolean(reward.catVariant) && !reward.duplicate,
+    );
+    if (unlockedCat) {
+      const select = new CanvasButton({
+        label: message("gacha.selectMainCat"),
+        width: 260,
+        height: 58,
+        color: 0x91aa55,
+        onPress: () => this.options.onSelectCat(unlockedCat.catVariant),
+      });
+      select.position.set(650, 715);
+      this.resultLayer.addChild(select);
+      return;
+    }
+    const close = new CanvasButton({
+      label: message("gacha.resultClose"),
+      width: 200,
+      height: 58,
+      color: 0xd7ad7e,
+      onPress: () => this.clearResults(),
+    });
+    close.position.set(700, 715);
+    this.resultLayer.addChild(close);
+  }
+
+  private addResultCard(reward: GachaReward, index: number, total: number): void {
+    const columns = total === 1 ? 1 : 4;
+    const cardWidth = total === 1 ? 280 : 205;
+    const x = total === 1 ? 660 : 370 + (index % columns) * 220;
+    const y = total === 1 ? 280 : 235 + Math.floor(index / columns) * 145;
+    const card = new Graphics()
+      .roundRect(x, y, cardWidth, total === 1 ? 300 : 130, 20)
+      .fill(rarityColor(reward.rarity))
+      .stroke({ color: 0x8a5738, width: 3 });
+    const rarity = new Text({ text: reward.rarity, style: textStyle(16, 0x70442b, "800") });
+    rarity.position.set(x + 12, y + 10);
+    const art = rewardArt(reward.id);
+    art.scale.set(total === 1 ? 1.15 : 0.58);
+    art.position.set(x + cardWidth / 2, y + (total === 1 ? 145 : 65));
+    const rewardName = message(rewardNameMessages[reward.id]);
+    const name = centeredText(rewardName, x + cardWidth / 2, y + (total === 1 ? 245 : 105), total === 1 ? 20 : 14);
+    this.resultLayer.addChild(card, rarity, art, name);
+    if (reward.duplicate) {
+      const duplicate = centeredText(
+        message("gacha.duplicateExchange", { amount: reward.exchangeGems }),
+        x + cardWidth / 2,
+        y + (total === 1 ? 275 : 120),
+        total === 1 ? 16 : 12,
+      );
+      this.resultLayer.addChild(duplicate);
+    }
+  }
+
+  private clearResults(): void {
+    this.resultLayer.removeChildren().forEach((child) => {
+      child.destroy({ children: true });
+    });
   }
 }
 
@@ -183,18 +294,6 @@ function drawMiniCat(color: number): Graphics {
     .circle(9, -13, 3)
     .fill(0xffd36c);
 }
-function drawPaw(): Graphics {
-  return new Graphics()
-    .circle(0, 8, 28)
-    .fill(0xf4bc65)
-    .stroke({ color: 0x855133, width: 3 })
-    .circle(-24, -22, 10)
-    .circle(-8, -32, 10)
-    .circle(10, -32, 10)
-    .circle(26, -20, 10)
-    .fill(0xf4bc65)
-    .stroke({ color: 0x855133, width: 2 });
-}
 function drawDesk(): Graphics {
   return new Graphics()
     .rect(-35, -15, 70, 35)
@@ -210,27 +309,84 @@ function pickupArt(index: number): Graphics {
     return drawMiniCat(0x343434);
   }
   if (index === 1) {
-    return drawPaw();
+    return drawDesk();
   }
-  return drawDesk();
+  return drawCatTower();
 }
 
-function rewardArt(index: number): Graphics {
-  if (index % 3 === 0) {
-    return drawMiniCat(index === 0 ? 0x333333 : 0xd69251);
+function rewardArt(rewardId: GachaRewardId): Graphics {
+  if (rewardId === "cat.ink") {
+    return drawMiniCat(0x333333);
   }
-  if (index % 3 === 1) {
-    return drawPaw();
+  if (rewardId === "furniture.desk") {
+    return drawDesk();
   }
-  return drawDesk();
+  if (rewardId === "furniture.catTower") {
+    return drawCatTower();
+  }
+  if (rewardId === "decor.plant") {
+    return drawPlant();
+  }
+  return drawSofa();
 }
 
-function rewardRarity(index: number): string {
-  if (index === 0) {
-    return "SSR";
-  }
-  if (index < 3) {
-    return "SR";
-  }
-  return "N";
+function drawCatTower(): Graphics {
+  return new Graphics()
+    .roundRect(-28, 5, 56, 55, 7)
+    .fill(0xb77b49)
+    .stroke({ color: 0x553426, width: 3 })
+    .rect(-5, -52, 10, 58)
+    .fill(0x8d5b38)
+    .ellipse(0, -55, 38, 12)
+    .fill(0xc58e55)
+    .stroke({ color: 0x553426, width: 3 });
 }
+
+function drawPlant(): Graphics {
+  return new Graphics()
+    .roundRect(-24, 15, 48, 40, 8)
+    .fill(0xbc8259)
+    .stroke({ color: 0x553426, width: 3 })
+    .ellipse(-14, -5, 13, 31)
+    .ellipse(8, -14, 14, 36)
+    .ellipse(20, 0, 12, 28)
+    .fill(0x6f9858)
+    .stroke({ color: 0x43623b, width: 2 });
+}
+
+function drawSofa(): Graphics {
+  return new Graphics()
+    .roundRect(-48, -20, 96, 55, 13)
+    .fill(0xc97e62)
+    .stroke({ color: 0x553426, width: 3 })
+    .roundRect(-55, 8, 110, 35, 12)
+    .fill(0xd79a79)
+    .stroke({ color: 0x553426, width: 3 });
+}
+
+function createBlocker(): Graphics {
+  const blocker = new Graphics().rect(0, 0, BASE_WIDTH, BASE_HEIGHT).fill({ color: 0x2b1b13, alpha: 0.5 });
+  blocker.eventMode = "static";
+  return blocker;
+}
+
+function rarityColor(rarity: GachaReward["rarity"]): number {
+  if (rarity === "SSR") {
+    return 0xffdda0;
+  }
+  if (rarity === "SR") {
+    return 0xead4ef;
+  }
+  if (rarity === "R") {
+    return 0xd8e8f4;
+  }
+  return 0xffead0;
+}
+
+const rewardNameMessages: Record<GachaRewardId, MessageId> = {
+  "cat.ink": "gacha.blackCat",
+  "furniture.desk": "gacha.studyDesk",
+  "furniture.catTower": "gacha.miniCatTower",
+  "decor.plant": "shop.productPlant",
+  "furniture.sofa": "shop.productSofa",
+};

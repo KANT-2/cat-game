@@ -1,6 +1,7 @@
 import { Container, Graphics, Text } from "pixi.js";
 import { message } from "../../content/messages";
-import type { PlacementCommand, PlacementResult } from "../../core/GameClient";
+import type { MoveFurnitureCommand, PlacementCommand, PlacementResult } from "../../core/GameClient";
+import type { CatVariant } from "../../domain/cats";
 import {
   type FurnitureKind,
   furnitureDefinitions,
@@ -10,19 +11,25 @@ import {
   ROOM_GRID_WIDTH,
   rotatedSize,
 } from "../../domain/room";
-import { gridCellPolygon, gridToScreen } from "../belt";
+import { gridCellPolygon, gridToScreen, screenToGrid } from "../belt";
 import { CLEARING_GRID, textStyle } from "../config";
-import { CatActor } from "../entities/CatActor";
-import type { CatAnimationSet } from "../entities/CatAnimations";
+import { CatActor, type CatDropTarget } from "../entities/CatActor";
+import type { CatAnimationLibrary } from "../entities/CatAnimations";
 import { furniturePresentation } from "../presentation/furniturePresentation";
 import { FurnitureView } from "./FurnitureView";
 
 type ForestClearingViewOptions = {
   getFurniture: () => PlacedFurniture[];
   onPlace: (command: PlacementCommand) => PlacementResult;
-  onRemove: (instanceId: string) => boolean;
+  onMove: (instanceId: string, command: MoveFurnitureCommand) => PlacementResult;
+  onSelectFurniture: (item: PlacedFurniture) => void;
   onToast: (message: string) => void;
-  catAnimations: CatAnimationSet;
+  getHomeCats: () => CatVariant[];
+  getActiveCat: () => CatVariant;
+  catAnimations: CatAnimationLibrary;
+  desktopWidget: boolean;
+  onCatFocusRequest: () => void;
+  onCatInteractionRegionChange: (region: { x: number; y: number; width: number; height: number }) => void;
 };
 
 export class ForestClearingView extends Container {
@@ -30,62 +37,90 @@ export class ForestClearingView extends Container {
   private readonly groundHitLayer = new Container({ label: "forest-ground-input" });
   private readonly gridLayer = new Container({ label: "forest-edit-grid" });
   private readonly selectionLayer = new Container({ label: "forest-selection" });
+  private readonly catDropLayer = new Container({ label: "forest-cat-drop" });
   private readonly entityLayer = new Container({ label: "forest-entities" });
   private readonly foregroundLayer = new Container({ label: "forest-foreground" });
   private readonly getFurniture: ForestClearingViewOptions["getFurniture"];
   private readonly onPlace: ForestClearingViewOptions["onPlace"];
-  private readonly onRemove: ForestClearingViewOptions["onRemove"];
+  private readonly onMove: ForestClearingViewOptions["onMove"];
+  private readonly onSelectFurniture: ForestClearingViewOptions["onSelectFurniture"];
   private readonly onToast: ForestClearingViewOptions["onToast"];
-  private readonly cat: CatActor;
+  private readonly getHomeCats: ForestClearingViewOptions["getHomeCats"];
+  private readonly getActiveCat: ForestClearingViewOptions["getActiveCat"];
+  private readonly catAnimations: CatAnimationLibrary;
+  private readonly desktopWidget: boolean;
+  private readonly onCatFocusRequest: ForestClearingViewOptions["onCatFocusRequest"];
+  private readonly onCatInteractionRegionChange: ForestClearingViewOptions["onCatInteractionRegionChange"];
+  private readonly cats = new Map<CatVariant, CatActor>();
+  private lastCatInteractionRegion = "";
   private editMode = false;
   private selectedFurniture: FurnitureKind | null = null;
   private placementRotation: 0 | 1 = 0;
+  private movingInstanceId: string | null = null;
+  private selectedShopItemId: PlacementCommand["shopItemId"];
   private hoveredCell: { x: number; y: number } | null = null;
   private catBubble: Container | null = null;
+  private catBubbleTarget: CatActor | null = null;
   private catBubbleTimer = 0;
 
   constructor(options: ForestClearingViewOptions) {
     super({ label: "forest-clearing" });
     this.getFurniture = options.getFurniture;
     this.onPlace = options.onPlace;
-    this.onRemove = options.onRemove;
+    this.onMove = options.onMove;
+    this.onSelectFurniture = options.onSelectFurniture;
     this.onToast = options.onToast;
+    this.getHomeCats = options.getHomeCats;
+    this.getActiveCat = options.getActiveCat;
+    this.catAnimations = options.catAnimations;
+    this.desktopWidget = options.desktopWidget;
+    this.onCatFocusRequest = options.onCatFocusRequest;
+    this.onCatInteractionRegionChange = options.onCatInteractionRegionChange;
     this.entityLayer.sortableChildren = true;
     this.addChild(
       this.backgroundLayer,
       this.groundHitLayer,
       this.gridLayer,
       this.selectionLayer,
+      this.catDropLayer,
       this.entityLayer,
       this.foregroundLayer,
     );
 
-    this.drawForest();
-    this.buildGroundGrid();
-    this.rebuildFurniture();
-
-    this.cat = new CatActor({
-      project: (x, y) => this.project(x, y),
-      canWalk: (x, y) => this.isAreaFree(x, y, 1, 1),
-      onTap: () => this.showCatBubble(),
-      animations: options.catAnimations,
-    });
-    this.entityLayer.addChild(this.cat);
+    if (!this.desktopWidget) {
+      this.drawForest();
+      this.buildGroundGrid();
+      this.rebuildFurniture();
+    }
+    this.syncCats();
   }
 
   update(deltaSeconds: number): void {
-    this.cat.update(deltaSeconds);
-    if (this.catBubble) {
-      this.catBubble.position.set(this.cat.x, this.cat.y - 130);
+    for (const cat of this.cats.values()) {
+      cat.update(deltaSeconds);
+    }
+    this.syncCatInteractionRegion();
+    if (this.catBubble && this.catBubbleTarget) {
+      this.catBubble.position.set(this.catBubbleTarget.x, this.catBubbleTarget.y - 130);
     }
   }
 
-  setPlacementMode(editMode: boolean, selected: FurnitureKind | null, rotation: 0 | 1): void {
+  setPlacementMode(
+    editMode: boolean,
+    selected: FurnitureKind | null,
+    rotation: 0 | 1,
+    movingInstanceId: string | null = null,
+    shopItemId?: PlacementCommand["shopItemId"],
+  ): void {
     this.editMode = editMode;
     this.selectedFurniture = selected;
     this.placementRotation = rotation;
+    this.movingInstanceId = movingInstanceId;
+    this.selectedShopItemId = shopItemId;
     this.gridLayer.visible = editMode;
-    this.cat.setPaused(editMode);
+    for (const cat of this.cats.values()) {
+      cat.setPaused(editMode);
+    }
     if (!editMode) {
       this.hoveredCell = null;
     }
@@ -93,12 +128,81 @@ export class ForestClearingView extends Container {
   }
 
   syncFurniture(): void {
+    if (this.desktopWidget) {
+      return;
+    }
     this.rebuildFurniture();
     this.updateSelection();
   }
 
+  /**
+   * 저장 상태의 홈 고양이 목록과 공터에 표시되는 고양이 배우를 일치시킨다.
+   *
+   * @remarks 기존 배우의 위치와 행동은 유지하고 새로 배치되거나 보관된 고양이만 추가·제거한다.
+   */
+  syncCats(): void {
+    const homeCats = this.desktopWidget ? [this.getActiveCat()] : this.getHomeCats();
+    for (const [variant, cat] of this.cats) {
+      if (homeCats.includes(variant)) {
+        continue;
+      }
+      if (this.catBubbleTarget === cat) {
+        this.removeCatBubble();
+      }
+      this.cats.delete(variant);
+      this.entityLayer.removeChild(cat);
+      cat.destroy({ children: true });
+    }
+
+    homeCats.forEach((variant, index) => {
+      if (this.cats.has(variant)) {
+        return;
+      }
+      const spawn = this.findCatSpawn(index);
+      const cat = new CatActor({
+        project: (x, y) => this.project(x, y),
+        unproject: (x, y) => screenToGrid(CLEARING_GRID, x, y),
+        canWalk: (x, y) => this.canCatWalk(variant, x, y),
+        onFocusRequest: this.desktopWidget ? this.onCatFocusRequest : () => {},
+        onLiftStart: () => this.removeCatBubble(),
+        onDragTargetChange: (target) => this.updateCatDropTarget(target),
+        onTap: () => this.showCatBubble(cat),
+        animations: this.catAnimations[variant],
+        initialGridX: spawn.x,
+        initialGridY: spawn.y,
+        label: `cat:${variant}`,
+      });
+      cat.setPaused(this.editMode);
+      this.cats.set(variant, cat);
+      this.entityLayer.addChild(cat);
+    });
+  }
+
   private project(x: number, y: number) {
     return gridToScreen(CLEARING_GRID, x, y);
+  }
+
+  private syncCatInteractionRegion(): void {
+    if (!this.desktopWidget) {
+      return;
+    }
+    const activeCat = this.cats.get(this.getActiveCat());
+    if (!activeCat) {
+      return;
+    }
+    const bounds = activeCat.getPointerInteractionRegion();
+    const region = {
+      x: Math.floor(bounds.x),
+      y: Math.floor(bounds.y),
+      width: Math.ceil(bounds.width),
+      height: Math.ceil(bounds.height),
+    };
+    const regionKey = `${region.x}:${region.y}:${region.width}:${region.height}`;
+    if (regionKey === this.lastCatInteractionRegion) {
+      return;
+    }
+    this.lastCatInteractionRegion = regionKey;
+    this.onCatInteractionRegionChange(region);
   }
 
   private drawForest(): void {
@@ -223,20 +327,17 @@ export class ForestClearingView extends Container {
   }
 
   private handleFurnitureTap(item: PlacedFurniture): void {
-    const presentation = furniturePresentation[item.kind];
-    const itemLabel = message(presentation.labelMessage);
     if (!this.editMode) {
-      this.onToast(message("furniture.description", { item: itemLabel }));
+      this.onSelectFurniture(item);
       return;
     }
-    if (this.onRemove(item.id)) {
-      this.onToast(message("furniture.stored", { item: itemLabel }));
-    }
+    this.onToast(message("furniture.finishCurrentPlacement"));
   }
 
   private handleGroundTap(x: number, y: number): void {
     if (!this.editMode) {
-      this.cat.walkTo(x, y);
+      const activeCat = this.cats.get(this.getActiveCat()) ?? this.cats.values().next().value;
+      activeCat?.walkTo(x, y);
       return;
     }
     if (!this.selectedFurniture) {
@@ -250,12 +351,15 @@ export class ForestClearingView extends Container {
       return;
     }
 
-    const result = this.onPlace({
-      kind: this.selectedFurniture,
-      x,
-      y,
-      rotation: this.placementRotation,
-    });
+    const result = this.movingInstanceId
+      ? this.onMove(this.movingInstanceId, { x, y, rotation: this.placementRotation })
+      : this.onPlace({
+          kind: this.selectedFurniture,
+          x,
+          y,
+          rotation: this.placementRotation,
+          shopItemId: this.selectedShopItemId,
+        });
     if (!result.ok) {
       this.onToast(
         message(result.reason === "outside-room" ? "furniture.outsideClearing" : "furniture.invalidPlacement"),
@@ -270,7 +374,66 @@ export class ForestClearingView extends Container {
   }
 
   private isAreaFree(x: number, y: number, width: number, height: number): boolean {
-    return isPlacementFree(this.getFurniture(), ROOM_GRID_WIDTH, ROOM_GRID_HEIGHT, x, y, width, height);
+    if (this.desktopWidget) {
+      return x >= 0 && y >= 0 && x + width <= ROOM_GRID_WIDTH && y + height <= ROOM_GRID_HEIGHT;
+    }
+    const furniture = this.movingInstanceId
+      ? this.getFurniture().filter((item) => item.id !== this.movingInstanceId)
+      : this.getFurniture();
+    return isPlacementFree(furniture, ROOM_GRID_WIDTH, ROOM_GRID_HEIGHT, x, y, width, height);
+  }
+
+  private canCatWalk(variant: CatVariant, x: number, y: number): boolean {
+    if (!this.isAreaFree(x, y, 1, 1)) {
+      return false;
+    }
+    return ![...this.cats].some(
+      ([otherVariant, cat]) =>
+        otherVariant !== variant && Math.round(cat.gridX) === Math.round(x) && Math.round(cat.gridY) === Math.round(y),
+    );
+  }
+
+  private findCatSpawn(index: number): { x: number; y: number } {
+    const candidates = [
+      { x: 4, y: 4 },
+      { x: 5, y: 4 },
+      { x: 3, y: 3 },
+      { x: 6, y: 3 },
+      { x: 4, y: 6 },
+      { x: 5, y: 6 },
+    ];
+    const ordered = [...candidates.slice(index), ...candidates.slice(0, index)];
+    return (
+      ordered.find(
+        (candidate) =>
+          this.isAreaFree(candidate.x, candidate.y, 1, 1) &&
+          ![...this.cats.values()].some(
+            (cat) => Math.round(cat.gridX) === candidate.x && Math.round(cat.gridY) === candidate.y,
+          ),
+      ) ?? { x: Math.min(index, ROOM_GRID_WIDTH - 1), y: ROOM_GRID_HEIGHT - 1 }
+    );
+  }
+
+  private updateCatDropTarget(target: CatDropTarget | null): void {
+    this.catDropLayer.removeChildren().forEach((child) => {
+      child.destroy();
+    });
+    if (
+      this.desktopWidget ||
+      !target ||
+      target.x < 0 ||
+      target.y < 0 ||
+      target.x >= ROOM_GRID_WIDTH ||
+      target.y >= ROOM_GRID_HEIGHT
+    ) {
+      return;
+    }
+    this.catDropLayer.addChild(
+      new Graphics()
+        .poly(gridCellPolygon(CLEARING_GRID, target.x, target.y))
+        .fill({ color: target.valid ? 0x78c96f : 0xd96e62, alpha: 0.5 })
+        .stroke({ color: target.valid ? 0x315f3a : 0x8b322c, width: 3 }),
+    );
   }
 
   private updateSelection(): void {
@@ -301,7 +464,7 @@ export class ForestClearingView extends Container {
     }
   }
 
-  private showCatBubble(): void {
+  private showCatBubble(cat: CatActor): void {
     if (this.catBubble) {
       this.removeCatBubble();
     }
@@ -319,7 +482,8 @@ export class ForestClearingView extends Container {
     label.anchor.set(0.5);
     label.position.set(0, -40);
     this.catBubble.addChild(label);
-    this.catBubble.position.set(this.cat.x, this.cat.y - 90);
+    this.catBubbleTarget = cat;
+    this.catBubble.position.set(cat.x, cat.y - 90);
     this.catBubble.zIndex = 10000;
     this.entityLayer.addChild(this.catBubble);
     window.clearTimeout(this.catBubbleTimer);
@@ -333,6 +497,7 @@ export class ForestClearingView extends Container {
     this.entityLayer.removeChild(this.catBubble);
     this.catBubble.destroy({ children: true });
     this.catBubble = null;
+    this.catBubbleTarget = null;
   }
 }
 

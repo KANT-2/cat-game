@@ -1,3 +1,5 @@
+import type { CatVariant } from "../domain/cats";
+import { drawGachaRewards, GACHA_DUPLICATE_CAT_GEMS, type GachaDrawCount, gachaCost } from "../domain/gacha";
 import {
   furnitureDefinitions,
   type GameState,
@@ -9,9 +11,13 @@ import {
 import { type ShopItemId, shopItemDefinitions } from "../domain/shop";
 import { quizDefinitions } from "../domain/study";
 import type {
+  CatHomeResult,
+  CatSelectionResult,
+  GachaDrawResult,
   GameClient,
   GameStateListener,
   GameStateRepository,
+  MoveFurnitureCommand,
   PlacementCommand,
   PlacementResult,
   PurchaseResult,
@@ -23,7 +29,10 @@ export class LocalGameClient implements GameClient {
   private state: GameState;
   private readonly listeners = new Set<GameStateListener>();
 
-  constructor(private readonly store: GameStateRepository) {
+  constructor(
+    private readonly store: GameStateRepository,
+    private readonly random: () => number = () => Math.random(),
+  ) {
     this.state = store.load();
   }
 
@@ -39,6 +48,16 @@ export class LocalGameClient implements GameClient {
   placeFurniture(command: PlacementCommand): PlacementResult {
     if (this.state.inventory[command.kind] <= 0) {
       return { ok: false, reason: "not-owned" };
+    }
+    if (command.shopItemId) {
+      const product = shopItemDefinitions[command.shopItemId];
+      if (
+        !product ||
+        product.furnitureKind !== command.kind ||
+        (this.state.shopInventory[command.shopItemId] ?? 0) <= 0
+      ) {
+        return { ok: false, reason: "not-owned" };
+      }
     }
     const definition = furnitureDefinitions[command.kind];
     const size = rotatedSize(definition, command.rotation);
@@ -69,6 +88,38 @@ export class LocalGameClient implements GameClient {
       ...this.state,
       furniture: [...this.state.furniture, { id: instanceId, ...command }],
       inventory: { ...this.state.inventory, [command.kind]: this.state.inventory[command.kind] - 1 },
+      shopInventory: command.shopItemId
+        ? { ...this.state.shopInventory, [command.shopItemId]: (this.state.shopInventory[command.shopItemId] ?? 0) - 1 }
+        : this.state.shopInventory,
+    };
+    this.commit();
+    return { ok: true, instanceId };
+  }
+
+  moveFurniture(instanceId: string, command: MoveFurnitureCommand): PlacementResult {
+    const existing = this.state.furniture.find((item) => item.id === instanceId);
+    if (!existing) {
+      return { ok: false, reason: "not-owned" };
+    }
+    const definition = furnitureDefinitions[existing.kind];
+    const size = rotatedSize(definition, command.rotation);
+    if (
+      command.x < 0 ||
+      command.y < 0 ||
+      command.x + size.width > ROOM_GRID_WIDTH ||
+      command.y + size.height > ROOM_GRID_HEIGHT
+    ) {
+      return { ok: false, reason: "outside-room" };
+    }
+    const otherFurniture = this.state.furniture.filter((item) => item.id !== instanceId);
+    if (
+      !isPlacementFree(otherFurniture, ROOM_GRID_WIDTH, ROOM_GRID_HEIGHT, command.x, command.y, size.width, size.height)
+    ) {
+      return { ok: false, reason: "occupied" };
+    }
+    this.state = {
+      ...this.state,
+      furniture: this.state.furniture.map((item) => (item.id === instanceId ? { ...item, ...command } : item)),
     };
     this.commit();
     return { ok: true, instanceId };
@@ -84,6 +135,9 @@ export class LocalGameClient implements GameClient {
       ...this.state,
       furniture,
       inventory: { ...this.state.inventory, [removed.kind]: this.state.inventory[removed.kind] + 1 },
+      shopInventory: removed.shopItemId
+        ? { ...this.state.shopInventory, [removed.shopItemId]: (this.state.shopInventory[removed.shopItemId] ?? 0) + 1 }
+        : this.state.shopInventory,
     };
     this.commit();
     return true;
@@ -108,6 +162,10 @@ export class LocalGameClient implements GameClient {
         ...this.state.inventory,
         [item.furnitureKind]: this.state.inventory[item.furnitureKind] + 1,
       },
+      shopInventory: {
+        ...this.state.shopInventory,
+        [itemId]: (this.state.shopInventory[itemId] ?? 0) + 1,
+      },
     };
     this.commit();
     return {
@@ -117,6 +175,79 @@ export class LocalGameClient implements GameClient {
       remainingCoins: this.state.coins,
       remainingGems: this.state.gems,
     };
+  }
+
+  drawGacha(count: GachaDrawCount): GachaDrawResult {
+    const cost = gachaCost(count);
+    if (this.state.gems < cost) {
+      return { ok: false, reason: "insufficient-gems" };
+    }
+
+    const ownedCats = [...this.state.ownedCats];
+    const inventory = { ...this.state.inventory };
+    const shopInventory = { ...this.state.shopInventory };
+    let gems = this.state.gems - cost;
+    const rewards = drawGachaRewards(count, this.random).map((definition) => {
+      let duplicate = false;
+      let exchangeGems = 0;
+      if (definition.kind === "cat" && definition.catVariant) {
+        duplicate = ownedCats.includes(definition.catVariant);
+        if (duplicate) {
+          exchangeGems = GACHA_DUPLICATE_CAT_GEMS;
+          gems += exchangeGems;
+        } else {
+          ownedCats.push(definition.catVariant);
+        }
+      } else if (definition.kind === "furniture" && definition.shopItemId) {
+        const item = shopItemDefinitions[definition.shopItemId];
+        inventory[item.furnitureKind] += 1;
+        shopInventory[definition.shopItemId] = (shopInventory[definition.shopItemId] ?? 0) + 1;
+      }
+      return {
+        id: definition.id,
+        rarity: definition.rarity,
+        kind: definition.kind,
+        catVariant: definition.catVariant,
+        shopItemId: definition.shopItemId,
+        duplicate,
+        exchangeGems,
+      };
+    });
+
+    this.state = { ...this.state, gems, ownedCats, inventory, shopInventory };
+    this.commit();
+    return { ok: true, rewards, remainingGems: gems };
+  }
+
+  selectCat(variant: CatVariant): CatSelectionResult {
+    if (!this.state.ownedCats.includes(variant)) {
+      return { ok: false, reason: "cat-not-owned" };
+    }
+    const homeCats = this.state.homeCats.includes(variant) ? this.state.homeCats : [...this.state.homeCats, variant];
+    if (this.state.activeCat === variant && homeCats === this.state.homeCats) {
+      return { ok: true, activeCat: variant };
+    }
+    this.state = { ...this.state, activeCat: variant, homeCats };
+    this.commit();
+    return { ok: true, activeCat: variant };
+  }
+
+  setCatHome(variant: CatVariant, visible: boolean): CatHomeResult {
+    if (!this.state.ownedCats.includes(variant)) {
+      return { ok: false, reason: "cat-not-owned" };
+    }
+    const currentlyVisible = this.state.homeCats.includes(variant);
+    if (currentlyVisible === visible) {
+      return { ok: true, homeCats: [...this.state.homeCats] };
+    }
+    const homeCats = visible
+      ? [...this.state.homeCats, variant]
+      : this.state.homeCats.filter((candidate) => candidate !== variant);
+    const activeCat =
+      !visible && this.state.activeCat === variant && homeCats.length > 0 ? homeCats[0] : this.state.activeCat;
+    this.state = { ...this.state, homeCats, activeCat };
+    this.commit();
+    return { ok: true, homeCats: [...homeCats] };
   }
 
   getQuiz(quizId: string): QuizView | null {
@@ -189,8 +320,11 @@ function cloneState(state: GameState): GameState {
   return {
     ...state,
     completedQuizIds: [...state.completedQuizIds],
+    ownedCats: [...state.ownedCats],
+    homeCats: [...state.homeCats],
     furniture: state.furniture.map((item) => ({ ...item })),
     inventory: { ...state.inventory },
+    shopInventory: { ...state.shopInventory },
   };
 }
 

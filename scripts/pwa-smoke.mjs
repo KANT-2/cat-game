@@ -1,5 +1,8 @@
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { chromium } from "playwright";
 
+const screenshotPath = join(tmpdir(), "cat-game-pwa-offline.png");
 const url = process.env.GAME_URL ?? "http://127.0.0.1:4173/";
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1600, height: 900 } });
@@ -46,7 +49,7 @@ await context.setOffline(true);
 await page.reload({ waitUntil: "domcontentloaded" });
 await page.locator("canvas").waitFor({ state: "visible" });
 await page.waitForTimeout(600);
-await page.screenshot({ path: "/tmp/cat-game-pwa-offline.png" });
+await page.screenshot({ path: screenshotPath });
 
 await browser.close();
 if (errors.length) {
@@ -54,4 +57,4 @@ if (errors.length) {
 }
 
 console.log("PWA smoke test passed");
-console.log("offline screenshot: /tmp/cat-game-pwa-offline.png");
+console.log(`offline screenshot: ${screenshotPath}`);

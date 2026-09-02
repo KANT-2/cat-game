@@ -1,4 +1,5 @@
 import type { LoadedSpriteSheet } from "../../assets/SpriteSheetLoader";
+import type { CatVariant } from "../../domain/cats";
 
 export const CAT_ACTIONS = [
   "idle",
@@ -13,8 +14,11 @@ export const CAT_ACTIONS = [
   "scratch",
   "sleep",
   "surprise",
+  "scruffLift",
 ] as const;
 
 export type CatAction = (typeof CAT_ACTIONS)[number];
 
 export type CatAnimationSet = Record<CatAction, LoadedSpriteSheet>;
+
+export type CatAnimationLibrary = Record<CatVariant, CatAnimationSet>;

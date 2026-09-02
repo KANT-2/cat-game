@@ -1,4 +1,6 @@
 import type { MessageId } from "../content/messages";
+import type { CatVariant } from "../domain/cats";
+import type { GachaDrawCount, GachaRarity, GachaRewardId } from "../domain/gacha";
 import type { FurnitureKind, GameState } from "../domain/room";
 import type { ShopItemId } from "../domain/shop";
 import type { QuizChoice } from "../domain/study";
@@ -9,7 +11,10 @@ export type PlacementCommand = {
   x: number;
   y: number;
   rotation: 0 | 1;
+  shopItemId?: ShopItemId;
 };
+
+export type MoveFurnitureCommand = { x: number; y: number; rotation: 0 | 1 };
 
 /** 가구 배치의 성공 결과 또는 UI가 처리할 수 있는 실패 이유다. */
 export type PlacementResult =
@@ -19,6 +24,24 @@ export type PlacementResult =
 export type PurchaseResult =
   | { ok: true; itemId: ShopItemId; furnitureKind: FurnitureKind; remainingCoins: number; remainingGems: number }
   | { ok: false; reason: "item-not-found" | "insufficient-coins" | "insufficient-gems" };
+
+export type GachaReward = {
+  id: GachaRewardId;
+  rarity: GachaRarity;
+  kind: "cat" | "furniture";
+  catVariant?: CatVariant;
+  shopItemId?: ShopItemId;
+  duplicate: boolean;
+  exchangeGems: number;
+};
+
+export type GachaDrawResult =
+  | { ok: true; rewards: GachaReward[]; remainingGems: number }
+  | { ok: false; reason: "insufficient-gems" };
+
+export type CatSelectionResult = { ok: true; activeCat: CatVariant } | { ok: false; reason: "cat-not-owned" };
+
+export type CatHomeResult = { ok: true; homeCats: CatVariant[] } | { ok: false; reason: "cat-not-owned" };
 
 /** 게임 시스템이 UI에 공개하는 퀴즈 표시 모델이다. 정답은 의도적으로 포함하지 않는다. */
 export type QuizView = {
@@ -103,6 +126,9 @@ export interface GameClient {
    */
   placeFurniture(command: PlacementCommand): PlacementResult;
 
+  /** 기존 가구를 인벤토리로 회수하지 않고 새 위치로 원자적으로 이동한다. 실패하면 원래 배치를 유지한다. */
+  moveFurniture(instanceId: string, command: MoveFurnitureCommand): PlacementResult;
+
   /**
    * 배치된 가구 인스턴스를 공터 상태에서 제거한다.
    *
@@ -124,6 +150,21 @@ export interface GameClient {
    * @remarks 성공한 구매만 상태를 저장하고 구독자에게 새 스냅샷을 알린다.
    */
   buyShopItem(itemId: ShopItemId): PurchaseResult;
+
+  /** 지폐를 차감하고 공개 확률과 10+1 보장 규칙에 따라 고양이 또는 가구 보상을 지급한다. */
+  drawGacha(count: GachaDrawCount): GachaDrawResult;
+
+  /** 보유한 고양이를 메인 공터에서 함께 지낼 고양이로 선택한다. */
+  selectCat(variant: CatVariant): CatSelectionResult;
+
+  /**
+   * 보유한 고양이를 홈 공터에 표시하거나 보관함으로 옮긴다.
+   *
+   * @param variant - 표시 상태를 바꿀 보유 고양이 종류.
+   * @param visible - `true`면 홈에 배치하고 `false`면 보관한다.
+   * @returns 성공 시 갱신된 홈 고양이 목록, 미보유 고양이면 실패 이유.
+   */
+  setCatHome(variant: CatVariant, visible: boolean): CatHomeResult;
 
   /**
    * UI가 렌더링할 수 있는 퀴즈 표시 모델을 조회한다.
