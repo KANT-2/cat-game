@@ -32,7 +32,7 @@ const DRAG_START_DISTANCE = 8;
 const LIFT_HOLD_FRAME_RATIO = 0.48;
 const DRAG_TAP_SUPPRESSION_MILLISECONDS = 250;
 const DRAG_LIFT_HEIGHT = 52;
-const DRAG_POSE_ACTION: CatAction = "fall";
+const DRAG_POSE_ACTION: CatAction = "scruffLift";
 
 function supportsPointerCapture(target: EventTarget | null): target is PointerCaptureTarget {
   if (!target) {
