@@ -25,6 +25,12 @@ body {
     linear-gradient(135deg, #3b251c, #241713);
 }
 
+:root[data-display-mode="desktop-widget"],
+:root[data-display-mode="desktop-widget"] body,
+:root[data-display-mode="desktop-widget"] #app {
+  background: transparent;
+}
+
 canvas {
   display: block;
   width: 100%;

@@ -23,6 +23,7 @@ type ForestClearingViewOptions = {
   onRemove: (instanceId: string) => boolean;
   onToast: (message: string) => void;
   catAnimations: CatAnimationSet;
+  desktopWidget: boolean;
 };
 
 export class ForestClearingView extends Container {
@@ -36,6 +37,7 @@ export class ForestClearingView extends Container {
   private readonly onPlace: ForestClearingViewOptions["onPlace"];
   private readonly onRemove: ForestClearingViewOptions["onRemove"];
   private readonly onToast: ForestClearingViewOptions["onToast"];
+  private readonly desktopWidget: boolean;
   private readonly cat: CatActor;
   private editMode = false;
   private selectedFurniture: FurnitureKind | null = null;
@@ -50,6 +52,7 @@ export class ForestClearingView extends Container {
     this.onPlace = options.onPlace;
     this.onRemove = options.onRemove;
     this.onToast = options.onToast;
+    this.desktopWidget = options.desktopWidget;
     this.entityLayer.sortableChildren = true;
     this.addChild(
       this.backgroundLayer,
@@ -60,9 +63,11 @@ export class ForestClearingView extends Container {
       this.foregroundLayer,
     );
 
-    this.drawForest();
-    this.buildGroundGrid();
-    this.rebuildFurniture();
+    if (!this.desktopWidget) {
+      this.drawForest();
+      this.buildGroundGrid();
+      this.rebuildFurniture();
+    }
 
     this.cat = new CatActor({
       project: (x, y) => this.project(x, y),
@@ -93,6 +98,9 @@ export class ForestClearingView extends Container {
   }
 
   syncFurniture(): void {
+    if (this.desktopWidget) {
+      return;
+    }
     this.rebuildFurniture();
     this.updateSelection();
   }
@@ -270,6 +278,9 @@ export class ForestClearingView extends Container {
   }
 
   private isAreaFree(x: number, y: number, width: number, height: number): boolean {
+    if (this.desktopWidget) {
+      return x >= 0 && y >= 0 && x + width <= ROOM_GRID_WIDTH && y + height <= ROOM_GRID_HEIGHT;
+    }
     return isPlacementFree(this.getFurniture(), ROOM_GRID_WIDTH, ROOM_GRID_HEIGHT, x, y, width, height);
   }
 

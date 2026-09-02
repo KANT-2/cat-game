@@ -80,6 +80,6 @@ npm run build
 
 ## 선택적 데스크톱 호스트
 
-`src-tauri/`는 동일한 Vite 빌드를 WebView에 표시하는 플랫폼 어댑터다. 항상 위 같은 운영체제 창
-정책을 소유하며 게임 규칙이나 PixiJS 장면을 복제하지 않는다. 현재 범위와 실행 방법은
-`docs/DESKTOP_HOST.md`에 기록한다.
+`src-tauri/`는 동일한 Vite 빌드를 WebView에 표시하는 플랫폼 어댑터다. Windows의 항상 위·투명·무테
+창과 트레이 같은 운영체제 정책을 소유하며 게임 규칙이나 PixiJS 장면을 복제하지 않는다. 현재 범위와
+실행 방법은 `docs/DESKTOP_HOST.md`에 기록한다.

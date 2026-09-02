@@ -17,6 +17,7 @@
     "assets:check": "node scripts/check-assets.mjs",
     "test": "vitest run",
     "smoke": "node scripts/smoke.mjs",
+    "smoke:desktop": "node scripts/desktop-smoke.mjs",
     "smoke:pwa": "node scripts/pwa-smoke.mjs",
     "desktop:config:check": "node scripts/check-desktop-config.mjs",
     "desktop:check": "npm run desktop:config:check && cargo check --manifest-path src-tauri/Cargo.toml",
