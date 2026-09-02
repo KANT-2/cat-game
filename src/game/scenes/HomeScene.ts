@@ -35,7 +35,15 @@ export class HomeScene extends Container {
   private screenWidth = BASE_WIDTH;
   private screenHeight = BASE_HEIGHT;
 
-  constructor(gameClient: GameClient, catAnimations: CatAnimationSet, options: { desktopWidget?: boolean } = {}) {
+  constructor(
+    gameClient: GameClient,
+    catAnimations: CatAnimationSet,
+    options: {
+      desktopWidget?: boolean;
+      onCatFocusRequest?: () => void;
+      onCatInteractionRegionChange?: (region: { x: number; y: number; width: number; height: number }) => void;
+    } = {},
+  ) {
     super();
     this.gameClient = gameClient;
     this.catAnimations = catAnimations;
@@ -47,6 +55,8 @@ export class HomeScene extends Container {
       onToast: (message) => this.notify(message),
       catAnimations,
       desktopWidget: options.desktopWidget ?? false,
+      onCatFocusRequest: options.onCatFocusRequest ?? (() => {}),
+      onCatInteractionRegionChange: options.onCatInteractionRegionChange ?? (() => {}),
     });
     this.clearingViewport.addChild(this.clearing);
     this.addChild(this.clearingViewport, this.uiLayer, this.modalLayer, this.toastLayer);

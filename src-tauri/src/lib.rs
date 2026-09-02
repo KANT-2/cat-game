@@ -3,6 +3,10 @@ mod windows_widget;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![
+            windows_widget::focus_widget,
+            windows_widget::set_widget_interaction_region
+        ])
         .setup(|_app| {
             #[cfg(target_os = "windows")]
             {

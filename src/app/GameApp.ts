@@ -21,7 +21,12 @@ export class GameApp {
     this.home = home;
   }
 
-  static async create(mount: HTMLElement, displayMode: AppDisplayMode = "game"): Promise<GameApp> {
+  static async create(
+    mount: HTMLElement,
+    displayMode: AppDisplayMode = "game",
+    onCatFocusRequest: () => void = () => {},
+    onCatInteractionRegionChange: (region: { x: number; y: number; width: number; height: number }) => void = () => {},
+  ): Promise<GameApp> {
     const renderer = new Application();
     await renderer.init({
       resizeTo: window,
@@ -74,6 +79,8 @@ export class GameApp {
     const gameClient = new LocalGameClient(new GameStateStore());
     const home = new HomeScene(gameClient, catAnimations, {
       desktopWidget: displayMode === "desktop-widget",
+      onCatFocusRequest,
+      onCatInteractionRegionChange,
     });
     renderer.stage.addChildAt(home, 0);
     const game = new GameApp(renderer, home);
