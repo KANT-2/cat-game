@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#fff4a8" />
+    </marker>
+  </defs>
+
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke">
+    <path d="M 800 62 L 800 504" stroke="#fff4a8" stroke-width="4" stroke-dasharray="12 12" marker-end="url(#arrow)" />
+    <circle cx="800" cy="560" r="13" fill="#ffdf5d" stroke="#4b321f" stroke-width="4" />
+    <path d="M 0 560 H 1600" stroke="#ffdf5d" stroke-width="5" stroke-dasharray="18 12" />
+
+    <path d="M 180 560 L 20 860 H 1580 L 1420 560 Z" fill="#75d7ff" fill-opacity="0.08" stroke="#75d7ff" stroke-width="4" />
+    <path d="M 127 660 H 1473" stroke="#8fffc1" stroke-width="3" stroke-dasharray="12 12" />
+    <path d="M 73 760 H 1527" stroke="#8fffc1" stroke-width="3" stroke-dasharray="12 12" />
+    <path d="M 20 860 H 1580" stroke="#8fffc1" stroke-width="4" />
+
+    <path d="M 600 710 H 1000" stroke="#ff9bbb" stroke-width="3" />
+    <path d="M 800 690 V 730" stroke="#ff9bbb" stroke-width="3" />
+    <ellipse cx="800" cy="710" rx="135" ry="40" stroke="#ff9bbb" stroke-width="4" stroke-dasharray="10 8" />
+  </g>
+
+  <g font-family="Arial, Noto Sans KR, sans-serif" font-weight="700" paint-order="stroke" stroke="#2c211a" stroke-width="5" stroke-linejoin="round">
+    <text x="824" y="548" fill="#ffdf5d" font-size="28">지평선 중심 (800, 560)</text>
+    <text x="30" y="548" fill="#ffdf5d" font-size="25">지평선 y=560</text>
+    <text x="34" y="650" fill="#8fffc1" font-size="23">먼 영역 · scale 0.78</text>
+    <text x="34" y="750" fill="#8fffc1" font-size="23">중앙 영역</text>
+    <text x="34" y="850" fill="#8fffc1" font-size="23">가까운 영역 · scale 1.00</text>
+    <text x="1020" y="704" fill="#ff9bbb" font-size="24">1차 합성 시안 위치 (800, 710)</text>
+    <text x="830" y="90" fill="#fff4a8" font-size="25">부드러운 위쪽 중앙 광원</text>
+  </g>
+
+  <g transform="translate(1160 110)">
+    <rect width="390" height="168" rx="22" fill="#211b18" fill-opacity="0.78" stroke="#ffffff" stroke-opacity="0.7" stroke-width="2" />
+    <text x="24" y="39" fill="#ffffff" font-family="Arial, Noto Sans KR, sans-serif" font-size="23" font-weight="700">카메라 승인 기준</text>
+    <text x="24" y="75" fill="#ffffff" font-family="Arial, Noto Sans KR, sans-serif" font-size="19">낮은 횡스크롤 벨트뷰</text>
+    <text x="24" y="106" fill="#ffffff" font-family="Arial, Noto Sans KR, sans-serif" font-size="19">탑뷰·아이소메트릭 금지</text>
+    <text x="24" y="137" fill="#ffffff" font-family="Arial, Noto Sans KR, sans-serif" font-size="19">그림자는 런타임에서 합성</text>
+  </g>
+</svg>

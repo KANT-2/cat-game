@@ -35,7 +35,7 @@ if (box?.width !== 1600 || box.height !== 900) {
 
 await page.screenshot({ path: screenshotPath("cat-game-home.png") });
 
-await page.mouse.move(728, 590);
+await page.mouse.move(600, 610);
 await page.mouse.down();
 await page.mouse.move(930, 560, { steps: 8 });
 await page.waitForTimeout(650);
@@ -226,6 +226,7 @@ compactPage.on("console", (message) => {
 compactPage.on("pageerror", (error) => errors.push(`compact page: ${error.message}`));
 await compactPage.goto(process.env.GAME_URL ?? "http://127.0.0.1:5173/", { waitUntil: "networkidle" });
 await compactPage.locator("canvas").waitFor({ state: "visible" });
+await compactPage.waitForTimeout(4800);
 const compactBox = await compactPage.locator("canvas").boundingBox();
 if (compactBox?.width !== 1024 || compactBox.height !== 640) {
   throw new Error(`unexpected compact canvas bounds: ${JSON.stringify(compactBox)}`);

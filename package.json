@@ -15,6 +15,7 @@
     "quality:fix": "node scripts/quality-fix.mjs",
     "structure:check": "node scripts/check-boundaries.mjs",
     "assets:check": "node scripts/check-assets.mjs",
+    "art:camera-reference": "node scripts/export-forest-camera-reference.mjs",
     "test": "vitest run",
     "smoke": "node scripts/smoke.mjs",
     "smoke:desktop": "node scripts/desktop-smoke.mjs",

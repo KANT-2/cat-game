@@ -1017,6 +1017,68 @@
         ]
       }
     ],
+    "home-environment": [
+      {
+        "id": "background.forest.clearing-day.01",
+        "kind": "background",
+        "src": "/assets/environment/forest-clearing-day-01.webp",
+        "tags": ["forest", "clearing", "day", "belt-view", "watercolor"]
+      },
+      {
+        "id": "furniture.sofa.cat-rug.01",
+        "kind": "furniture",
+        "src": "/assets/environment/furniture-sofa-rug-01.png",
+        "anchor": { "x": 0.5, "y": 0.94 },
+        "tags": ["sofa", "rug", "calico", "transparent", "outdoor"]
+      },
+      {
+        "id": "furniture.desk.low-table.01",
+        "kind": "furniture",
+        "src": "/assets/environment/furniture-low-table-01.png",
+        "anchor": { "x": 0.5, "y": 0.94 },
+        "tags": ["desk", "table", "wood", "transparent", "outdoor"]
+      },
+      {
+        "id": "furniture.plant.flower-bush.01",
+        "kind": "furniture",
+        "src": "/assets/environment/furniture-flower-bush-01.png",
+        "anchor": { "x": 0.5, "y": 0.97 },
+        "tags": ["plant", "shrub", "flowers", "transparent", "forest"]
+      },
+      {
+        "id": "furniture.cat-tree.scratch-post.01",
+        "kind": "furniture",
+        "src": "/assets/environment/furniture-cat-tree-01.png",
+        "anchor": { "x": 0.5, "y": 0.98 },
+        "tags": ["cat-tree", "scratch-post", "wood", "transparent", "outdoor"]
+      },
+      {
+        "id": "furniture.bed.paw-cushion.01",
+        "kind": "furniture",
+        "src": "/assets/environment/furniture-paw-bed-01.png",
+        "anchor": { "x": 0.5, "y": 0.94 },
+        "tags": ["bed", "paw", "cushion", "transparent", "outdoor"]
+      },
+      {
+        "id": "background.alley.day.01",
+        "kind": "background",
+        "src": "/assets/environment/alley-day-01.webp",
+        "tags": ["alley", "day", "alternate-theme", "watercolor"]
+      },
+      {
+        "id": "background.room.day.01",
+        "kind": "background",
+        "src": "/assets/environment/room-day-01.webp",
+        "tags": ["room", "day", "alternate-theme", "watercolor"]
+      },
+      {
+        "id": "environment.alley.cardboard-box.01",
+        "kind": "environment",
+        "src": "/assets/environment/alley-cardboard-box-01.webp",
+        "anchor": { "x": 0.5, "y": 0.97 },
+        "tags": ["alley", "cardboard", "box", "transparent", "alternate-theme"]
+      }
+    ],
     "study": [],
     "common-ui": [
       {

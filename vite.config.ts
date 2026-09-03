@@ -3,6 +3,14 @@ import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   clearScreen: false,
+  build: {
+    rollupOptions: {
+      input: {
+        game: new URL("./index.html", import.meta.url).pathname,
+        desktopWidget: new URL("./desktop-widget.html", import.meta.url).pathname,
+      },
+    },
+  },
   server: {
     port: 5173,
     strictPort: true,
@@ -38,7 +46,7 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: "/index.html",
-        globPatterns: ["**/*.{js,css,html,json,png,svg,woff2}"],
+        globPatterns: ["**/*.{js,css,html,json,png,webp,svg,woff2}"],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         cleanupOutdatedCaches: true,
         clientsClaim: true,

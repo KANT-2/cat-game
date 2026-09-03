@@ -19,6 +19,7 @@ main.ts
 public/assets/            빌드에 포함되는 이미지와 카탈로그
 src/assets/               카탈로그를 읽는 기술 계약
 src/content/              메시지 ID 타입과 Canvas 런타임 문구
+src/desktop/              게임 상태와 격자를 사용하지 않는 데스크톱 전용 PixiJS 화면
 src/pwa/                  설치와 service worker 연결
 src-tauri/                후속 데스크톱 창 기능을 격리한 선택적 호스트
 ```
@@ -35,6 +36,11 @@ src-tauri/                후속 데스크톱 창 기능을 격리한 선택적 
 | 공동 연결부 | `src/app`, `src/main.ts`, `src/services`, `src/pwa`, 빌드 설정 | 구현체 조립, 저장소, PWA 수명주기 | 한 명이 장기간 독점하지 않고 작은 통합 PR로 변경 |
 
 `src/game/presentation`의 색상과 라벨은 현재 절차형 프로토타입을 위한 UI 표시 데이터다. 실제 이미지 경로는 이곳에 넣지 않고 리소스 카탈로그의 안정적인 ID를 사용한다.
+
+`desktop-widget.html → desktop-main.ts → DesktopWidgetApp → src/desktop`은 게임 진입점과 별도 번들로
+구성한다. 데스크톱 화면은 `GameClient`, `GameStateStore`, `HomeScene`과 숲 격자를 사용하지 않으며,
+공유 리소스 카탈로그와 고양이 애니메이션 타입만 재사용한다. Tauri 명령 호출은 `src/app/desktopWidgetHost.ts`에
+격리한다.
 
 ## GameClient 경계
 

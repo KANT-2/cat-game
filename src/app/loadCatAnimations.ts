@@ -52,6 +52,21 @@ const CAT_ASSET_IDS: Record<CatVariant, Record<CatAction, string>> = {
     surprise: "cat.siamese.surprise.01",
     scruffLift: "cat.siamese.scruff-lift.01",
   },
+  tabby: {
+    idle: "cat.tabby.idle.01",
+    walk: "cat.tabby.walk.01",
+    run: "cat.tabby.run.01",
+    attack: "cat.tabby.attack.01",
+    fall: "cat.tabby.fall.01",
+    groom: "cat.tabby.groom.01",
+    hit: "cat.tabby.hit.01",
+    jump: "cat.tabby.jump.01",
+    land: "cat.tabby.land.01",
+    scratch: "cat.tabby.scratch.01",
+    sleep: "cat.tabby.sleep.01",
+    surprise: "cat.tabby.surprise.01",
+    scruffLift: "cat.tabby.scruff-lift.01",
+  },
 };
 
 /**
