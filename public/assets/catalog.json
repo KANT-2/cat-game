@@ -363,63 +363,39 @@
         "tags": ["ink", "black", "surprise"]
       },
       {
-        "id": "ui.home.study.01",
+        "id": "ui.home.profile.02",
         "kind": "ui",
-        "src": "/assets/ui/home-menu/study.png",
+        "src": "/assets/ui/home-menu/profile-v2.png",
         "anchor": { "x": 0.5, "y": 0.5 }
       },
       {
-        "id": "ui.home.shop.01",
+        "id": "ui.home.study.02",
         "kind": "ui",
-        "src": "/assets/ui/home-menu/shop.png",
+        "src": "/assets/ui/home-menu/study-v2.png",
         "anchor": { "x": 0.5, "y": 0.5 }
       },
       {
-        "id": "ui.home.level-problems.01",
+        "id": "ui.home.daily-quest.02",
         "kind": "ui",
-        "src": "/assets/ui/home-menu/level-problems.png",
+        "src": "/assets/ui/home-menu/daily-quest-v2.png",
         "anchor": { "x": 0.5, "y": 0.5 }
       },
       {
-        "id": "ui.home.daily-quest.01",
+        "id": "ui.home.gacha.02",
         "kind": "ui",
-        "src": "/assets/ui/home-menu/daily-quest.png",
+        "src": "/assets/ui/home-menu/gacha-v2.png",
         "anchor": { "x": 0.5, "y": 0.5 }
       },
       {
-        "id": "ui.home.room-decor.01",
+        "id": "ui.home.house.02",
         "kind": "ui",
-        "src": "/assets/ui/home-menu/room-decor.png",
+        "src": "/assets/ui/home-menu/home-v2.png",
         "anchor": { "x": 0.5, "y": 0.5 }
       },
       {
-        "id": "ui.home.gacha.01",
+        "id": "ui.home.settings.02",
         "kind": "ui",
-        "src": "/assets/ui/home-menu/gacha.png",
-        "anchor": { "x": 0.5, "y": 0.5 }
-      },
-      {
-        "id": "ui.home.owned-collection.01",
-        "kind": "ui",
-        "src": "/assets/ui/home-menu/owned-collection.png",
-        "anchor": { "x": 0.5, "y": 0.5 }
-      },
-      {
-        "id": "ui.home.social-group.01",
-        "kind": "ui",
-        "src": "/assets/ui/home-menu/social-group.png",
-        "anchor": { "x": 0.5, "y": 0.5 }
-      },
-      {
-        "id": "ui.home.add-friend.01",
-        "kind": "ui",
-        "src": "/assets/ui/home-menu/add-friend.png",
-        "anchor": { "x": 0.5, "y": 0.5 }
-      },
-      {
-        "id": "ui.home.visit-garden.01",
-        "kind": "ui",
-        "src": "/assets/ui/home-menu/visit-garden.png",
+        "src": "/assets/ui/home-menu/settings-v2.png",
         "anchor": { "x": 0.5, "y": 0.5 }
       }
     ],
@@ -1055,6 +1031,83 @@
         "src": "/assets/loading/game-logo-01.png",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["logo", "game-title", "transparent", "watercolor"]
+      },
+      {
+        "id": "ui.scene.shop-showcase.01",
+        "kind": "ui",
+        "src": "/assets/ui/scenes/shop-furniture-showcase-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["shop", "furniture", "showcase", "watercolor"]
+      },
+      {
+        "id": "ui.scene.gacha-machine.01",
+        "kind": "ui",
+        "src": "/assets/ui/scenes/gacha-machine-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["gacha", "machine", "watercolor"]
+      },
+      {
+        "id": "ui.scene.gacha-room-backdrop.01",
+        "kind": "ui",
+        "src": "/assets/ui/scenes/gacha-room-backdrop-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["gacha", "room", "background", "watercolor"]
+      },
+      {
+        "id": "ui.scene.gacha-machine.02",
+        "kind": "ui",
+        "src": "/assets/ui/scenes/gacha-machine-02.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["gacha", "machine", "cream", "watercolor"]
+      },
+      {
+        "id": "ui.scene.gacha-mascot-environment.01",
+        "kind": "ui",
+        "src": "/assets/ui/scenes/gacha-mascot-environment-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["gacha", "cat", "environment", "watercolor"]
+      },
+      {
+        "id": "ui.scene.gacha-machine-cutout.01",
+        "kind": "ui",
+        "src": "/assets/ui/scenes/gacha-machine-cutout-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["gacha", "machine", "transparent", "watercolor"]
+      },
+      {
+        "id": "ui.scene.gacha-mascot-cutout.01",
+        "kind": "ui",
+        "src": "/assets/ui/scenes/gacha-mascot-cutout-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["gacha", "cat", "transparent", "watercolor"]
+      },
+      {
+        "id": "ui.scene.gacha-left-decor-cutout.01",
+        "kind": "ui",
+        "src": "/assets/ui/scenes/gacha-left-decor-cutout-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["gacha", "decor", "transparent", "watercolor"]
+      },
+      {
+        "id": "ui.scene.gacha-right-decor-cutout.01",
+        "kind": "ui",
+        "src": "/assets/ui/scenes/gacha-right-decor-cutout-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["gacha", "decor", "transparent", "watercolor"]
+      },
+      {
+        "id": "ui.common.currency-coin.01",
+        "kind": "ui",
+        "src": "/assets/ui/common/currency-coin-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["currency", "coin", "paw", "transparent", "watercolor"]
+      },
+      {
+        "id": "ui.common.back-button.01",
+        "kind": "ui",
+        "src": "/assets/ui/common/back-button-01.png",
+        "anchor": { "x": 0, "y": 0 },
+        "tags": ["button", "back", "transparent", "watercolor"]
       }
     ]
   }

@@ -8,20 +8,19 @@ afterEach(() => {
 });
 
 describe("GameStateStore", () => {
-  it("migrates legacy saves to the 100,000-gem economy with the Siamese cat stored", () => {
+  it("migrates legacy saves to the unified coin economy with the Siamese cat stored", () => {
     installStorage({ economyVersion: 1, coins: 321, gems: 8 });
 
     const state = new GameStateStore().load();
 
-    expect(state.economyVersion).toBe(2);
-    expect(state.coins).toBe(321);
-    expect(state.gems).toBe(100_000);
+    expect(state.economyVersion).toBe(3);
+    expect(state.coins).toBe(100_321);
     expect(state.ownedCats).toEqual(["fluffy", "siamese"]);
     expect(state.homeCats).toEqual(["fluffy"]);
     expect(state.activeCat).toBe("fluffy");
   });
 
-  it("preserves current currency and the selected owned cat", () => {
+  it("combines version 2 coins and gems while preserving the selected owned cat", () => {
     installStorage({
       economyVersion: 2,
       coins: 654,
@@ -32,10 +31,19 @@ describe("GameStateStore", () => {
 
     const state = new GameStateStore().load();
 
-    expect(state.gems).toBe(99_940);
+    expect(state.coins).toBe(100_594);
     expect(state.ownedCats).toEqual(["fluffy", "ink", "siamese"]);
     expect(state.homeCats).toEqual(["ink"]);
     expect(state.activeCat).toBe("ink");
+  });
+
+  it("preserves version 3 unified coins without a second currency", () => {
+    installStorage({ economyVersion: 3, coins: 777 });
+
+    const state = new GameStateStore().load();
+
+    expect(state.coins).toBe(777);
+    expect(state).not.toHaveProperty("gems");
   });
 
   it("preserves an explicit empty home while keeping cats owned", () => {

@@ -80,6 +80,28 @@ UI는 `reason`을 메시지 키로 변환해 보여 줄 뿐 충돌을 다시 판
 
 게임 시스템은 사용자 문장을 반환하지 않는다. UI가 `feedbackMessage`를 `ko.json`에서 조회한다. 처리할 수 없는 ID는 `ok: false`와 기계 판독 가능한 `reason`으로 반환한다.
 
+### 함수 작성형 과제와 데일리 퀘스트
+
+함수 작성형 과제는 UI가 함수 선언을 고정하고 본문만 `submitCodeChallenge()`로 전달한다. 로컬 클라이언트는 임의 코드를 실행하지 않고 허용된 풀이 형태를 테스트 결과로 변환한다. 서버 채점기로 교체할 때도 아래 결과 계약을 유지한다.
+
+```json
+{
+  "ok": true,
+  "passed": true,
+  "tests": [{ "input": 5, "expected": 15, "actual": 15, "passed": true }],
+  "firstCompletion": true,
+  "coinsAwarded": 50
+}
+```
+
+오늘 완료한 서로 다른 과제 ID는 `dailyCompletedTaskIds`에 기록한다. `claimDailyQuest()`와 `claimDailyBonus()`만 재화를 지급하며, `claimedDailyQuestIds`와 `dailyBonusClaimed`로 중복 수령을 막는다. 날짜가 바뀌면 데일리 필드만 초기화되고 전체 학습 진도는 유지된다.
+
+### 뽑기 보장과 방 테마
+
+학습 보상, 상점 구매, 고양이 뽑기는 모두 `coins` 단일 재화를 사용한다. 저장소는 `economyVersion: 2` 이하의 기존 `coins`와 `gems`를 합산해 `economyVersion: 3`의 `coins`로 마이그레이션한다. 벽지와 바닥재는 `shopInventory`에 상품 ID별로 저장하고 `applyRoomTheme()`가 보유 여부를 확인한 뒤 `activeWallpaper` 또는 `activeFloor`를 갱신한다. UI는 이 상태를 읽어 홈 배경을 다시 그릴 뿐 구매·보유 판정을 하지 않는다.
+
+사운드와 화면 움직임 설정은 `GameState.settings`에 저장한다. 고양이 기억은 `catMemories`에 별도로 저장하여 `clearCatMemories()`가 학습 기록, 가구, 고양이 보유 상태를 건드리지 않도록 한다.
+
 ## 상태와 저장
 
 `GameState`는 렌더 객체 없이 JSON으로 직렬화 가능한 값만 가진다.
@@ -228,8 +250,7 @@ Canvas 초기화 전에는 `src/style.css`의 짙은 갈색 앱 셸 배경이 �
   "ok": true,
   "itemId": "furniture.sofa",
   "furnitureKind": "sofa",
-  "remainingCoins": 995200,
-  "remainingGems": 8
+  "remainingCoins": 1095200
 }
 ```
 

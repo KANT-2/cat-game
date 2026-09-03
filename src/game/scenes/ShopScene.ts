@@ -1,19 +1,30 @@
-import { Container, Graphics, Text } from "pixi.js";
+import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
 import type { GameState } from "../../domain/room";
 import type { ShopItemId } from "../../domain/shop";
+import { BackButton } from "../components/BackButton";
 import { CanvasButton } from "../components/CanvasButton";
+import { createCozyPageBackground, createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
+import { createCoinIcon, createCurrencyBar } from "../components/CurrencyBar";
+import { layoutToFillViewport } from "../components/fullscreenLayout";
+import { applySmoothTextureSampling } from "../components/smoothSprite";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
 
-type ShopSceneOptions = { getState: () => GameState; onBack: () => void; onBuy: (itemId: ShopItemId | null) => void };
-type CategoryId = "furniture" | "food" | "wallpaper" | "floor" | "decor" | "special";
-type TabId = "recommended" | "new" | "popular" | "package";
+type ShopSceneOptions = {
+  getState: () => GameState;
+  onBack: () => void;
+  onBuy: (itemId: ShopItemId | null) => void;
+  heroArt: string;
+  backIcon: string;
+  coinIcon: string;
+};
+type CategoryId = "furniture" | "wallpaper" | "floor" | "decor";
+type TabId = "recommended" | "new" | "popular";
 type ProductKind =
   | "sofa"
   | "table"
   | "catTower"
   | "bed"
-  | "food"
   | "wallpaper"
   | "floor"
   | "curtain"
@@ -22,22 +33,19 @@ type ProductKind =
   | "decor"
   | "rug"
   | "package";
-type Product = { name: MessageId; price: string; kind: ProductKind; cash?: boolean; itemId?: ShopItemId };
+type Product = { name: MessageId; price: string; kind: ProductKind; itemId?: ShopItemId };
 
 const categories: Array<{ id: CategoryId; label: MessageId }> = [
   { id: "furniture", label: "shop.categoryFurnitureWithTower" },
-  { id: "food", label: "shop.categoryFood" },
   { id: "wallpaper", label: "shop.categoryWallpaper" },
   { id: "floor", label: "shop.categoryFloor" },
   { id: "decor", label: "shop.categoryDecor" },
-  { id: "special", label: "shop.categorySpecial" },
 ];
 
 const tabs: Array<{ id: TabId; label: MessageId }> = [
   { id: "recommended", label: "shop.tabRecommended" },
   { id: "new", label: "shop.tabNew" },
   { id: "popular", label: "shop.tabPopular" },
-  { id: "package", label: "shop.tabPackage" },
 ];
 
 const catalog: Record<CategoryId, Product[]> = {
@@ -47,48 +55,25 @@ const catalog: Record<CategoryId, Product[]> = {
     { name: "shop.productCatTower", price: "4,200", kind: "catTower", itemId: "furniture.catTower" },
     { name: "shop.productBed", price: "5,600", kind: "bed", itemId: "furniture.bed" },
     { name: "shop.productDesk", price: "3,900", kind: "table", itemId: "furniture.desk" },
-    { name: "shop.productPremiumTower", price: "90", kind: "catTower", cash: true, itemId: "furniture.premiumTower" },
-  ],
-  food: [
-    { name: "shop.productFood", price: "1,200", kind: "food" },
-    { name: "shop.productWaterBowl", price: "900", kind: "food" },
-    { name: "shop.productFishBowl", price: "1,500", kind: "food" },
-    { name: "shop.productWoodTray", price: "1,800", kind: "food" },
-    { name: "shop.productAutoFeeder", price: "55", kind: "food", cash: true },
-    { name: "shop.productPicnicSet", price: "2,400", kind: "food" },
+    { name: "shop.productPremiumTower", price: "90", kind: "catTower", itemId: "furniture.premiumTower" },
   ],
   wallpaper: [
-    { name: "shop.productCreamWall", price: "2,100", kind: "wallpaper" },
-    { name: "shop.productCloudWall", price: "2,400", kind: "wallpaper" },
-    { name: "shop.productForestWall", price: "2,800", kind: "wallpaper" },
-    { name: "shop.productFlowerWall", price: "2,600", kind: "wallpaper" },
-    { name: "shop.productNightWall", price: "70", kind: "wallpaper", cash: true },
-    { name: "shop.productCatWall", price: "3,000", kind: "wallpaper" },
+    { name: "shop.productCreamWall", price: "2,100", kind: "wallpaper", itemId: "wallpaper.cream" },
+    { name: "shop.productCloudWall", price: "2,400", kind: "wallpaper", itemId: "wallpaper.cloud" },
+    { name: "shop.productForestWall", price: "2,800", kind: "wallpaper", itemId: "wallpaper.forest" },
+    { name: "shop.productFlowerWall", price: "2,600", kind: "wallpaper", itemId: "wallpaper.flower" },
+    { name: "shop.productNightWall", price: "70", kind: "wallpaper", itemId: "wallpaper.night" },
+    { name: "shop.productCatWall", price: "3,000", kind: "wallpaper", itemId: "wallpaper.cat" },
   ],
   floor: [
-    { name: "shop.productOakFloor", price: "2,300", kind: "floor" },
-    { name: "shop.productCheckFloor", price: "2,600", kind: "floor" },
-    { name: "shop.productStoneFloor", price: "2,800", kind: "floor" },
-    { name: "shop.productCreamFloor", price: "2,100", kind: "floor" },
-    { name: "shop.productStarFloor", price: "65", kind: "floor", cash: true },
-    { name: "shop.productWalnutFloor", price: "3,100", kind: "floor" },
+    { name: "shop.productOakFloor", price: "2,300", kind: "floor", itemId: "floor.oak" },
+    { name: "shop.productCheckFloor", price: "2,600", kind: "floor", itemId: "floor.check" },
+    { name: "shop.productStoneFloor", price: "2,800", kind: "floor", itemId: "floor.stone" },
+    { name: "shop.productCreamFloor", price: "2,100", kind: "floor", itemId: "floor.cream" },
+    { name: "shop.productStarFloor", price: "65", kind: "floor", itemId: "floor.star" },
+    { name: "shop.productWalnutFloor", price: "3,100", kind: "floor", itemId: "floor.walnut" },
   ],
-  decor: [
-    { name: "shop.productCurtain", price: "2,100", kind: "curtain" },
-    { name: "shop.productPlant", price: "1,700", kind: "plant", itemId: "decor.plant" },
-    { name: "shop.productLamp", price: "1,900", kind: "lamp" },
-    { name: "shop.productFrame", price: "1,400", kind: "wallpaper" },
-    { name: "shop.productBooks", price: "1,600", kind: "decor" },
-    { name: "shop.productNeon", price: "75", kind: "lamp", cash: true },
-  ],
-  special: [
-    { name: "shop.productRug", price: "60", kind: "rug", cash: true },
-    { name: "shop.productPawCushion", price: "84", kind: "rug", cash: true },
-    { name: "shop.productCozyBundle", price: "250", kind: "package", cash: true },
-    { name: "shop.productStudyBundle", price: "270", kind: "package", cash: true },
-    { name: "shop.productCatBundle", price: "320", kind: "package", cash: true },
-    { name: "shop.productDailyBox", price: "30", kind: "package", cash: true },
-  ],
+  decor: [{ name: "shop.productPlant", price: "1,700", kind: "plant", itemId: "decor.plant" }],
 };
 
 export class ShopScene extends Container {
@@ -96,37 +81,55 @@ export class ShopScene extends Container {
   private readonly navigationLayer = new Container();
   private readonly productLayer = new Container();
   private readonly onBuy: (itemId: ShopItemId | null) => void;
+  private readonly getState: () => GameState;
+  private readonly onBack: () => void;
+  private readonly heroArt: string;
+  private readonly backIcon: string;
+  private readonly coinIcon: string;
+  private readonly headerLayer = new Container();
   private activeCategory: CategoryId = "furniture";
   private activeTab: TabId = "recommended";
 
   constructor(options: ShopSceneOptions) {
     super();
     this.onBuy = options.onBuy;
+    this.getState = options.getState;
+    this.onBack = options.onBack;
+    this.heroArt = options.heroArt;
+    this.backIcon = options.backIcon;
+    this.coinIcon = options.coinIcon;
     this.addChild(this.content);
     this.buildBackground();
-    this.buildHeader(options);
-    this.content.addChild(this.navigationLayer, this.productLayer);
+    this.content.addChild(this.headerLayer, this.navigationLayer, this.productLayer);
+    this.buildHeader();
     this.renderNavigation();
     this.renderProducts();
   }
 
+  /** 구매 직후 재화와 보유 수량을 현재 상태로 다시 그린다. */
+  refresh(): void {
+    this.buildHeader();
+    this.renderProducts();
+  }
+
   layout(width: number, height: number): void {
-    const scale = Math.min(width / BASE_WIDTH, height / BASE_HEIGHT);
-    this.content.scale.set(scale);
-    this.content.position.set((width - BASE_WIDTH * scale) / 2, (height - BASE_HEIGHT * scale) / 2);
+    layoutToFillViewport(this.content, width, height);
   }
 
   private buildBackground(): void {
-    this.content.addChild(
-      new Graphics().rect(0, 0, BASE_WIDTH, BASE_HEIGHT).fill(0xf8e5c3).rect(0, 790, BASE_WIDTH, 110).fill(0xd8a26b),
-    );
+    this.content.addChild(createCozyPageBackground(BASE_WIDTH, BASE_HEIGHT, 790));
   }
 
-  private buildHeader(options: ShopSceneOptions): void {
+  private buildHeader(): void {
+    this.clearLayer(this.headerLayer);
     const sign = new Graphics()
+      .roundRect(52, 31, 340, 98, 18)
+      .fill({ color: 0x4a2919, alpha: 0.25 })
       .roundRect(48, 24, 340, 98, 18)
       .fill(0xd9a266)
       .stroke({ color: 0x6c4028, width: 5 })
+      .roundRect(58, 34, 320, 78, 13)
+      .stroke({ color: 0xffdaa1, width: 2, alpha: 0.72 })
       .moveTo(80, 24)
       .lineTo(80, 0)
       .moveTo(356, 24)
@@ -135,35 +138,18 @@ export class ShopScene extends Container {
     const title = new Text({ text: message("shop.title"), style: textStyle(40, 0x4a2919, "800") });
     title.anchor.set(0.5);
     title.position.set(218, 73);
-    const state = options.getState();
-    const currency = new Graphics()
-      .roundRect(1030, 22, 520, 62, 25)
-      .fill(0xf3d4aa)
-      .stroke({ color: 0x70442b, width: 4 });
-    const coin = new Graphics().circle(1070, 53, 22).fill(0xf6bd39).stroke({ color: 0xa4601f, width: 4 });
-    const cash = new Graphics().roundRect(1320, 34, 52, 38, 7).fill(0x75a844).stroke({ color: 0x365b2b, width: 3 });
-    const coins = new Text({ text: state.coins.toLocaleString(), style: textStyle(21, 0x3d2b22, "800") });
-    coins.anchor.set(1, 0.5);
-    coins.position.set(1288, 53);
-    const gems = new Text({ text: String(state.gems), style: textStyle(21, 0x3d2b22, "800") });
-    gems.anchor.set(1, 0.5);
-    gems.position.set(1515, 53);
-    const back = new CanvasButton({
-      label: message("shop.back"),
-      width: 112,
-      height: 58,
-      color: 0xf3bd79,
-      onPress: options.onBack,
-    });
-    back.position.set(36, 820);
-    this.content.addChild(sign, title, currency, coin, cash, coins, gems, back);
+    const ornament = createTitleOrnament(153, 102, 130);
+    const state = this.getState();
+    const currency = createCurrencyBar(this.coinIcon, state.coins);
+    currency.container.position.set(1230, 22);
+    const back = new BackButton({ iconSrc: this.backIcon, size: 76, onPress: this.onBack });
+    back.position.set(28, 800);
+    this.headerLayer.addChild(sign, title, ornament, currency.container, back);
   }
 
   private renderNavigation(): void {
     this.clearLayer(this.navigationLayer);
-    this.navigationLayer.addChild(
-      new Graphics().roundRect(55, 145, 255, 575, 20).fill(0xf6dcb7).stroke({ color: 0x9a623b, width: 4 }),
-    );
+    this.navigationLayer.addChild(createCozyPanel(55, 145, 255, 630, { fill: 0xf6dcb7, border: 0x9a623b }));
     categories.forEach((category, index) => {
       const active = category.id === this.activeCategory;
       const button = new CanvasButton({
@@ -197,10 +183,7 @@ export class ShopScene extends Container {
     if (!category || !tab) {
       return;
     }
-    const headingPanel = new Graphics()
-      .roundRect(330, 145, 1215, 105, 20)
-      .fill(0xfff4dc)
-      .stroke({ color: 0xa96d43, width: 4 });
+    const headingPanel = createCozyPanel(330, 145, 1215, 190, { fill: 0xfff4dc, border: 0xa96d43 });
     const title = new Text({
       text: message("shop.viewTitle", { category: message(category.label), tab: message(tab.label) }),
       style: textStyle(28, 0x493022, "800"),
@@ -211,7 +194,16 @@ export class ShopScene extends Container {
       style: textStyle(17, 0x76533c, "600"),
     });
     description.position.set(370, 211);
-    this.productLayer.addChild(headingPanel, title, description);
+    const heroFrame = createCozyPanel(1115, 157, 405, 165, { fill: 0x5a321f, border: 0x8f5836, radius: 18 });
+    const hero = Sprite.from(this.heroArt);
+    applySmoothTextureSampling(hero);
+    hero.anchor.set(0.5);
+    hero.position.set(1318, 240);
+    hero.width = 245;
+    hero.height = 164;
+    const featured = new Text({ text: message("shop.badgePick"), style: textStyle(14, 0xffe9b2, "800") });
+    featured.position.set(1138, 175);
+    this.productLayer.addChild(headingPanel, title, description, heroFrame, hero, featured);
     this.productsForView().forEach((product, index) => {
       this.buildProductCard(product, index);
     });
@@ -225,9 +217,6 @@ export class ShopScene extends Container {
     if (this.activeTab === "popular") {
       return [...source].reverse();
     }
-    if (this.activeTab === "package") {
-      return packageProducts();
-    }
     return source;
   }
 
@@ -235,12 +224,10 @@ export class ShopScene extends Container {
     const column = index % 3;
     const row = Math.floor(index / 3);
     const x = 330 + column * 405;
-    const y = 270 + row * 255;
-    const card = new Graphics().roundRect(x, y, 380, 230, 18).fill(0xfff5e1).stroke({ color: 0xb77a4f, width: 3 });
+    const y = 355 + row * 210;
+    const card = createCozyPanel(x, y, 380, 195, { fill: 0xfff5e1, border: 0xb77a4f, radius: 18 });
     const badgeId = tabBadge(this.activeTab);
-    const badge = new Graphics()
-      .roundRect(x + 15, y + 15, 74, 28, 10)
-      .fill(this.activeTab === "package" ? 0x9b78a8 : 0xe98a48);
+    const badge = new Graphics().roundRect(x + 15, y + 15, 74, 28, 10).fill(0xe98a48);
     const badgeText = new Text({ text: message(badgeId), style: textStyle(13, 0xffffff, "800") });
     badgeText.anchor.set(0.5);
     badgeText.position.set(x + 52, y + 29);
@@ -248,22 +235,29 @@ export class ShopScene extends Container {
     name.anchor.set(0.5);
     name.position.set(x + 190, y + 37);
     const art = drawProduct(product.kind, index);
-    art.position.set(x + 120, y + 128);
-    const price = new Text({
-      text: message(product.cash ? "shop.cashPrice" : "shop.coinPrice", { amount: product.price }),
-      style: textStyle(18, product.cash ? 0x4e7a32 : 0x8b571e, "800"),
-    });
+    art.scale.set(0.82);
+    art.position.set(x + 120, y + 108);
+    const priceIcon = createCoinIcon(this.coinIcon, 28);
+    priceIcon.position.set(x + 215, y + 69);
+    const price = new Text({ text: product.price, style: textStyle(18, 0x8b571e, "800") });
     price.anchor.set(0.5);
-    price.position.set(x + 265, y + 113);
+    price.position.set(x + 290, y + 83);
+    const ownedCount = product.itemId ? (this.getState().shopInventory[product.itemId] ?? 0) : 0;
+    const owned = new Text({
+      text: message("shop.ownedCount", { count: ownedCount }),
+      style: textStyle(14, 0x6f7652, "700"),
+    });
+    owned.anchor.set(0.5);
+    owned.position.set(x + 265, y + 109);
     const buy = new CanvasButton({
-      label: message("shop.buy"),
+      label: message(ownedCount > 0 ? "shop.buyMore" : "shop.buy"),
       width: 140,
       height: 46,
       color: 0x91aa55,
       onPress: () => this.onBuy(product.itemId ?? null),
     });
-    buy.position.set(x + 195, y + 145);
-    this.productLayer.addChild(card, badge, badgeText, name, art, price, buy);
+    buy.position.set(x + 195, y + 132);
+    this.productLayer.addChild(card, badge, badgeText, name, art, priceIcon, price, owned, buy);
   }
 
   private selectCategory(category: CategoryId): void {
@@ -296,9 +290,6 @@ function tabDescription(tab: TabId): MessageId {
   if (tab === "popular") {
     return "shop.popularDescription";
   }
-  if (tab === "package") {
-    return "shop.packageDescription";
-  }
   return "shop.recommendedDescription";
 }
 
@@ -309,22 +300,7 @@ function tabBadge(tab: TabId): MessageId {
   if (tab === "popular") {
     return "shop.badgeHot";
   }
-  if (tab === "package") {
-    return "shop.badgePackage";
-  }
   return "shop.badgePick";
-}
-
-function packageProducts(): Product[] {
-  const names: MessageId[] = [
-    "shop.packageStarter",
-    "shop.packageCozy",
-    "shop.packagePremium",
-    "shop.packageDaily",
-    "shop.packageValue",
-    "shop.packageComplete",
-  ];
-  return names.map((name, index) => ({ name, price: String(120 + index * 35), kind: "package", cash: true }));
 }
 
 function drawProduct(kind: ProductKind, variant: number): Graphics {
@@ -359,15 +335,6 @@ function drawProduct(kind: ProductKind, variant: number): Graphics {
       .ellipse(0, -68, 42, 15)
       .fill(0xd89b58)
       .stroke({ color: 0x543426, width: 3 });
-  }
-  if (kind === "food") {
-    return art
-      .ellipse(-28, 15, 53, 27)
-      .fill(0xd3b189)
-      .stroke({ color: 0x543426, width: 4 })
-      .ellipse(38, 22, 38, 20)
-      .fill(accent)
-      .stroke({ color: 0x543426, width: 4 });
   }
   if (kind === "wallpaper") {
     return art

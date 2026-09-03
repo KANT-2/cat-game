@@ -1,4 +1,5 @@
 import { type CatVariant, DEFAULT_CAT_VARIANT } from "./cats";
+import type { DailyQuestId } from "./dailyQuest";
 import type { ShopItemId } from "./shop";
 
 /** 현재 프로토타입에서 배치할 수 있는 가구 원형 ID다. */
@@ -24,18 +25,35 @@ export type PlacedFurniture = {
   shopItemId?: ShopItemId;
 };
 
+export type GameSettings = {
+  bgmEnabled: boolean;
+  bgmVolume: number;
+  effectsEnabled: boolean;
+  effectsVolume: number;
+  reducedMotion: boolean;
+};
+
 /** 로컬 또는 원격 저장소로 직렬화할 수 있는 게임 스냅샷이다. */
 export type GameState = {
-  economyVersion: 2;
+  economyVersion: 3;
   coins: number;
-  gems: number;
   ownedCats: CatVariant[];
   homeCats: CatVariant[];
   activeCat: CatVariant;
   completedQuizIds: string[];
+  completedCodeChallengeIds: string[];
+  dailyQuestDate: string;
+  dailyCompletedTaskIds: string[];
+  claimedDailyQuestIds: DailyQuestId[];
+  dailyBonusClaimed: boolean;
+  gachaPityCount: number;
+  catMemories: Partial<Record<CatVariant, string[]>>;
+  settings: GameSettings;
   furniture: PlacedFurniture[];
   inventory: Record<FurnitureKind, number>;
   shopInventory: Partial<Record<ShopItemId, number>>;
+  activeWallpaper: ShopItemId | null;
+  activeFloor: ShopItemId | null;
 };
 
 export const furnitureDefinitions: Record<FurnitureKind, FurnitureDefinition> = {
@@ -65,16 +83,31 @@ export const defaultFurniture: PlacedFurniture[] = [
  */
 export function createDefaultState(): GameState {
   return {
-    economyVersion: 2,
-    coins: 1_000_000,
-    gems: 100_000,
+    economyVersion: 3,
+    coins: 1_100_000,
     ownedCats: [DEFAULT_CAT_VARIANT, "siamese"],
     homeCats: [DEFAULT_CAT_VARIANT],
     activeCat: DEFAULT_CAT_VARIANT,
     completedQuizIds: [],
+    completedCodeChallengeIds: [],
+    dailyQuestDate: "",
+    dailyCompletedTaskIds: [],
+    claimedDailyQuestIds: [],
+    dailyBonusClaimed: false,
+    gachaPityCount: 0,
+    catMemories: {},
+    settings: {
+      bgmEnabled: true,
+      bgmVolume: 70,
+      effectsEnabled: true,
+      effectsVolume: 80,
+      reducedMotion: false,
+    },
     furniture: defaultFurniture.map((item) => ({ ...item })),
     inventory: { sofa: 0, desk: 0, plant: 1, catTree: 0, bed: 0 },
     shopInventory: {},
+    activeWallpaper: null,
+    activeFloor: null,
   };
 }
 

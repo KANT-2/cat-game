@@ -1,40 +1,46 @@
 import { Container, Graphics, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
+import type { GameSettings, GameState } from "../../domain/room";
 import { CanvasButton } from "../components/CanvasButton";
+import { createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
 import { textStyle } from "../config";
 
-type SettingsSection = "account" | "sound" | "alerts" | "learning" | "display" | "support";
+type SettingsSection = "account" | "sound" | "alerts" | "learning";
 type ConfirmAction = "dataReset" | "accountDelete" | "learningReset";
 
 type SettingsPageOptions = {
   onStatus: (id: MessageId) => void;
+  getState: () => GameState;
+  onUpdateSettings: (patch: Partial<GameSettings>) => GameSettings;
+  onResetLearning: () => void;
 };
 
-const sections: readonly SettingsSection[] = ["account", "sound", "alerts", "learning", "display", "support"];
+const sections: readonly SettingsSection[] = ["account", "sound", "alerts", "learning"];
 
 /** 설정 카테고리 탐색과 각 카테고리의 Canvas 컨트롤을 한 화면에서 관리한다. */
 export class SettingsPage extends Container {
   private activeSection: SettingsSection = "account";
   private confirmAction: ConfirmAction | null = null;
-  private bgmEnabled = true;
-  private bgmVolume = 70;
-  private effectsEnabled = true;
-  private effectsVolume = 80;
+  private bgmEnabled: boolean;
+  private bgmVolume: number;
+  private effectsEnabled: boolean;
+  private effectsVolume: number;
   private dailyQuestAlerts = true;
   private studyAlerts = true;
   private rewardAlerts = true;
   private quietHours = true;
   private subjectIndex = 0;
-  private difficultyIndex = 0;
   private hintsEnabled = true;
   private explanationsEnabled = true;
   private dailyGoal = 5;
-  private reducedMotion = false;
-  private textSizeIndex = 1;
-  private gradeLabels = true;
 
   constructor(private readonly options: SettingsPageOptions) {
     super();
+    const settings = options.getState().settings;
+    this.bgmEnabled = settings.bgmEnabled;
+    this.bgmVolume = settings.bgmVolume;
+    this.effectsEnabled = settings.effectsEnabled;
+    this.effectsVolume = settings.effectsVolume;
     this.render();
   }
 
@@ -42,9 +48,7 @@ export class SettingsPage extends Container {
     this.removeChildren().forEach((child) => {
       child.destroy({ children: true });
     });
-    this.addChild(
-      new Graphics().roundRect(335, 120, 1225, 715, 28).fill(0xfff0dc).stroke({ color: 0x9a633e, width: 4 }),
-    );
+    this.addChild(createCozyPanel(335, 120, 1225, 715, { fill: 0xfff0dc, border: 0x9a633e, radius: 28 }));
     this.renderNavigation();
     this.renderHeader();
     if (this.activeSection === "account") {
@@ -53,12 +57,8 @@ export class SettingsPage extends Container {
       this.renderSound();
     } else if (this.activeSection === "alerts") {
       this.renderAlerts();
-    } else if (this.activeSection === "learning") {
-      this.renderLearning();
-    } else if (this.activeSection === "display") {
-      this.renderDisplay();
     } else {
-      this.renderSupport();
+      this.renderLearning();
     }
     if (this.confirmAction) {
       this.renderConfirmation(this.confirmAction);
@@ -78,7 +78,7 @@ export class SettingsPage extends Container {
           this.render();
         },
       });
-      button.position.set(53, 305 + index * 72);
+      button.position.set(53, 250 + index * 90);
       this.addChild(button);
     });
   }
@@ -89,7 +89,8 @@ export class SettingsPage extends Container {
     title.position.set(375, 145);
     const description = new Text({ text: message(section.description), style: textStyle(16, 0x76533c, "600") });
     description.position.set(375, 187);
-    this.addChild(title, description);
+    const ornament = createTitleOrnament(375, 214, 180);
+    this.addChild(title, description, ornament);
   }
 
   private renderAccount(): void {
@@ -103,14 +104,9 @@ export class SettingsPage extends Container {
     this.addDetail("settings.nicknameValue", 980, 280);
     this.addActionButton("settings.change", 1330, 253, 160, () => this.notify("settings.accountActionReady"));
 
-    this.addCard(370, 370, 555, 125);
-    this.addLabel("settings.uid", 400, 390, 20);
-    this.addDetail("settings.uidValue", 400, 430);
-    this.addActionButton("settings.copy", 735, 398, 160, () => this.notify("settings.copied"));
-
-    this.addCard(950, 370, 570, 125);
-    this.addLabel("settings.accountLink", 980, 390, 20);
-    this.addDetail("settings.accountLinkDescription", 980, 448);
+    this.addCard(370, 370, 1150, 125);
+    this.addLabel("settings.accountLink", 400, 390, 20);
+    this.addDetail("settings.accountLinkDescription", 400, 448);
     this.addActionButton("settings.linkGoogle", 1200, 385, 135, () => this.notify("settings.linkReady"));
     this.addActionButton("settings.linkEmail", 1350, 385, 140, () => this.notify("settings.linkReady"));
 
@@ -140,25 +136,37 @@ export class SettingsPage extends Container {
   }
 
   private renderSound(): void {
-    this.addToggleRow(225, "settings.bgm", "settings.bgmDescription", this.bgmEnabled, () => {
-      this.bgmEnabled = !this.bgmEnabled;
-    });
-    this.addStepperRow(345, "settings.bgmVolume", "settings.bgmVolumeDescription", this.bgmVolume, (delta) => {
-      this.bgmVolume = clampVolume(this.bgmVolume + delta);
-    });
-    this.addToggleRow(465, "settings.effects", "settings.effectsDescription", this.effectsEnabled, () => {
-      this.effectsEnabled = !this.effectsEnabled;
-    });
-    this.addStepperRow(
-      585,
-      "settings.effectsVolume",
-      "settings.effectsVolumeDescription",
-      this.effectsVolume,
+    this.addSoundControlRow(
+      245,
+      "settings.bgm",
+      "settings.bgmDescription",
+      this.bgmEnabled,
+      this.bgmVolume,
+      () => {
+        this.bgmEnabled = !this.bgmEnabled;
+        this.options.onUpdateSettings({ bgmEnabled: this.bgmEnabled });
+      },
       (delta) => {
-        this.effectsVolume = clampVolume(this.effectsVolume + delta);
+        this.bgmVolume = clampVolume(this.bgmVolume + delta);
+        this.options.onUpdateSettings({ bgmVolume: this.bgmVolume });
       },
     );
-    this.addNotice("settings.vibrationNotice", 705);
+    this.addSoundControlRow(
+      435,
+      "settings.effects",
+      "settings.effectsDescription",
+      this.effectsEnabled,
+      this.effectsVolume,
+      () => {
+        this.effectsEnabled = !this.effectsEnabled;
+        this.options.onUpdateSettings({ effectsEnabled: this.effectsEnabled });
+      },
+      (delta) => {
+        this.effectsVolume = clampVolume(this.effectsVolume + delta);
+        this.options.onUpdateSettings({ effectsVolume: this.effectsVolume });
+      },
+    );
+    this.addNotice("settings.vibrationNotice", 655);
   }
 
   private renderAlerts(): void {
@@ -186,7 +194,7 @@ export class SettingsPage extends Container {
   private renderLearning(): void {
     this.addSelectCard(
       370,
-      225,
+      245,
       "settings.subject",
       "settings.subjectDescription",
       subjectMessages[this.subjectIndex],
@@ -194,22 +202,12 @@ export class SettingsPage extends Container {
         this.subjectIndex = (this.subjectIndex + 1) % subjectMessages.length;
       },
     );
-    this.addSelectCard(
-      950,
-      225,
-      "settings.difficulty",
-      "settings.difficultyDescription",
-      difficultyMessages[this.difficultyIndex],
-      () => {
-        this.difficultyIndex = (this.difficultyIndex + 1) % difficultyMessages.length;
-      },
-    );
-    this.addGridToggle(370, 350, "settings.hints", "settings.hintsDescription", this.hintsEnabled, () => {
+    this.addGridToggle(950, 245, "settings.hints", "settings.hintsDescription", this.hintsEnabled, () => {
       this.hintsEnabled = !this.hintsEnabled;
     });
     this.addGridToggle(
       950,
-      350,
+      390,
       "settings.explanations",
       "settings.explanationsDescription",
       this.explanationsEnabled,
@@ -217,55 +215,10 @@ export class SettingsPage extends Container {
         this.explanationsEnabled = !this.explanationsEnabled;
       },
     );
-    this.addGoalCard();
-    this.addActionCard(950, 475, "settings.tutorial", "settings.tutorialDescription", "settings.replay", () =>
-      this.notify("settings.tutorialReady"),
-    );
-    this.addDangerCard(370, 615, "settings.learningReset", "settings.learningResetDescription", "settings.reset", () =>
+    this.addGoalCard(370, 390);
+    this.addDangerCard(370, 550, "settings.learningReset", "settings.learningResetDescription", "settings.reset", () =>
       this.askConfirmation("learningReset"),
     );
-  }
-
-  private renderDisplay(): void {
-    this.addToggleRow(225, "settings.reducedMotion", "settings.reducedMotionDescription", this.reducedMotion, () => {
-      this.reducedMotion = !this.reducedMotion;
-    });
-    this.addSelectRow(
-      345,
-      "settings.textSize",
-      "settings.textSizeDescription",
-      textSizeMessages[this.textSizeIndex],
-      () => {
-        this.textSizeIndex = (this.textSizeIndex + 1) % textSizeMessages.length;
-      },
-    );
-    this.addActionRow(465, "settings.fullscreen", "settings.fullscreenDescription", "settings.openFullscreen", () =>
-      this.notify("settings.fullscreenReady"),
-    );
-    this.addToggleRow(585, "settings.gradeLabels", "settings.gradeLabelsDescription", this.gradeLabels, () => {
-      this.gradeLabels = !this.gradeLabels;
-    });
-  }
-
-  private renderSupport(): void {
-    const actions: ReadonlyArray<[MessageId, MessageId, MessageId]> = [
-      ["settings.faq", "settings.faqDescription", "settings.open"],
-      ["settings.gameGuide", "settings.gameGuideDescription", "settings.open"],
-      ["settings.contact", "settings.contactDescription", "settings.open"],
-      ["settings.bugReport", "settings.bugReportDescription", "settings.open"],
-      ["settings.copyDiagnostics", "settings.copyDiagnosticsDescription", "settings.copy"],
-      ["settings.terms", "settings.termsDescription", "settings.open"],
-      ["settings.privacy", "settings.privacyDescription", "settings.open"],
-      ["settings.licenses", "settings.licensesDescription", "settings.open"],
-    ];
-    actions.forEach(([label, detail, action], index) => {
-      const x = index % 2 === 0 ? 370 : 950;
-      const y = 225 + Math.floor(index / 2) * 125;
-      this.addActionCard(x, y, label, detail, action, () =>
-        this.notify(action === "settings.copy" ? "settings.copied" : "settings.supportReady"),
-      );
-    });
-    this.addNotice("settings.versionValue", 735);
   }
 
   private addToggleRow(y: number, label: MessageId, detail: MessageId, value: boolean, toggle: () => void): void {
@@ -282,36 +235,32 @@ export class SettingsPage extends Container {
     );
   }
 
-  private addStepperRow(
+  private addSoundControlRow(
     y: number,
     label: MessageId,
     detail: MessageId,
+    enabled: boolean,
     value: number,
-    change: (delta: number) => void,
+    toggle: () => void,
+    changeVolume: (delta: number) => void,
   ): void {
-    this.addCard(370, y, 1150, 100);
-    this.addLabel(label, 400, y + 18, 20);
-    this.addDetail(detail, 400, y + 54);
-    this.addActionButton("settings.decrease", 1280, y + 26, 55, () => this.change(() => change(-10)));
+    this.addCard(370, y, 1150, 150);
+    this.addLabel(label, 400, y + 24, 22);
+    this.addDetail(detail, 400, y + 66);
+    this.addActionButton(
+      enabled ? "settings.on" : "settings.off",
+      1050,
+      y + 50,
+      150,
+      () => this.change(toggle),
+      enabled ? 0x83a66a : 0xc7aa91,
+    );
+    this.addActionButton("settings.decrease", 1230, y + 50, 55, () => this.change(() => changeVolume(-10)));
     const amount = new Text({ text: message("settings.percent", { value }), style: textStyle(18, 0x493022, "800") });
     amount.anchor.set(0.5);
-    amount.position.set(1385, y + 48);
-    this.addActionButton("settings.increase", 1435, y + 26, 55, () => this.change(() => change(10)));
+    amount.position.set(1360, y + 73);
+    this.addActionButton("settings.increase", 1435, y + 50, 55, () => this.change(() => changeVolume(10)));
     this.addChild(amount);
-  }
-
-  private addSelectRow(y: number, label: MessageId, detail: MessageId, value: MessageId, select: () => void): void {
-    this.addCard(370, y, 1150, 100);
-    this.addLabel(label, 400, y + 18, 20);
-    this.addDetail(detail, 400, y + 54);
-    this.addActionButton(value, 1280, y + 23, 210, () => this.change(select));
-  }
-
-  private addActionRow(y: number, label: MessageId, detail: MessageId, action: MessageId, onPress: () => void): void {
-    this.addCard(370, y, 1150, 100);
-    this.addLabel(label, 400, y + 18, 20);
-    this.addDetail(detail, 400, y + 54);
-    this.addActionButton(action, 1280, y + 23, 210, onPress);
   }
 
   private addSelectCard(
@@ -336,11 +285,11 @@ export class SettingsPage extends Container {
     this.addActionCard(x, y, label, detail, value ? "settings.on" : "settings.off", () => this.change(toggle));
   }
 
-  private addGoalCard(): void {
-    this.addCard(370, 475, 555, 115);
-    this.addLabel("settings.dailyGoal", 400, 492, 20);
-    this.addDetail("settings.dailyGoalDescription", 400, 528);
-    this.addActionButton("settings.decrease", 700, 512, 50, () =>
+  private addGoalCard(x: number, y: number): void {
+    this.addCard(x, y, 555, 105);
+    this.addLabel("settings.dailyGoal", x + 30, y + 18, 20);
+    this.addDetail("settings.dailyGoalDescription", x + 30, y + 54);
+    this.addActionButton("settings.decrease", x + 330, y + 31, 50, () =>
       this.change(() => {
         this.dailyGoal = Math.max(1, this.dailyGoal - 1);
       }),
@@ -350,8 +299,8 @@ export class SettingsPage extends Container {
       style: textStyle(17, 0x493022, "800"),
     });
     goal.anchor.set(0.5);
-    goal.position.set(802, 535);
-    this.addActionButton("settings.increase", 845, 512, 50, () =>
+    goal.position.set(x + 435, y + 54);
+    this.addActionButton("settings.increase", x + 475, y + 31, 50, () =>
       this.change(() => {
         this.dailyGoal = Math.min(20, this.dailyGoal + 1);
       }),
@@ -396,9 +345,7 @@ export class SettingsPage extends Container {
   }
 
   private addCard(x: number, y: number, width: number, height: number): void {
-    this.addChild(
-      new Graphics().roundRect(x, y, width, height, 22).fill(0xfff8e9).stroke({ color: 0xc38a58, width: 2 }),
-    );
+    this.addChild(createCozyPanel(x, y, width, height, { fill: 0xfff8e9, border: 0xc38a58, radius: 22 }));
   }
 
   private addLabel(id: MessageId, x: number, y: number, size: number, color = 0x493022): void {
@@ -442,42 +389,51 @@ export class SettingsPage extends Container {
   }
 
   private renderConfirmation(action: ConfirmAction): void {
-    const blocker = new Graphics().rect(0, 0, 1600, 900).fill({ color: 0x2f1d16, alpha: 0.55 });
+    const blocker = new Graphics().rect(0, 0, 1600, 900).fill(0xf8e7ca);
     blocker.eventMode = "static";
-    const panel = new Graphics().roundRect(520, 285, 600, 310, 30).fill(0xfff4df).stroke({ color: 0x9d4b3d, width: 5 });
-    const title = new Text({ text: message(confirmMessages[action].title), style: textStyle(27, 0x742e27, "800") });
+    const panel = createCozyPanel(300, 155, 1000, 590, { fill: 0xfff4df, border: 0x9d4b3d, radius: 32 });
+    const warningBadge = new Graphics().circle(800, 245, 48).fill(0xf6d7ad).stroke({ color: 0x9d4b3d, width: 4 });
+    const warning = new Text({ text: "!", style: textStyle(45, 0x9d4b3d, "800") });
+    warning.anchor.set(0.5);
+    warning.position.set(800, 244);
+    const title = new Text({ text: message(confirmMessages[action].title), style: textStyle(32, 0x742e27, "800") });
     title.anchor.set(0.5);
-    title.position.set(820, 350);
+    title.position.set(800, 330);
     const detail = new Text({
       text: message(confirmMessages[action].description),
-      style: { ...textStyle(17, 0x654238, "600"), align: "center", lineHeight: 28 },
+      style: { ...textStyle(20, 0x654238, "600"), align: "center", lineHeight: 34 },
     });
     detail.anchor.set(0.5);
-    detail.position.set(820, 425);
+    detail.position.set(800, 420);
     const cancel = new CanvasButton({
       label: message("settings.cancel"),
-      width: 190,
-      height: 54,
+      width: 220,
+      height: 64,
+      fontSize: 20,
       color: 0xd7b28c,
       onPress: () => {
         this.confirmAction = null;
         this.render();
       },
     });
-    cancel.position.set(600, 505);
+    cancel.position.set(535, 555);
     const confirm = new CanvasButton({
       label: message("settings.confirm"),
-      width: 190,
-      height: 54,
+      width: 220,
+      height: 64,
+      fontSize: 20,
       color: 0xd96c5b,
       onPress: () => {
         this.confirmAction = null;
+        if (action === "learningReset") {
+          this.options.onResetLearning();
+        }
         this.notify(confirmMessages[action].status);
         this.render();
       },
     });
-    confirm.position.set(850, 505);
-    this.addChild(blocker, panel, title, detail, cancel, confirm);
+    confirm.position.set(845, 555);
+    this.addChild(blocker, panel, warningBadge, warning, title, detail, cancel, confirm);
   }
 }
 
@@ -490,8 +446,6 @@ const sectionMessages: Record<SettingsSection, { tab: MessageId; title: MessageI
     title: "settings.learningTitle",
     description: "settings.learningDescription",
   },
-  display: { tab: "settings.tabDisplay", title: "settings.displayTitle", description: "settings.displayDescription" },
-  support: { tab: "settings.tabSupport", title: "settings.supportTitle", description: "settings.supportDescription" },
 };
 
 const confirmMessages: Record<ConfirmAction, { title: MessageId; description: MessageId; status: MessageId }> = {
@@ -517,13 +471,6 @@ const subjectMessages: readonly MessageId[] = [
   "settings.subjectJavaScript",
   "settings.subjectWeb",
 ];
-const difficultyMessages: readonly MessageId[] = [
-  "settings.difficultyIntro",
-  "settings.difficultyBasic",
-  "settings.difficultyPractice",
-];
-const textSizeMessages: readonly MessageId[] = ["settings.textSmall", "settings.textNormal", "settings.textLarge"];
-
 function clampVolume(value: number): number {
   return Math.min(100, Math.max(0, value));
 }

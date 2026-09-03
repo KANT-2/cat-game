@@ -1,10 +1,15 @@
-import { Container, Graphics, Text } from "pixi.js";
+import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
 import type { GachaDrawResult, GachaReward } from "../../core/GameClient";
 import type { CatVariant } from "../../domain/cats";
-import { type GachaDrawCount, type GachaRewardId, gachaRewardDefinitions } from "../../domain/gacha";
+import { type GachaDrawCount, type GachaRewardId, gachaCost } from "../../domain/gacha";
 import type { GameState } from "../../domain/room";
+import { BackButton } from "../components/BackButton";
 import { CanvasButton } from "../components/CanvasButton";
+import { createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
+import { createCoinIcon, createCurrencyBar } from "../components/CurrencyBar";
+import { layoutToFillViewport } from "../components/fullscreenLayout";
+import { applySmoothTextureSampling } from "../components/smoothSprite";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
 
 type GachaSceneOptions = {
@@ -12,200 +17,169 @@ type GachaSceneOptions = {
   onBack: () => void;
   onDraw: (count: GachaDrawCount) => GachaDrawResult;
   onSelectCat: (variant: CatVariant) => void;
+  backdropArt: string;
+  machineArt: string;
+  backIcon: string;
+  coinIcon: string;
 };
 
 export class GachaScene extends Container {
   private readonly content = new Container();
+  private readonly mainLayer = new Container();
+  private readonly headerLayer = new Container();
   private readonly resultLayer = new Container();
-  private readonly gemsText = new Text({ text: "", style: textStyle(21, 0x3d2b22, "800") });
+  private readonly confirmLayer = new Container();
+  private coinsText: Text | null = null;
   private readonly options: GachaSceneOptions;
 
   constructor(options: GachaSceneOptions) {
     super();
     this.options = options;
     this.addChild(this.content);
-    this.content.addChild(
-      new Graphics().rect(0, 0, BASE_WIDTH, BASE_HEIGHT).fill(0xf8e5c5).rect(0, 680, BASE_WIDTH, 220).fill(0xdca76e),
-    );
+    this.content.addChild(this.mainLayer, this.resultLayer, this.confirmLayer);
+    const backdrop = Sprite.from(options.backdropArt);
+    applySmoothTextureSampling(backdrop);
+    backdrop.width = BASE_WIDTH;
+    backdrop.height = BASE_HEIGHT;
+    this.mainLayer.addChild(backdrop);
     this.buildHeader(options);
-    this.buildPickup();
     this.buildMachine();
-    this.buildRewards();
     this.buildDrawButtons();
-    this.content.addChild(this.resultLayer);
+    this.mainLayer.addChild(this.headerLayer);
   }
 
   layout(width: number, height: number): void {
-    const scale = Math.min(width / BASE_WIDTH, height / BASE_HEIGHT);
-    this.content.scale.set(scale);
-    this.content.position.set((width - BASE_WIDTH * scale) / 2, (height - BASE_HEIGHT * scale) / 2);
+    layoutToFillViewport(this.content, width, height);
   }
 
   private buildHeader(options: GachaSceneOptions): void {
-    const back = new CanvasButton({
-      label: message("gacha.back"),
-      width: 82,
-      height: 68,
-      color: 0xf1bd82,
-      onPress: options.onBack,
-    });
+    const back = new BackButton({ iconSrc: options.backIcon, size: 72, onPress: options.onBack });
     back.position.set(24, 20);
     const title = new Text({ text: message("gacha.title"), style: textStyle(34, 0x3f2418, "800") });
     title.position.set(130, 35);
+    const ornament = createTitleOrnament(132, 78, 110);
     const state = options.getState();
-    const currency = new Graphics()
-      .roundRect(1090, 20, 470, 62, 25)
-      .fill(0xf1d3aa)
-      .stroke({ color: 0x70442b, width: 4 });
-    const coin = new Graphics().circle(1130, 51, 22).fill(0xf5bd39).stroke({ color: 0xa4601f, width: 4 });
-    const cash = new Graphics().roundRect(1340, 32, 52, 38, 7).fill(0x75a844).stroke({ color: 0x365b2b, width: 3 });
-    const coins = new Text({ text: state.coins.toLocaleString(), style: textStyle(21, 0x3d2b22, "800") });
-    coins.anchor.set(1, 0.5);
-    coins.position.set(1310, 51);
-    this.gemsText.text = String(state.gems);
-    this.gemsText.anchor.set(1, 0.5);
-    this.gemsText.position.set(1528, 51);
-    this.content.addChild(back, title, currency, coin, cash, coins, this.gemsText);
-  }
-
-  private buildPickup(): void {
-    const panel = new Graphics().roundRect(42, 108, 470, 330, 24).fill(0xfff3dc).stroke({ color: 0x99603b, width: 4 });
-    const heading = centeredText(message("gacha.pickup"), 277, 138, 23);
-    this.content.addChild(panel, heading);
-    const labels = [message("gacha.blackCat"), message("gacha.studyDesk"), message("gacha.miniCatTower")];
-    labels.forEach((label, index) => {
-      const x = 65 + index * 145;
-      const card = new Graphics().roundRect(x, 170, 132, 190, 15).fill(0xffe8c3).stroke({ color: 0xc48750, width: 3 });
-      const rarity = new Text({
-        text: index === 0 ? "SSR" : "SR",
-        style: textStyle(16, index === 0 ? 0xb56b13 : 0x8f4b91, "800"),
-      });
-      rarity.position.set(x + 8, 180);
-      const art = pickupArt(index);
-      art.position.set(x + 66, 258);
-      const name = centeredText(label, x + 66, 333, 14);
-      this.content.addChild(card, rarity, art, name);
-    });
-    const odds = new Graphics().roundRect(105, 455, 365, 220, 20).fill(0xfff0d6).stroke({ color: 0xa8754d, width: 3 });
-    const oddsTitle = centeredText(message("gacha.odds"), 287, 480, 21);
-    const oddsText = new Text({
-      text: message("gacha.oddsList"),
-      style: { ...textStyle(17, 0x4b3021, "700"), lineHeight: 38 },
-    });
-    oddsText.position.set(145, 515);
-    this.content.addChild(odds, oddsTitle, oddsText);
+    const currency = createCurrencyBar(options.coinIcon, state.coins);
+    currency.container.position.set(1240, 20);
+    this.coinsText = currency.amountText;
+    this.headerLayer.addChild(back, title, ornament, currency.container);
   }
 
   private buildMachine(): void {
-    const machine = new Graphics()
-      .circle(800, 315, 190)
-      .fill({ color: 0xeaf4f0, alpha: 0.72 })
-      .stroke({ color: 0x9b643e, width: 8 })
-      .roundRect(620, 430, 360, 280, 80)
-      .fill(0xe98682)
-      .stroke({ color: 0x8c5037, width: 8 })
-      .circle(800, 120, 105)
-      .fill(0xffd599)
-      .stroke({ color: 0x8c5037, width: 7 })
-      .poly([715, 105, 735, 35, 790, 94, 845, 40, 883, 112])
-      .fill(0xf3ad78)
-      .stroke({ color: 0x8c5037, width: 6 })
-      .circle(760, 290, 55)
-      .fill({ color: 0xf1a7b4, alpha: 0.8 })
-      .circle(840, 330, 58)
-      .fill({ color: 0xa9d3e1, alpha: 0.8 })
-      .circle(775, 390, 54)
-      .fill({ color: 0xd5e4a5, alpha: 0.8 })
-      .circle(875, 245, 50)
-      .fill({ color: 0xffd990, alpha: 0.8 })
-      .circle(800, 530, 66)
-      .fill(0xf2b16c)
-      .stroke({ color: 0x8c5037, width: 6 })
-      .circle(800, 530, 34)
-      .fill(0x8b5438)
-      .roundRect(740, 615, 120, 58, 12)
-      .fill(0x4f3327);
-    const bubble = new Graphics().roundRect(980, 280, 205, 78, 22).fill(0xffffff).stroke({ color: 0x68442f, width: 3 });
-    const bubbleText = centeredText(message("gacha.bubble"), 1082, 319, 17);
-    this.content.addChild(machine, bubble, bubbleText);
-  }
-
-  private buildRewards(): void {
-    const panel = new Graphics()
-      .roundRect(1190, 108, 365, 570, 24)
-      .fill(0xfff3dc)
-      .stroke({ color: 0x99603b, width: 4 });
-    const heading = centeredText(message("gacha.rewards"), 1372, 140, 22);
-    this.content.addChild(panel, heading);
-    for (let index = 0; index < 9; index += 1) {
-      const reward = gachaRewardDefinitions[index % gachaRewardDefinitions.length];
-      const x = 1215 + (index % 3) * 108;
-      const y = 180 + Math.floor(index / 3) * 150;
-      const cell = new Graphics().roundRect(x, y, 94, 130, 12).fill(0xffead0).stroke({ color: 0xc38a58, width: 2 });
-      const art = rewardArt(reward.id);
-      art.scale.set(0.58);
-      art.position.set(x + 47, y + 64);
-      const rarity = new Text({
-        text: reward.rarity,
-        style: textStyle(13, 0x70442b, "800"),
-      });
-      rarity.position.set(x + 7, y + 6);
-      this.content.addChild(cell, art, rarity);
-    }
+    const shadow = new Graphics().ellipse(800, 720, 205, 25).fill({ color: 0x75452c, alpha: 0.16 });
+    const machine = Sprite.from(this.options.machineArt);
+    applySmoothTextureSampling(machine);
+    machine.anchor.set(0.5);
+    machine.position.set(800, 405);
+    machine.width = 445;
+    machine.height = 668;
+    const sparkle = new Graphics()
+      .poly([555, 165, 563, 188, 586, 196, 563, 204, 555, 227, 547, 204, 524, 196, 547, 188])
+      .fill(0xffc84f)
+      .poly([1035, 480, 1041, 498, 1059, 504, 1041, 510, 1035, 528, 1029, 510, 1011, 504, 1029, 498])
+      .fill(0xffdf76);
+    this.mainLayer.addChild(shadow, machine, sparkle);
   }
 
   private buildDrawButtons(): void {
-    const once = new CanvasButton({
-      label: message("gacha.drawOnce"),
-      width: 270,
-      height: 84,
+    const once = createDrawButton({
+      title: message("gacha.drawOnceTitle"),
+      cost: gachaCost(1),
+      coinIcon: this.options.coinIcon,
       color: 0xcddf91,
-      onPress: () => this.draw(1),
+      onPress: () => this.confirmDraw(1),
     });
-    once.position.set(505, 745);
-    const ten = new CanvasButton({
-      label: message("gacha.drawTen"),
-      width: 300,
-      height: 84,
+    once.position.set(480, 730);
+    const ten = createDrawButton({
+      title: message("gacha.drawTenTitle"),
+      cost: gachaCost(11),
+      coinIcon: this.options.coinIcon,
       color: 0xf3ad54,
-      onPress: () => this.draw(11),
+      onPress: () => this.confirmDraw(11),
     });
-    ten.position.set(825, 745);
-    const guarantee = centeredText(message("gacha.guarantee"), 800, 862, 17);
-    this.content.addChild(once, ten, guarantee);
+    ten.position.set(820, 730);
+    this.mainLayer.addChild(once, ten);
+  }
+
+  private confirmDraw(count: GachaDrawCount): void {
+    this.closeConfirmation();
+    this.mainLayer.visible = false;
+    const panel = createCozyPanel(300, 155, 1000, 590, { fill: 0xfff5df, border: 0x87502e, radius: 32 });
+    const displayCount = count === 1 ? 1 : "10+1";
+    const coin = createCoinIcon(this.options.coinIcon, 76);
+    coin.position.set(762, 210);
+    const title = centeredText(message("gacha.confirmTitle", { count: displayCount }), 800, 330, 34);
+    const detail = new Text({
+      text: message("gacha.confirmDetail", { cost: gachaCost(count) }),
+      style: { ...textStyle(20, 0x6b4935, "600"), align: "center", wordWrap: true, wordWrapWidth: 680, lineHeight: 32 },
+    });
+    detail.anchor.set(0.5, 0);
+    detail.position.set(800, 400);
+    const cancel = new CanvasButton({
+      label: message("gacha.cancel"),
+      width: 210,
+      height: 64,
+      fontSize: 20,
+      color: 0xd8bea0,
+      onPress: () => this.closeConfirmation(),
+    });
+    cancel.position.set(535, 550);
+    const confirm = new CanvasButton({
+      label: message("gacha.confirmPurchase"),
+      width: 210,
+      height: 64,
+      fontSize: 20,
+      color: 0xf2aa4d,
+      onPress: () => this.draw(count),
+    });
+    confirm.position.set(855, 550);
+    this.confirmLayer.addChild(createBlocker(), panel, coin, title, detail, cancel, confirm);
+  }
+
+  private closeConfirmation(): void {
+    this.confirmLayer.removeChildren().forEach((child) => {
+      child.destroy({ children: true });
+    });
+    this.mainLayer.visible = true;
   }
 
   private draw(count: GachaDrawCount): void {
+    this.closeConfirmation();
     const result = this.options.onDraw(count);
     if (!result.ok) {
       this.showFailure();
       return;
     }
-    this.gemsText.text = String(result.remainingGems);
+    if (this.coinsText) {
+      this.coinsText.text = result.remainingCoins.toLocaleString();
+    }
     this.showResults(result);
   }
 
   private showFailure(): void {
     this.clearResults();
-    const panel = new Graphics().roundRect(555, 330, 490, 220, 28).fill(0xfff4df).stroke({ color: 0x7b4b32, width: 5 });
-    const title = centeredText(message("gacha.insufficientGems"), 800, 395, 25);
+    this.mainLayer.visible = false;
+    const panel = createCozyPanel(350, 190, 900, 520, { fill: 0xfff4df, border: 0x7b4b32, radius: 30 });
+    const title = centeredText(message("gacha.insufficientCoins"), 800, 355, 32);
     const close = new CanvasButton({
       label: message("gacha.resultClose"),
       width: 180,
-      height: 56,
+      height: 64,
+      fontSize: 20,
       color: 0xd7ad7e,
       onPress: () => this.clearResults(),
     });
-    close.position.set(710, 455);
+    close.position.set(710, 495);
     this.resultLayer.addChild(createBlocker(), panel, title, close);
   }
 
   private showResults(result: Extract<GachaDrawResult, { ok: true }>): void {
     this.clearResults();
+    this.mainLayer.visible = false;
     const blocker = createBlocker();
-    const panel = new Graphics().roundRect(310, 105, 980, 690, 34).fill(0xfff4df).stroke({ color: 0x7b4b32, width: 6 });
-    const title = centeredText(message("gacha.resultTitle", { count: result.rewards.length }), 800, 155, 30);
-    const guide = centeredText(message("gacha.resultStored"), 800, 198, 18);
+    const panel = createCozyPanel(110, 95, 1380, 740, { fill: 0xfff4df, border: 0x7b4b32, radius: 34 });
+    const title = centeredText(message("gacha.resultTitle", { count: result.rewards.length }), 800, 155, 36);
+    const guide = centeredText(message("gacha.resultStored"), 800, 205, 20);
     this.resultLayer.addChild(blocker, panel, title, guide);
 
     result.rewards.forEach((reward, index) => {
@@ -219,7 +193,8 @@ export class GachaScene extends Container {
       const select = new CanvasButton({
         label: message("gacha.selectMainCat"),
         width: 260,
-        height: 58,
+        height: 64,
+        fontSize: 20,
         color: 0x91aa55,
         onPress: () => this.options.onSelectCat(unlockedCat.catVariant),
       });
@@ -230,7 +205,8 @@ export class GachaScene extends Container {
     const close = new CanvasButton({
       label: message("gacha.resultClose"),
       width: 200,
-      height: 58,
+      height: 64,
+      fontSize: 20,
       color: 0xd7ad7e,
       onPress: () => this.clearResults(),
     });
@@ -240,27 +216,25 @@ export class GachaScene extends Container {
 
   private addResultCard(reward: GachaReward, index: number, total: number): void {
     const columns = total === 1 ? 1 : 4;
-    const cardWidth = total === 1 ? 280 : 205;
-    const x = total === 1 ? 660 : 370 + (index % columns) * 220;
-    const y = total === 1 ? 280 : 235 + Math.floor(index / columns) * 145;
+    const cardWidth = total === 1 ? 400 : 205;
+    const x = total === 1 ? 600 : 370 + (index % columns) * 220;
+    const y = total === 1 ? 265 : 235 + Math.floor(index / columns) * 145;
     const card = new Graphics()
-      .roundRect(x, y, cardWidth, total === 1 ? 300 : 130, 20)
-      .fill(rarityColor(reward.rarity))
+      .roundRect(x, y, cardWidth, total === 1 ? 370 : 130, 20)
+      .fill(0xffead0)
       .stroke({ color: 0x8a5738, width: 3 });
-    const rarity = new Text({ text: reward.rarity, style: textStyle(16, 0x70442b, "800") });
-    rarity.position.set(x + 12, y + 10);
     const art = rewardArt(reward.id);
-    art.scale.set(total === 1 ? 1.15 : 0.58);
-    art.position.set(x + cardWidth / 2, y + (total === 1 ? 145 : 65));
+    art.scale.set(total === 1 ? 1.65 : 0.58);
+    art.position.set(x + cardWidth / 2, y + (total === 1 ? 165 : 65));
     const rewardName = message(rewardNameMessages[reward.id]);
-    const name = centeredText(rewardName, x + cardWidth / 2, y + (total === 1 ? 245 : 105), total === 1 ? 20 : 14);
-    this.resultLayer.addChild(card, rarity, art, name);
+    const name = centeredText(rewardName, x + cardWidth / 2, y + (total === 1 ? 295 : 105), total === 1 ? 24 : 14);
+    this.resultLayer.addChild(card, art, name);
     if (reward.duplicate) {
       const duplicate = centeredText(
-        message("gacha.duplicateExchange", { amount: reward.exchangeGems }),
+        message("gacha.duplicateExchange", { amount: reward.exchangeCoins }),
         x + cardWidth / 2,
-        y + (total === 1 ? 275 : 120),
-        total === 1 ? 16 : 12,
+        y + (total === 1 ? 330 : 120),
+        total === 1 ? 18 : 12,
       );
       this.resultLayer.addChild(duplicate);
     }
@@ -270,6 +244,7 @@ export class GachaScene extends Container {
     this.resultLayer.removeChildren().forEach((child) => {
       child.destroy({ children: true });
     });
+    this.mainLayer.visible = true;
   }
 }
 
@@ -302,16 +277,6 @@ function drawDesk(): Graphics {
     .rect(-29, 20, 7, 35)
     .rect(22, 20, 7, 35)
     .fill(0x6f422d);
-}
-
-function pickupArt(index: number): Graphics {
-  if (index === 0) {
-    return drawMiniCat(0x343434);
-  }
-  if (index === 1) {
-    return drawDesk();
-  }
-  return drawCatTower();
 }
 
 function rewardArt(rewardId: GachaRewardId): Graphics {
@@ -365,22 +330,9 @@ function drawSofa(): Graphics {
 }
 
 function createBlocker(): Graphics {
-  const blocker = new Graphics().rect(0, 0, BASE_WIDTH, BASE_HEIGHT).fill({ color: 0x2b1b13, alpha: 0.5 });
+  const blocker = new Graphics().rect(0, 0, BASE_WIDTH, BASE_HEIGHT).fill(0xf8e7ca);
   blocker.eventMode = "static";
   return blocker;
-}
-
-function rarityColor(rarity: GachaReward["rarity"]): number {
-  if (rarity === "SSR") {
-    return 0xffdda0;
-  }
-  if (rarity === "SR") {
-    return 0xead4ef;
-  }
-  if (rarity === "R") {
-    return 0xd8e8f4;
-  }
-  return 0xffead0;
 }
 
 const rewardNameMessages: Record<GachaRewardId, MessageId> = {
@@ -390,3 +342,38 @@ const rewardNameMessages: Record<GachaRewardId, MessageId> = {
   "decor.plant": "shop.productPlant",
   "furniture.sofa": "shop.productSofa",
 };
+
+type DrawButtonOptions = {
+  title: string;
+  cost: number;
+  coinIcon: string;
+  color: number;
+  onPress: () => void;
+};
+
+function createDrawButton(options: DrawButtonOptions): Container {
+  const button = new Container();
+  const background = new Graphics()
+    .roundRect(0, 0, 300, 112, 24)
+    .fill(options.color)
+    .stroke({ color: 0x765039, width: 4 });
+  const pricePanel = new Graphics()
+    .roundRect(25, 57, 250, 42, 15)
+    .fill({ color: 0xffffff, alpha: 0.24 })
+    .stroke({ color: 0x765039, width: 2, alpha: 0.42 });
+  const title = centeredText(options.title, 150, 29, 25);
+  const coin = createCoinIcon(options.coinIcon, 34);
+  coin.position.set(92, 61);
+  const cost = centeredText(options.cost.toLocaleString(), 175, 78, 28);
+  button.addChild(background, pricePanel, title, coin, cost);
+  button.eventMode = "static";
+  button.cursor = "pointer";
+  button.on("pointerdown", () => button.scale.set(0.98));
+  button.on("pointerout", () => button.scale.set(1));
+  button.on("pointerupoutside", () => button.scale.set(1));
+  button.on("pointerup", () => {
+    button.scale.set(1);
+    options.onPress();
+  });
+  return button;
+}

@@ -98,16 +98,17 @@ export class GameApp {
     }
 
     const iconSources = {
-      studyGroup: assetPath(assetCatalog, "ui.home.level-problems.01"),
-      shopGroup: assetPath(assetCatalog, "ui.home.shop.01"),
-      socialGroup: assetPath(assetCatalog, "ui.home.social-group.01"),
-      learning: assetPath(assetCatalog, "ui.home.study.01"),
-      dailyQuest: assetPath(assetCatalog, "ui.home.daily-quest.01"),
-      roomDecor: assetPath(assetCatalog, "ui.home.room-decor.01"),
-      gacha: assetPath(assetCatalog, "ui.home.gacha.01"),
-      ownedCollection: assetPath(assetCatalog, "ui.home.owned-collection.01"),
-      addFriend: assetPath(assetCatalog, "ui.home.add-friend.01"),
-      visitGarden: assetPath(assetCatalog, "ui.home.visit-garden.01"),
+      profile: assetPath(assetCatalog, "ui.home.profile.02"),
+      study: assetPath(assetCatalog, "ui.home.study.02"),
+      dailyQuest: assetPath(assetCatalog, "ui.home.daily-quest.02"),
+      gacha: assetPath(assetCatalog, "ui.home.gacha.02"),
+      home: assetPath(assetCatalog, "ui.home.house.02"),
+      settings: assetPath(assetCatalog, "ui.home.settings.02"),
+      back: assetPath(assetCatalog, "ui.common.back-button.01"),
+      coin: assetPath(assetCatalog, "ui.common.currency-coin.01"),
+      shopShowcase: assetPath(assetCatalog, "ui.scene.shop-showcase.01"),
+      gachaBackdrop: assetPath(assetCatalog, "ui.scene.gacha-room-backdrop.01"),
+      gachaMachine: assetPath(assetCatalog, "ui.scene.gacha-machine-cutout.01"),
     };
     await Assets.load(Object.values(iconSources));
     const home = new HomeScene(gameClient, iconSources, catAnimations, {

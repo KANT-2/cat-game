@@ -1,10 +1,19 @@
 import { Container, Graphics, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
 import type { GameState } from "../../domain/room";
+import { BackButton } from "../components/BackButton";
 import { CanvasButton } from "../components/CanvasButton";
+import { createCurrencyBar } from "../components/CurrencyBar";
+import { layoutToFillViewport } from "../components/fullscreenLayout";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
 
-type RankingSceneOptions = { getState: () => GameState; onBack: () => void; onRefresh: () => void };
+type RankingSceneOptions = {
+  getState: () => GameState;
+  onBack: () => void;
+  onRefresh: () => void;
+  backIcon: string;
+  coinIcon: string;
+};
 const players: Array<{ name: MessageId; level: number; score: string; color: number; status: MessageId }> = [
   { name: "ranking.meowCoder", level: 10, score: "7,650", color: 0x333333, status: "ranking.statusStreak10" },
   { name: "ranking.helloPaws", level: 9, score: "6,980", color: 0xe69a50, status: "ranking.statusQuiz" },
@@ -26,36 +35,18 @@ export class RankingScene extends Container {
     this.buildBoard(options.onRefresh);
   }
   layout(width: number, height: number): void {
-    const scale = Math.min(width / BASE_WIDTH, height / BASE_HEIGHT);
-    this.content.scale.set(scale);
-    this.content.position.set((width - BASE_WIDTH * scale) / 2, (height - BASE_HEIGHT * scale) / 2);
+    layoutToFillViewport(this.content, width, height);
   }
 
   private buildHeader(options: RankingSceneOptions): void {
-    const back = new CanvasButton({
-      label: message("ranking.back"),
-      width: 82,
-      height: 68,
-      color: 0xf1bd82,
-      onPress: options.onBack,
-    });
+    const back = new BackButton({ iconSrc: options.backIcon, size: 72, onPress: options.onBack });
     back.position.set(24, 20);
     const title = new Text({ text: message("ranking.title"), style: textStyle(34, 0x3f2418, "800") });
     title.position.set(125, 34);
     const state = options.getState();
-    const currency = new Graphics()
-      .roundRect(1110, 20, 450, 62, 25)
-      .fill(0xf1d3aa)
-      .stroke({ color: 0x70442b, width: 4 });
-    const coin = new Graphics().circle(1150, 51, 22).fill(0xf5bd39).stroke({ color: 0xa4601f, width: 4 });
-    const cash = new Graphics().roundRect(1360, 32, 52, 38, 7).fill(0x75a844).stroke({ color: 0x365b2b, width: 3 });
-    const coins = new Text({ text: state.coins.toLocaleString(), style: textStyle(21, 0x3d2b22, "800") });
-    coins.anchor.set(1, 0.5);
-    coins.position.set(1330, 51);
-    const gems = new Text({ text: String(state.gems), style: textStyle(21, 0x3d2b22, "800") });
-    gems.anchor.set(1, 0.5);
-    gems.position.set(1528, 51);
-    this.content.addChild(back, title, currency, coin, cash, coins, gems);
+    const currency = createCurrencyBar(options.coinIcon, state.coins);
+    currency.container.position.set(1240, 20);
+    this.content.addChild(back, title, currency.container);
   }
 
   private buildSidebar(): void {

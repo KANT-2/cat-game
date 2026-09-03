@@ -56,7 +56,7 @@ describe("LocalGameClient", () => {
       firstCompletion: false,
       coinsAwarded: 0,
     });
-    expect(client.getSnapshot().coins).toBe(1_000_025);
+    expect(client.getSnapshot().coins).toBe(1_100_025);
   });
 
   it("keeps answer validation and rewards inside the game system", () => {
@@ -78,7 +78,7 @@ describe("LocalGameClient", () => {
     const client = new LocalGameClient(repository);
 
     expect(client.buyShopItem("furniture.sofa")).toMatchObject({ ok: true, furnitureKind: "sofa" });
-    expect(client.getSnapshot().coins).toBe(995_200);
+    expect(client.getSnapshot().coins).toBe(1_095_200);
     expect(client.getSnapshot().inventory.sofa).toBe(1);
     expect(client.getSnapshot().shopInventory["furniture.sofa"]).toBe(1);
 
@@ -101,6 +101,18 @@ describe("LocalGameClient", () => {
       reason: "not-owned",
     });
     expect(repository.save).not.toHaveBeenCalled();
+  });
+
+  it("buys former premium products with the same coin balance", () => {
+    const repository = new MemoryRepository();
+    repository.state.coins = 90;
+    const client = new LocalGameClient(repository);
+
+    expect(client.buyShopItem("furniture.premiumTower")).toMatchObject({
+      ok: true,
+      remainingCoins: 0,
+    });
+    expect(client.getSnapshot().shopInventory["furniture.premiumTower"]).toBe(1);
   });
 
   it("returns removed furniture to the owned inventory", () => {
@@ -154,8 +166,8 @@ describe("LocalGameClient", () => {
 
     expect(result).toMatchObject({
       ok: true,
-      remainingGems: 99_970,
-      rewards: [{ id: "furniture.desk", rarity: "SR", duplicate: false }],
+      remainingCoins: 1_099_970,
+      rewards: [{ id: "furniture.desk", duplicate: false }],
     });
     expect(client.getSnapshot().inventory.desk).toBe(1);
     expect(client.getSnapshot().shopInventory["furniture.desk"]).toBe(1);
@@ -198,42 +210,137 @@ describe("LocalGameClient", () => {
     expect(client.setCatHome("siamese", false)).toEqual({ ok: true, homeCats: ["fluffy"] });
   });
 
-  it("converts a duplicate cat to gems", () => {
+  it("converts a duplicate cat to coins", () => {
     const repository = new MemoryRepository();
     const client = new LocalGameClient(repository, () => 0.01);
     client.drawGacha(1);
 
     expect(client.drawGacha(1)).toMatchObject({
       ok: true,
-      remainingGems: 99_955,
-      rewards: [{ id: "cat.ink", duplicate: true, exchangeGems: 15 }],
+      remainingCoins: 1_099_955,
+      rewards: [{ id: "cat.ink", duplicate: true, exchangeCoins: 15 }],
     });
     expect(client.getSnapshot().ownedCats).toEqual(["fluffy", "siamese", "ink"]);
   });
 
-  it("gives eleven rewards with an SR guarantee for the multi draw", () => {
+  it("gives eleven independently drawn rewards for the multi draw", () => {
     const repository = new MemoryRepository();
     const client = new LocalGameClient(repository, () => 0.9);
 
     const result = client.drawGacha(11);
 
-    expect(result).toMatchObject({ ok: true, remainingGems: 99_730 });
+    expect(result).toMatchObject({ ok: true, remainingCoins: 1_099_730 });
     if (!result.ok) {
       throw new Error("expected multi draw to succeed");
     }
     expect(result.rewards).toHaveLength(11);
-    expect(result.rewards.some((reward) => reward.rarity === "SR" || reward.rarity === "SSR")).toBe(true);
-    expect(client.getSnapshot().shopInventory["furniture.desk"]).toBe(1);
+    expect(result.rewards.every((reward) => reward.id === "furniture.sofa")).toBe(true);
+    expect(client.getSnapshot().shopInventory["furniture.sofa"]).toBe(11);
   });
 
-  it("rejects a draw without enough gems and cannot select an unowned cat", () => {
+  it("rejects a draw without enough coins and cannot select an unowned cat", () => {
     const repository = new MemoryRepository();
-    repository.state.gems = 0;
+    repository.state.coins = 0;
     const client = new LocalGameClient(repository, () => 0.01);
 
-    expect(client.drawGacha(1)).toEqual({ ok: false, reason: "insufficient-gems" });
+    expect(client.drawGacha(1)).toEqual({ ok: false, reason: "insufficient-coins" });
     expect(client.selectCat("ink")).toEqual({ ok: false, reason: "cat-not-owned" });
     expect(client.setCatHome("ink", true)).toEqual({ ok: false, reason: "cat-not-owned" });
     expect(repository.save).not.toHaveBeenCalled();
+  });
+
+  it("grades a function-body challenge and preserves the base reward when hints are used", () => {
+    const repository = new MemoryRepository();
+    const client = new LocalGameClient(
+      repository,
+      () => 0.5,
+      () => new Date(2026, 8, 3),
+    );
+
+    const failed = client.submitCodeChallenge("python-sum-001", "    return 0", 0);
+    expect(failed).toMatchObject({ ok: true, passed: false, coinsAwarded: 0 });
+
+    const passed = client.submitCodeChallenge(
+      "python-sum-001",
+      "    total = 0\n    for i in range(1, n + 1):\n        total += i\n    return total",
+      2,
+    );
+    expect(passed).toMatchObject({ ok: true, passed: true, firstCompletion: true, coinsAwarded: 40 });
+    expect(client.getSnapshot().completedCodeChallengeIds).toEqual(["python-sum-001"]);
+    expect(client.getSnapshot().dailyCompletedTaskIds).toEqual(["python-sum-001"]);
+  });
+
+  it("tracks daily missions and pays each reward only once", () => {
+    const repository = new MemoryRepository();
+    const client = new LocalGameClient(
+      repository,
+      () => 0.5,
+      () => new Date(2026, 8, 3),
+    );
+    client.answerQuiz("python-range-001", "zero-to-two");
+
+    expect(client.getDailyQuests()[0]).toMatchObject({ progress: 1, complete: true, claimed: false });
+    expect(client.claimDailyQuest("solve-one")).toEqual({ ok: true, coinsAwarded: 50 });
+    expect(client.claimDailyQuest("solve-one")).toEqual({ ok: false, reason: "already-claimed" });
+    expect(client.claimDailyBonus()).toEqual({ ok: false, reason: "bonus-not-ready" });
+  });
+
+  it("pays the completed daily bonus entirely in coins", () => {
+    const repository = new MemoryRepository();
+    repository.state.dailyQuestDate = "2026-09-03";
+    repository.state.claimedDailyQuestIds = ["solve-one", "solve-three", "finish-code"];
+    const client = new LocalGameClient(
+      repository,
+      () => 0.5,
+      () => new Date(2026, 8, 3),
+    );
+
+    expect(client.claimDailyBonus()).toEqual({ ok: true, coinsAwarded: 310 });
+    expect(client.getSnapshot().coins).toBe(1_100_310);
+  });
+
+  it("resets daily progress when the local date changes", () => {
+    const repository = new MemoryRepository();
+    let day = 3;
+    const client = new LocalGameClient(
+      repository,
+      () => 0.5,
+      () => new Date(2026, 8, day),
+    );
+    client.answerQuiz("python-range-001", "zero-to-two");
+    expect(client.getDailyQuests()[0].progress).toBe(1);
+
+    day = 4;
+    expect(client.getDailyQuests()[0].progress).toBe(0);
+    expect(client.getSnapshot().claimedDailyQuestIds).toEqual([]);
+  });
+
+  it("buys and applies owned wallpaper without adding furniture inventory", () => {
+    const repository = new MemoryRepository();
+    const client = new LocalGameClient(repository);
+    const before = client.getSnapshot().inventory;
+
+    expect(client.buyShopItem("wallpaper.cream")).toMatchObject({ ok: true, itemType: "wallpaper" });
+    expect(client.getSnapshot().inventory).toEqual(before);
+    expect(client.applyRoomTheme("wallpaper.cream")).toEqual({
+      ok: true,
+      itemId: "wallpaper.cream",
+      itemType: "wallpaper",
+    });
+    expect(client.getSnapshot().activeWallpaper).toBe("wallpaper.cream");
+  });
+
+  it("persists sound settings and clears only cat memories", () => {
+    const repository = new MemoryRepository();
+    repository.state.catMemories = { fluffy: ["반복문을 연습했어요"] };
+    const client = new LocalGameClient(repository);
+
+    expect(client.updateSettings({ bgmEnabled: false, effectsVolume: 37 })).toMatchObject({
+      bgmEnabled: false,
+      effectsVolume: 40,
+    });
+    expect(client.clearCatMemories()).toEqual({ ok: true, removed: 1 });
+    expect(client.getSnapshot().ownedCats).toContain("fluffy");
+    expect(client.getSnapshot().catMemories).toEqual({});
   });
 });

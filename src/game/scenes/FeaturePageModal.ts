@@ -1,9 +1,13 @@
 import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
 import type { CatVariant } from "../../domain/cats";
-import type { FurnitureKind, GameState } from "../../domain/room";
+import type { FurnitureKind, GameSettings, GameState } from "../../domain/room";
 import { type ShopItemId, shopItemDefinitions } from "../../domain/shop";
+import { BackButton } from "../components/BackButton";
 import { CanvasButton } from "../components/CanvasButton";
+import { createCozyPanel } from "../components/CozyGameUi";
+import { createCurrencyBar } from "../components/CurrencyBar";
+import { layoutToFillViewport } from "../components/fullscreenLayout";
 import { textStyle } from "../config";
 import type { CatAnimationLibrary } from "../entities/CatAnimations";
 import { SettingsPage } from "./SettingsPage";
@@ -18,7 +22,13 @@ type Options = {
   onPlaceOwned: (itemId: ShopItemId | undefined, kind: FurnitureKind) => void;
   onSelectCat: (variant: CatVariant) => boolean;
   onSetCatHome: (variant: CatVariant, visible: boolean) => boolean;
+  onApplyTheme: (itemId: ShopItemId) => boolean;
+  onEnterRoomEdit: () => void;
+  onUpdateSettings: (patch: Partial<GameSettings>) => GameSettings;
+  onResetLearning: () => void;
   catAnimations: CatAnimationLibrary;
+  backIcon: string;
+  coinIcon: string;
 };
 /** 설정·보유·친구 기능을 전체 Canvas 화면으로 표시한다. */
 export class FeaturePageModal extends Container {
@@ -28,6 +38,7 @@ export class FeaturePageModal extends Container {
   private readonly status = new Text({ text: "", style: textStyle(17, 0x537145, "700") });
   private readonly options: Options;
   private readonly requested = new Set<number>();
+  private ownedCategory: "cats" | "furniture" | "wallpaper" | "floor" = "furniture";
 
   constructor(options: Options) {
     super();
@@ -41,39 +52,20 @@ export class FeaturePageModal extends Container {
   /** 현재 렌더러 크기에 맞춰 1600×900 논리 화면을 비율 유지해 배치한다. */
   layout(width: number, height: number): void {
     this.background.clear().rect(0, 0, width, height).fill(0xf8e7ca);
-    const scale = Math.min(width / 1600, height / 900);
-    this.page.scale.set(scale);
-    this.page.position.set((width - 1600 * scale) / 2, (height - 900 * scale) / 2);
+    layoutToFillViewport(this.page, width, height);
   }
 
   private buildFrame(): void {
-    const back = new CanvasButton({
-      label: "‹",
-      width: 70,
-      height: 64,
-      color: 0xd9ad7d,
-      onPress: this.options.onClose,
-    });
+    const back = new BackButton({ iconSrc: this.options.backIcon, size: 70, onPress: this.options.onClose });
     back.position.set(28, 28);
     const title = new Text({ text: message(titleFor(this.options.kind)), style: textStyle(36, 0x3d2b22, "800") });
     title.position.set(120, 43);
-    const currency = new Graphics()
-      .roundRect(1110, 26, 450, 62, 28)
-      .fill(0x795037)
-      .stroke({ color: 0x4e3020, width: 4 });
-    const currencyText = new Text({
-      text: message("page.currency", {
-        coins: this.options.getState().coins.toLocaleString(),
-        gems: this.options.getState().gems,
-      }),
-      style: textStyle(20, 0xfff1d2, "800"),
-    });
-    currencyText.anchor.set(0.5);
-    currencyText.position.set(1335, 57);
+    const currency = createCurrencyBar(this.options.coinIcon, this.options.getState().coins);
+    currency.container.position.set(1240, 26);
     this.buildSidebar();
     this.status.anchor.set(0.5);
     this.status.position.set(930, 864);
-    this.page.addChild(back, title, currency, currencyText, this.content, this.status);
+    this.page.addChild(back, title, currency.container, this.content, this.status);
   }
 
   private buildSidebar(): void {
@@ -81,16 +73,17 @@ export class FeaturePageModal extends Container {
       return;
     }
     const panel = new Graphics().roundRect(28, 125, 275, 710, 28).fill(0xf2d7b5).stroke({ color: 0x9a633e, width: 4 });
+    this.page.addChild(panel);
+    if (this.options.kind === "settings") {
+      return;
+    }
     const portrait = catPortrait(0);
     portrait.scale.set(0.72);
     portrait.position.set(165, 205);
     const level = new Text({ text: message("page.profileLevel"), style: textStyle(17, 0x493022, "800") });
     level.anchor.set(0.5);
     level.position.set(165, 270);
-    this.page.addChild(panel, portrait, level);
-    if (this.options.kind === "settings") {
-      return;
-    }
+    this.page.addChild(portrait, level);
     const entries =
       this.options.kind === "addFriend" || this.options.kind === "visitGarden"
         ? (["addFriend", "visitGarden"] as const)
@@ -129,7 +122,14 @@ export class FeaturePageModal extends Container {
   }
 
   private renderSettings(): void {
-    this.content.addChild(new SettingsPage({ onStatus: (id) => this.show(id) }));
+    this.content.addChild(
+      new SettingsPage({
+        onStatus: (id) => this.show(id),
+        getState: this.options.getState,
+        onUpdateSettings: (patch) => this.options.onUpdateSettings(patch),
+        onResetLearning: this.options.onResetLearning,
+      }),
+    );
   }
 
   private renderOwned(): void {
@@ -144,17 +144,28 @@ export class FeaturePageModal extends Container {
       }),
       style: textStyle(20, 0x604637, "700"),
     });
-    summary.position.set(180, 155);
+    summary.position.set(70, 120);
     this.content.addChild(summary);
-    const catHeading = new Text({ text: message("owned.cats"), style: textStyle(22, 0x493022, "800") });
-    catHeading.position.set(180, 200);
-    this.content.addChild(catHeading);
-    state.ownedCats.forEach((variant, index) => {
-      this.addOwnedCatCard(variant, index, state.activeCat, state.homeCats.includes(variant));
+    const edit = new CanvasButton({
+      label: message("owned.editRoom"),
+      width: 220,
+      height: 54,
+      color: 0xe9a14b,
+      onPress: this.options.onEnterRoomEdit,
     });
-    const furnitureHeading = new Text({ text: message("owned.furniture"), style: textStyle(22, 0x493022, "800") });
-    furnitureHeading.position.set(180, 405);
-    this.content.addChild(furnitureHeading);
+    edit.position.set(1290, 112);
+    this.content.addChild(edit);
+    this.buildOwnedTabs();
+    if (this.ownedCategory === "cats") {
+      state.ownedCats.forEach((variant, index) => {
+        this.addOwnedCatCard(variant, index, state.activeCat, state.homeCats.includes(variant));
+      });
+      return;
+    }
+    if (this.ownedCategory === "wallpaper" || this.ownedCategory === "floor") {
+      this.renderOwnedThemes(this.ownedCategory, state);
+      return;
+    }
     const entries: Array<{
       key: string;
       itemId?: ShopItemId;
@@ -164,7 +175,11 @@ export class FeaturePageModal extends Container {
       placed: number;
     }> = [];
     for (const itemId of Object.keys(shopItemDefinitions) as ShopItemId[]) {
-      const kind = shopItemDefinitions[itemId].furnitureKind;
+      const definition = shopItemDefinitions[itemId];
+      if (definition.kind !== "furniture") {
+        continue;
+      }
+      const kind = definition.furnitureKind;
       const storedCount = state.shopInventory[itemId] ?? 0;
       const placed = state.furniture.filter((item) => item.shopItemId === itemId).length;
       if (storedCount > 0 || placed > 0) {
@@ -173,7 +188,10 @@ export class FeaturePageModal extends Container {
     }
     for (const kind of Object.keys(state.inventory) as FurnitureKind[]) {
       const exactStored = (Object.keys(shopItemDefinitions) as ShopItemId[])
-        .filter((itemId) => shopItemDefinitions[itemId].furnitureKind === kind)
+        .filter((itemId) => {
+          const definition = shopItemDefinitions[itemId];
+          return definition.kind === "furniture" && definition.furnitureKind === kind;
+        })
         .reduce((sum, itemId) => sum + (state.shopInventory[itemId] ?? 0), 0);
       const genericStored = Math.max(0, state.inventory[kind] - exactStored);
       const genericPlaced = state.furniture.filter((item) => item.kind === kind && !item.shopItemId).length;
@@ -198,17 +216,17 @@ export class FeaturePageModal extends Container {
     if (entries.length === 0) {
       const empty = new Text({ text: message("owned.noProducts"), style: textStyle(22, 0x76533c, "700") });
       empty.anchor.set(0.5);
-      empty.position.set(800, 560);
+      empty.position.set(800, 490);
       this.content.addChild(empty);
       return;
     }
     entries.forEach((entry, index) => {
       const { kind } = entry;
       const x = 180 + (index % 3) * 420;
-      const y = 445 + Math.floor(index / 3) * 220;
+      const y = 285 + Math.floor(index / 3) * 220;
       const storedCount = entry.stored;
       const ownedCount = storedCount + entry.placed;
-      const card = new Graphics().roundRect(x, y, 380, 205, 22).fill(0xfff5df).stroke({ color: 0xb77a4f, width: 3 });
+      const card = createCozyPanel(x, y, 380, 205, { fill: 0xfff5df, border: 0xb77a4f, radius: 22 });
       const art = furnitureBadge(kind);
       art.position.set(x + 90, y + 102);
       const name = new Text({ text: message(entry.name), style: textStyle(20, 0x493022, "800") });
@@ -234,11 +252,88 @@ export class FeaturePageModal extends Container {
     });
   }
 
+  private buildOwnedTabs(): void {
+    const tabs = [
+      ["furniture", "owned.furniture"],
+      ["cats", "owned.cats"],
+      ["wallpaper", "owned.wallpaper"],
+      ["floor", "owned.floor"],
+    ] as const;
+    tabs.forEach(([category, label], index) => {
+      const active = category === this.ownedCategory;
+      const tab = new CanvasButton({
+        label: message(label),
+        width: 210,
+        height: 54,
+        color: active ? 0x8da66e : 0xe3c49f,
+        textColor: active ? 0xffffff : 0x493022,
+        onPress: () => {
+          this.ownedCategory = category;
+          this.render();
+        },
+      });
+      tab.position.set(180 + index * 230, 190);
+      this.content.addChild(tab);
+    });
+  }
+
+  private renderOwnedThemes(category: "wallpaper" | "floor", state: GameState): void {
+    const entries = (Object.keys(shopItemDefinitions) as ShopItemId[]).filter((itemId) => {
+      const item = shopItemDefinitions[itemId];
+      return item.kind === category && (state.shopInventory[itemId] ?? 0) > 0;
+    });
+    if (entries.length === 0) {
+      const empty = new Text({ text: message("owned.noThemes"), style: textStyle(21, 0x76533c, "700") });
+      empty.anchor.set(0.5);
+      empty.position.set(800, 480);
+      this.content.addChild(empty);
+      return;
+    }
+    entries.forEach((itemId, index) => {
+      const definition = shopItemDefinitions[itemId];
+      if (definition.kind === "furniture") {
+        return;
+      }
+      const x = 180 + (index % 3) * 420;
+      const y = 285 + Math.floor(index / 3) * 220;
+      const active = category === "wallpaper" ? state.activeWallpaper === itemId : state.activeFloor === itemId;
+      const card = createCozyPanel(x, y, 380, 190, {
+        fill: 0xfff5df,
+        border: active ? 0x79945f : 0xb77a4f,
+        radius: 22,
+      });
+      const preview = new Graphics()
+        .roundRect(x + 28, y + 28, 125, 125, 16)
+        .fill(definition.themeColor)
+        .stroke({ color: 0x68442f, width: 3 });
+      const name = new Text({ text: message(productNameMessages[itemId]), style: textStyle(19, 0x493022, "800") });
+      name.position.set(x + 175, y + 37);
+      const count = new Text({
+        text: message("owned.count", { count: state.shopInventory[itemId] ?? 0 }),
+        style: textStyle(15, 0x76533c, "700"),
+      });
+      count.position.set(x + 175, y + 76);
+      const apply = new CanvasButton({
+        label: message(active ? "owned.applied" : "owned.apply"),
+        width: 155,
+        height: 46,
+        color: active ? 0xa8b49b : 0x91aa82,
+        onPress: () => {
+          if (!active && this.options.onApplyTheme(itemId)) {
+            this.render();
+          }
+        },
+      });
+      apply.position.set(x + 175, y + 115);
+      this.content.addChild(card, preview, name, count, apply);
+    });
+  }
+
   private addOwnedCatCard(variant: CatVariant, index: number, activeCat: CatVariant, visibleAtHome: boolean): void {
-    const x = 180 + index * 390;
-    const y = 235;
+    const x = 180 + (index % 3) * 420;
+    const y = 285 + Math.floor(index / 3) * 190;
     const active = variant === activeCat;
-    const card = new Graphics().roundRect(x, y, 360, 150, 22).fill(0xfff5df).stroke({ color: 0xb77a4f, width: 3 });
+    const card = createCozyPanel(x, y, 360, 150, { fill: 0xfff5df, border: 0xb77a4f, radius: 22 });
     const animations = this.options.catAnimations[variant];
     const portrait = new Sprite(animations.idle.textures[0]);
     portrait.anchor.set(animations.idle.anchor.x, animations.idle.anchor.y);
@@ -419,6 +514,18 @@ const productNameMessages: Record<ShopItemId, MessageId> = {
   "furniture.desk": "shop.productDesk",
   "furniture.premiumTower": "shop.productPremiumTower",
   "decor.plant": "shop.productPlant",
+  "wallpaper.cream": "shop.productCreamWall",
+  "wallpaper.cloud": "shop.productCloudWall",
+  "wallpaper.forest": "shop.productForestWall",
+  "wallpaper.flower": "shop.productFlowerWall",
+  "wallpaper.night": "shop.productNightWall",
+  "wallpaper.cat": "shop.productCatWall",
+  "floor.oak": "shop.productOakFloor",
+  "floor.check": "shop.productCheckFloor",
+  "floor.stone": "shop.productStoneFloor",
+  "floor.cream": "shop.productCreamFloor",
+  "floor.star": "shop.productStarFloor",
+  "floor.walnut": "shop.productWalnutFloor",
 };
 const genericProductNameMessages: Record<FurnitureKind, MessageId> = {
   sofa: "shop.productSofa",

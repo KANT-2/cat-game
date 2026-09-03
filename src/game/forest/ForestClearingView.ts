@@ -11,6 +11,8 @@ import {
   ROOM_GRID_WIDTH,
   rotatedSize,
 } from "../../domain/room";
+import type { ShopItemId } from "../../domain/shop";
+import { shopItemDefinitions } from "../../domain/shop";
 import { gridCellPolygon, gridToScreen, screenToGrid } from "../belt";
 import { CLEARING_GRID, textStyle } from "../config";
 import { CatActor, type CatDropTarget } from "../entities/CatActor";
@@ -26,6 +28,8 @@ type ForestClearingViewOptions = {
   onToast: (message: string) => void;
   getHomeCats: () => CatVariant[];
   getActiveCat: () => CatVariant;
+  getActiveWallpaper: () => ShopItemId | null;
+  getActiveFloor: () => ShopItemId | null;
   catAnimations: CatAnimationLibrary;
   desktopWidget: boolean;
   onCatFocusRequest: () => void;
@@ -35,6 +39,7 @@ type ForestClearingViewOptions = {
 export class ForestClearingView extends Container {
   private readonly backgroundLayer = new Container({ label: "forest-background" });
   private readonly groundHitLayer = new Container({ label: "forest-ground-input" });
+  private readonly themeLayer = new Container({ label: "forest-room-theme" });
   private readonly gridLayer = new Container({ label: "forest-edit-grid" });
   private readonly selectionLayer = new Container({ label: "forest-selection" });
   private readonly catDropLayer = new Container({ label: "forest-cat-drop" });
@@ -47,6 +52,8 @@ export class ForestClearingView extends Container {
   private readonly onToast: ForestClearingViewOptions["onToast"];
   private readonly getHomeCats: ForestClearingViewOptions["getHomeCats"];
   private readonly getActiveCat: ForestClearingViewOptions["getActiveCat"];
+  private readonly getActiveWallpaper: ForestClearingViewOptions["getActiveWallpaper"];
+  private readonly getActiveFloor: ForestClearingViewOptions["getActiveFloor"];
   private readonly catAnimations: CatAnimationLibrary;
   private readonly desktopWidget: boolean;
   private readonly onCatFocusRequest: ForestClearingViewOptions["onCatFocusRequest"];
@@ -72,6 +79,8 @@ export class ForestClearingView extends Container {
     this.onToast = options.onToast;
     this.getHomeCats = options.getHomeCats;
     this.getActiveCat = options.getActiveCat;
+    this.getActiveWallpaper = options.getActiveWallpaper;
+    this.getActiveFloor = options.getActiveFloor;
     this.catAnimations = options.catAnimations;
     this.desktopWidget = options.desktopWidget;
     this.onCatFocusRequest = options.onCatFocusRequest;
@@ -79,6 +88,7 @@ export class ForestClearingView extends Container {
     this.entityLayer.sortableChildren = true;
     this.addChild(
       this.backgroundLayer,
+      this.themeLayer,
       this.groundHitLayer,
       this.gridLayer,
       this.selectionLayer,
@@ -89,6 +99,7 @@ export class ForestClearingView extends Container {
 
     if (!this.desktopWidget) {
       this.drawForest();
+      this.syncTheme();
       this.buildGroundGrid();
       this.rebuildFurniture();
     }
@@ -180,6 +191,35 @@ export class ForestClearingView extends Container {
 
   private project(x: number, y: number) {
     return gridToScreen(CLEARING_GRID, x, y);
+  }
+
+  /** 선택한 벽지·바닥재의 색감을 야외 홈 배경과 공터에 즉시 반영한다. */
+  syncTheme(): void {
+    this.themeLayer.removeChildren().forEach((child) => {
+      child.destroy({ children: true });
+    });
+    if (this.desktopWidget) {
+      return;
+    }
+    const wallpaper = this.getActiveWallpaper();
+    const floor = this.getActiveFloor();
+    if (wallpaper) {
+      const item = shopItemDefinitions[wallpaper];
+      if (item.kind === "wallpaper") {
+        this.themeLayer.addChild(new Graphics().rect(0, 0, 1600, 410).fill({ color: item.themeColor, alpha: 0.26 }));
+      }
+    }
+    if (floor) {
+      const item = shopItemDefinitions[floor];
+      if (item.kind === "floor") {
+        this.themeLayer.addChild(
+          new Graphics()
+            .poly([180, 392, 1420, 392, 1580, 832, 20, 832])
+            .fill({ color: item.themeColor, alpha: 0.38 })
+            .stroke({ color: item.themeColor, alpha: 0.7, width: 5 }),
+        );
+      }
+    }
   }
 
   private syncCatInteractionRegion(): void {

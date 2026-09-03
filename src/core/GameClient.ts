@@ -1,9 +1,10 @@
 import type { MessageId } from "../content/messages";
 import type { CatVariant } from "../domain/cats";
-import type { GachaDrawCount, GachaRarity, GachaRewardId } from "../domain/gacha";
-import type { FurnitureKind, GameState } from "../domain/room";
+import type { DailyQuestId } from "../domain/dailyQuest";
+import type { GachaDrawCount, GachaRewardId } from "../domain/gacha";
+import type { FurnitureKind, GameSettings, GameState } from "../domain/room";
 import type { ShopItemId } from "../domain/shop";
-import type { QuizChoice } from "../domain/study";
+import type { CodeTestResult, QuizChoice, StudyConcept, StudyDifficulty, StudyTaskType } from "../domain/study";
 
 /** 가구 배치를 요청할 때 UI가 게임 시스템에 전달하는 직렬화 가능한 명령이다. */
 export type PlacementCommand = {
@@ -22,22 +23,37 @@ export type PlacementResult =
   | { ok: false; reason: "outside-room" | "occupied" | "not-owned" };
 
 export type PurchaseResult =
-  | { ok: true; itemId: ShopItemId; furnitureKind: FurnitureKind; remainingCoins: number; remainingGems: number }
-  | { ok: false; reason: "item-not-found" | "insufficient-coins" | "insufficient-gems" };
+  | {
+      ok: true;
+      itemId: ShopItemId;
+      itemType: "furniture";
+      furnitureKind: FurnitureKind;
+      remainingCoins: number;
+    }
+  | {
+      ok: true;
+      itemId: ShopItemId;
+      itemType: "wallpaper" | "floor";
+      remainingCoins: number;
+    }
+  | { ok: false; reason: "item-not-found" | "insufficient-coins" };
+
+export type ApplyRoomThemeResult =
+  | { ok: true; itemId: ShopItemId; itemType: "wallpaper" | "floor" }
+  | { ok: false; reason: "item-not-found" | "not-owned" | "not-theme" };
 
 export type GachaReward = {
   id: GachaRewardId;
-  rarity: GachaRarity;
   kind: "cat" | "furniture";
   catVariant?: CatVariant;
   shopItemId?: ShopItemId;
   duplicate: boolean;
-  exchangeGems: number;
+  exchangeCoins: number;
 };
 
 export type GachaDrawResult =
-  | { ok: true; rewards: GachaReward[]; remainingGems: number }
-  | { ok: false; reason: "insufficient-gems" };
+  | { ok: true; rewards: GachaReward[]; remainingCoins: number }
+  | { ok: false; reason: "insufficient-coins" };
 
 export type CatSelectionResult = { ok: true; activeCat: CatVariant } | { ok: false; reason: "cat-not-owned" };
 
@@ -47,6 +63,7 @@ export type CatHomeResult = { ok: true; homeCats: CatVariant[] } | { ok: false; 
 export type QuizView = {
   id: string;
   titleMessage: MessageId;
+  summaryMessage: MessageId;
   promptMessage: MessageId;
   choices: QuizChoice[];
   rewardCoins: number;
@@ -63,6 +80,54 @@ export type QuizAnswerResult =
       coinsAwarded: number;
     }
   | { ok: false; reason: "quiz-not-found" | "choice-not-found" };
+
+export type StudyTaskView = {
+  id: string;
+  type: StudyTaskType;
+  concept: StudyConcept;
+  difficulty: StudyDifficulty;
+  titleMessage: MessageId;
+  summaryMessage: MessageId;
+  rewardCoins: number;
+  completed: boolean;
+};
+
+export type CodeChallengeView = StudyTaskView & {
+  type: "code";
+  promptMessage: MessageId;
+  signature: string;
+  starterBody: string;
+  examplesMessage: MessageId;
+  hintMessages: readonly MessageId[];
+  bonusCoins: number;
+};
+
+export type CodeSubmissionResult =
+  | {
+      ok: true;
+      passed: boolean;
+      tests: CodeTestResult[];
+      firstCompletion: boolean;
+      coinsAwarded: number;
+    }
+  | { ok: false; reason: "challenge-not-found" | "empty-code" };
+
+export type DailyQuestView = {
+  id: DailyQuestId;
+  titleMessage: MessageId;
+  descriptionMessage: MessageId;
+  progress: number;
+  target: number;
+  rewardCoins: number;
+  complete: boolean;
+  claimed: boolean;
+};
+
+export type DailyRewardResult =
+  | { ok: true; coinsAwarded: number }
+  | { ok: false; reason: "quest-not-found" | "not-complete" | "already-claimed" | "bonus-not-ready" };
+
+export type CatMemoryClearResult = { ok: true; removed: number };
 
 /** 상태가 커밋될 때 복제된 스냅샷을 받는 구독 함수다. */
 export type GameStateListener = (snapshot: GameState) => void;
@@ -151,7 +216,10 @@ export interface GameClient {
    */
   buyShopItem(itemId: ShopItemId): PurchaseResult;
 
-  /** 지폐를 차감하고 공개 확률과 10+1 보장 규칙에 따라 고양이 또는 가구 보상을 지급한다. */
+  /** 보유한 벽지 또는 바닥재를 현재 방 테마로 적용한다. */
+  applyRoomTheme(itemId: ShopItemId): ApplyRoomThemeResult;
+
+  /** 코인을 차감하고 가중치에 따라 고양이 또는 가구 보상을 지급한다. */
   drawGacha(count: GachaDrawCount): GachaDrawResult;
 
   /** 보유한 고양이를 메인 공터에서 함께 지낼 고양이로 선택한다. */
@@ -188,4 +256,31 @@ export interface GameClient {
    * UI는 `feedbackMessage`를 JSON 메시지 카탈로그에서 해석해야 한다.
    */
   answerQuiz(quizId: string, choiceId: string): QuizAnswerResult;
+
+  /** 학습 홈에 표시할 과제 목록과 완료 상태를 반환한다. */
+  getStudyTasks(): StudyTaskView[];
+
+  /** 함수 선언을 제외한 본문만 편집하는 코드 과제를 조회한다. */
+  getCodeChallenge(challengeId: string): CodeChallengeView | null;
+
+  /** 안전한 로컬 채점기를 통해 코드 과제를 채점하고 최초 완료 보상을 반영한다. */
+  submitCodeChallenge(challengeId: string, body: string, hintsUsed: number): CodeSubmissionResult;
+
+  /** 오늘의 학습 기록에서 계산한 퀘스트 진행도와 수령 상태를 반환한다. */
+  getDailyQuests(): DailyQuestView[];
+
+  /** 완료한 개별 데일리 퀘스트 보상을 한 번만 지급한다. */
+  claimDailyQuest(questId: DailyQuestId): DailyRewardResult;
+
+  /** 모든 데일리 퀘스트 보상을 수령한 뒤 최종 보너스를 지급한다. */
+  claimDailyBonus(): DailyRewardResult;
+
+  /** 학습 진도만 초기화하며 보유 가구와 고양이는 유지한다. */
+  resetLearningProgress(): void;
+
+  /** 세션 간 저장된 모든 고양이 기억 문장을 삭제한다. */
+  clearCatMemories(): CatMemoryClearResult;
+
+  /** 사운드와 접근성 환경설정을 저장하고 최신 설정을 반환한다. */
+  updateSettings(patch: Partial<GameSettings>): GameSettings;
 }

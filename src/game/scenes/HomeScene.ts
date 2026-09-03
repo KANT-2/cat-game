@@ -4,9 +4,9 @@ import type { GameClient } from "../../core/GameClient";
 import type { CatVariant } from "../../domain/cats";
 import type { FurnitureKind, GameState, PlacedFurniture } from "../../domain/room";
 import type { ShopItemId } from "../../domain/shop";
-import { DAILY_QUIZ_ID } from "../../domain/study";
 import { CanvasButton } from "../components/CanvasButton";
 import { HomeMenuButton } from "../components/HomeMenuButton";
+import { applySmoothTextureSampling } from "../components/smoothSprite";
 import { ToastLayer } from "../components/ToastLayer";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
 import type { CatAnimationLibrary } from "../entities/CatAnimations";
@@ -18,16 +18,17 @@ import { ShopScene } from "./ShopScene";
 import { StudyModal } from "./StudyModal";
 
 export type HomeIconSources = {
-  studyGroup: string;
-  shopGroup: string;
-  socialGroup: string;
-  learning: string;
+  profile: string;
+  study: string;
   dailyQuest: string;
-  roomDecor: string;
   gacha: string;
-  ownedCollection: string;
-  addFriend: string;
-  visitGarden: string;
+  home: string;
+  settings: string;
+  back: string;
+  coin: string;
+  shopShowcase: string;
+  gachaBackdrop: string;
+  gachaMachine: string;
 };
 
 export class HomeScene extends Container {
@@ -44,9 +45,8 @@ export class HomeScene extends Container {
   private readonly toastLayer = new ToastLayer();
   private readonly profilePanel = new Container();
   private readonly sideMenu = new Container();
-  private readonly studyOptions = new Container();
+  private readonly settingsMenu = new Container();
   private readonly shopOptions = new Container();
-  private readonly socialOptions = new Container();
   private profilePortrait: Sprite | null = null;
   private studyModal: StudyModal | null = null;
   private shopScene: ShopScene | null = null;
@@ -99,6 +99,8 @@ export class HomeScene extends Container {
       onToast: (message) => this.notify(message),
       getHomeCats: () => this.state.homeCats,
       getActiveCat: () => this.state.activeCat,
+      getActiveWallpaper: () => this.state.activeWallpaper,
+      getActiveFloor: () => this.state.activeFloor,
       catAnimations,
       desktopWidget: this.desktopWidget,
       onCatFocusRequest: options.onCatFocusRequest ?? (() => {}),
@@ -111,7 +113,7 @@ export class HomeScene extends Container {
 
     this.buildProfile();
     this.buildSideMenu();
-    this.uiLayer.addChild(this.profilePanel, this.sideMenu);
+    this.uiLayer.addChild(this.profilePanel, this.sideMenu, this.settingsMenu);
     if (this.desktopWidget) {
       this.uiLayer.visible = false;
       this.pageLayer.visible = false;
@@ -138,8 +140,9 @@ export class HomeScene extends Container {
       (height - BASE_HEIGHT * clearingScale) / 2,
     );
 
-    this.profilePanel.position.set(30, 24);
-    this.sideMenu.position.set(width - 108, 24);
+    this.profilePanel.position.set(24, 20);
+    this.sideMenu.position.set(Math.max(24, width - 464), height - 128);
+    this.settingsMenu.position.set(24, height - 132);
     this.pageBackground.clear().rect(0, 0, width, height).fill(0xf8e7ca);
     this.studyModal?.layout(width, height);
     this.shopScene?.layout(width, height);
@@ -160,92 +163,79 @@ export class HomeScene extends Container {
   setInstallHandler(_handler: (() => void) | null): void {}
 
   private buildProfile(): void {
-    const card = new Graphics()
-      .roundRect(4, 6, 170, 112, 25)
-      .fill({ color: 0x68412b, alpha: 0.2 })
-      .roundRect(0, 0, 170, 112, 25)
-      .fill({ color: 0xfff3d8, alpha: 0.97 })
-      .stroke({ color: 0x69432c, width: 4 });
+    const profileSize = 156;
+    const visualScale = 0.75;
+    const frame = Sprite.from(this.iconSources.profile);
+    applySmoothTextureSampling(frame);
+    frame.width = profileSize * visualScale;
+    frame.height = profileSize * visualScale;
+    frame.position.set((profileSize - frame.width) / 2, (profileSize - frame.height) / 2);
     const activeAnimations = this.catAnimations[this.state.activeCat];
     const portrait = new Sprite(activeAnimations.idle.textures[0]);
     portrait.anchor.set(activeAnimations.idle.anchor.x, activeAnimations.idle.anchor.y);
-    portrait.scale.set(0.27);
-    portrait.position.set(54, 91);
+    const portraitScale = Math.min(72 / portrait.texture.width, 72 / portrait.texture.height);
+    portrait.scale.set(portraitScale);
+    portrait.position.set(78, 113);
     this.profilePortrait = portrait;
-    const level = new Text({ text: message("home.level", { level: 10 }), style: textStyle(16, 0x3d2b22, "800") });
+    const level = new Text({ text: message("home.level", { level: 10 }), style: textStyle(18, 0x3d2b22, "800") });
     level.anchor.set(0.5);
-    level.position.set(126, 54);
-    this.profilePanel.addChild(card, portrait, level);
-    this.profilePanel.hitArea = new Rectangle(0, 0, 174, 118);
+    level.position.set(78, 128);
+    this.profilePanel.addChild(frame, portrait, level);
+    this.profilePanel.hitArea = new Rectangle(0, 0, profileSize, profileSize);
     this.profilePanel.eventMode = "static";
     this.profilePanel.cursor = "pointer";
     this.profilePanel.on("pointertap", () => this.openFeaturePage("settings"));
   }
 
   private buildSideMenu(): void {
-    this.studyOptions.visible = false;
     this.shopOptions.visible = false;
-    this.socialOptions.visible = false;
 
-    const study = this.createIconButton(this.iconSources.studyGroup, () => this.toggleStudyOptions());
-    const shop = this.createIconButton(this.iconSources.shopGroup, () => this.toggleShopOptions());
-    const social = this.createIconButton(this.iconSources.socialGroup, () => this.toggleSocialOptions());
-    shop.y = 88;
-    social.y = 176;
-
-    const learning = this.createIconButton(this.iconSources.learning, () => this.openStudy());
-    const dailyQuest = this.createIconButton(this.iconSources.dailyQuest, () => this.openDailyQuest());
-    learning.x = -176;
-    dailyQuest.x = -88;
-    this.studyOptions.addChild(learning, dailyQuest);
-
-    const roomDecor = this.createIconButton(this.iconSources.roomDecor, () => this.openShop());
-    const gacha = this.createIconButton(this.iconSources.gacha, () => this.openGacha());
-    const ownedCollection = this.createIconButton(this.iconSources.ownedCollection, () =>
-      this.openFeaturePage("owned"),
+    const study = this.createIconButton(this.iconSources.study, message("home.study"), true, () => this.openStudy());
+    const dailyQuest = this.createIconButton(this.iconSources.dailyQuest, message("home.dailyQuest"), true, () =>
+      this.openDailyQuest(),
     );
-    roomDecor.x = -264;
-    gacha.x = -176;
-    ownedCollection.x = -88;
-    this.shopOptions.y = 88;
-    this.shopOptions.addChild(roomDecor, gacha, ownedCollection);
+    const gacha = this.createIconButton(this.iconSources.gacha, message("home.gacha"), true, () => this.openGacha());
+    const home = this.createIconButton(this.iconSources.home, message("home.shopOwned"), true, () =>
+      this.toggleShopOptions(),
+    );
+    const settings = this.createIconButton(this.iconSources.settings, message("home.settings"), true, () =>
+      this.openFeaturePage("settings"),
+    );
+    dailyQuest.x = 108;
+    gacha.x = 216;
+    home.x = 324;
+    const shop = new CanvasButton({
+      label: message("shop.title"),
+      width: 126,
+      height: 48,
+      color: 0xffc875,
+      onPress: () => this.openShop(),
+    });
+    const owned = new CanvasButton({
+      label: message("home.owned"),
+      width: 126,
+      height: 48,
+      color: 0xffe2b5,
+      onPress: () => this.openFeaturePage("owned"),
+    });
+    owned.y = 56;
+    this.shopOptions.position.set(319, -112);
+    this.shopOptions.addChild(shop, owned);
 
-    const addFriend = this.createIconButton(this.iconSources.addFriend, () => this.openFeaturePage("addFriend"));
-    const visitGarden = this.createIconButton(this.iconSources.visitGarden, () => this.openFeaturePage("visitGarden"));
-    addFriend.x = -176;
-    visitGarden.x = -88;
-    this.socialOptions.y = 176;
-    this.socialOptions.addChild(addFriend, visitGarden);
-
-    this.sideMenu.addChild(study, shop, social, this.studyOptions, this.shopOptions, this.socialOptions);
+    this.sideMenu.addChild(study, dailyQuest, gacha, home, this.shopOptions);
+    this.settingsMenu.addChild(settings);
   }
 
-  private createIconButton(iconSrc: string, onPress: () => void): HomeMenuButton {
-    return new HomeMenuButton({ iconSrc, onPress });
-  }
-
-  private toggleStudyOptions(): void {
-    this.shopOptions.visible = false;
-    this.socialOptions.visible = false;
-    this.studyOptions.visible = !this.studyOptions.visible;
+  private createIconButton(iconSrc: string, label: string, medallion: boolean, onPress: () => void): HomeMenuButton {
+    return new HomeMenuButton({ iconSrc, label, medallion, visualScale: 0.75, hitAreaHeight: 108, onPress });
   }
 
   private toggleShopOptions(): void {
-    this.studyOptions.visible = false;
-    this.socialOptions.visible = false;
     this.shopOptions.visible = !this.shopOptions.visible;
   }
 
-  private toggleSocialOptions(): void {
-    this.studyOptions.visible = false;
-    this.shopOptions.visible = false;
-    this.socialOptions.visible = !this.socialOptions.visible;
-  }
-
   private hideMenuOptions(): void {
-    this.studyOptions.visible = false;
     this.shopOptions.visible = false;
-    this.socialOptions.visible = false;
   }
 
   private enterPage(): void {
@@ -266,16 +256,17 @@ export class HomeScene extends Container {
     if (this.studyModal) {
       return;
     }
-    const quiz = this.gameClient.getQuiz(DAILY_QUIZ_ID);
-    if (!quiz) {
-      this.notify(message("home.quizUnavailable"));
-      return;
-    }
+    this.clearOpenPages();
     this.enterPage();
     this.studyModal = new StudyModal({
-      quiz,
-      onAnswer: (choiceId) => this.gameClient.answerQuiz(quiz.id, choiceId),
+      tasks: this.gameClient.getStudyTasks(),
+      getQuiz: (quizId) => this.gameClient.getQuiz(quizId),
+      getCodeChallenge: (challengeId) => this.gameClient.getCodeChallenge(challengeId),
+      onAnswer: (quizId, choiceId) => this.gameClient.answerQuiz(quizId, choiceId),
+      onSubmitCode: (challengeId, body, hintsUsed) => this.gameClient.submitCodeChallenge(challengeId, body, hintsUsed),
       onClose: () => this.closeStudy(),
+      backIcon: this.iconSources.back,
+      coinIcon: this.iconSources.coin,
     });
     this.pageLayer.addChild(this.studyModal);
     this.studyModal.layout(this.screenWidth, this.screenHeight);
@@ -285,21 +276,23 @@ export class HomeScene extends Container {
     if (!this.studyModal) {
       return;
     }
-    this.pageLayer.removeChild(this.studyModal);
-    this.studyModal.destroy({ children: true });
-    this.studyModal = null;
+    this.clearOpenPages();
     this.leavePage();
   }
 
   private openShop(): void {
-    this.enterPage();
     if (this.shopScene) {
       return;
     }
+    this.clearOpenPages();
+    this.enterPage();
     this.shopScene = new ShopScene({
       getState: () => this.state,
       onBack: () => this.closeShop(),
       onBuy: (itemId) => this.buyShopItem(itemId),
+      heroArt: this.iconSources.shopShowcase,
+      backIcon: this.iconSources.back,
+      coinIcon: this.iconSources.coin,
     });
     this.pageLayer.addChild(this.shopScene);
     this.shopScene.layout(this.screenWidth, this.screenHeight);
@@ -309,23 +302,25 @@ export class HomeScene extends Container {
     if (!this.shopScene) {
       return;
     }
-    this.pageLayer.removeChild(this.shopScene);
-    this.shopScene.destroy({ children: true });
-    this.shopScene = null;
-    this.closePurchaseChoice();
+    this.clearOpenPages();
     this.leavePage();
   }
 
   private openDailyQuest(): void {
-    this.enterPage();
     if (this.dailyQuestScene) {
       return;
     }
+    this.clearOpenPages();
+    this.enterPage();
     this.dailyQuestScene = new DailyQuestScene({
       getState: () => this.state,
+      getQuests: () => this.gameClient.getDailyQuests(),
       onBack: () => this.closeDailyQuest(),
-      onQuest: () => this.notify(message("daily.questComingSoon")),
-      onClaimAll: () => this.notify(message("daily.claimComingSoon")),
+      onOpenStudy: () => this.openStudy(),
+      onClaim: (questId) => this.gameClient.claimDailyQuest(questId),
+      onClaimBonus: () => this.gameClient.claimDailyBonus(),
+      backIcon: this.iconSources.back,
+      coinIcon: this.iconSources.coin,
     });
     this.pageLayer.addChild(this.dailyQuestScene);
     this.dailyQuestScene.layout(this.screenWidth, this.screenHeight);
@@ -335,17 +330,16 @@ export class HomeScene extends Container {
     if (!this.dailyQuestScene) {
       return;
     }
-    this.pageLayer.removeChild(this.dailyQuestScene);
-    this.dailyQuestScene.destroy({ children: true });
-    this.dailyQuestScene = null;
+    this.clearOpenPages();
     this.leavePage();
   }
 
   private openGacha(): void {
-    this.enterPage();
     if (this.gachaScene) {
       return;
     }
+    this.clearOpenPages();
+    this.enterPage();
     this.gachaScene = new GachaScene({
       getState: () => this.state,
       onBack: () => this.closeGacha(),
@@ -355,6 +349,10 @@ export class HomeScene extends Container {
           this.closeGacha();
         }
       },
+      backdropArt: this.iconSources.gachaBackdrop,
+      machineArt: this.iconSources.gachaMachine,
+      backIcon: this.iconSources.back,
+      coinIcon: this.iconSources.coin,
     });
     this.pageLayer.addChild(this.gachaScene);
     this.gachaScene.layout(this.screenWidth, this.screenHeight);
@@ -364,14 +362,12 @@ export class HomeScene extends Container {
     if (!this.gachaScene) {
       return;
     }
-    this.pageLayer.removeChild(this.gachaScene);
-    this.gachaScene.destroy({ children: true });
-    this.gachaScene = null;
+    this.clearOpenPages();
     this.leavePage();
   }
 
   private openFeaturePage(kind: FeaturePageKind): void {
-    this.closeFeaturePage(false);
+    this.clearOpenPages();
     this.enterPage();
     this.featurePageModal = new FeaturePageModal({
       kind,
@@ -382,7 +378,16 @@ export class HomeScene extends Container {
       },
       onSelectCat: (variant) => this.gameClient.selectCat(variant).ok,
       onSetCatHome: (variant, visible) => this.gameClient.setCatHome(variant, visible).ok,
+      onApplyTheme: (itemId) => this.gameClient.applyRoomTheme(itemId).ok,
+      onEnterRoomEdit: () => {
+        this.closeFeaturePage();
+        this.notify(message("owned.editGuide"));
+      },
+      onUpdateSettings: (patch) => this.gameClient.updateSettings(patch),
+      onResetLearning: () => this.gameClient.resetLearningProgress(),
       catAnimations: this.catAnimations,
+      backIcon: this.iconSources.back,
+      coinIcon: this.iconSources.coin,
       onNavigate: (nextKind) => this.openFeaturePage(nextKind),
       onClose: () => this.closeFeaturePage(),
     });
@@ -390,16 +395,31 @@ export class HomeScene extends Container {
     this.featurePageModal.layout(this.screenWidth, this.screenHeight);
   }
 
-  private closeFeaturePage(returnHome = true): void {
+  private closeFeaturePage(): void {
     if (!this.featurePageModal) {
       return;
     }
-    this.pageLayer.removeChild(this.featurePageModal);
-    this.featurePageModal.destroy({ children: true });
-    this.featurePageModal = null;
-    if (returnHome) {
-      this.leavePage();
+    this.clearOpenPages();
+    this.leavePage();
+  }
+
+  private clearOpenPages(): void {
+    const pages = [this.studyModal, this.shopScene, this.dailyQuestScene, this.gachaScene, this.featurePageModal];
+    for (const page of pages) {
+      if (!page) {
+        continue;
+      }
+      if (page.parent === this.pageLayer) {
+        this.pageLayer.removeChild(page);
+      }
+      page.destroy({ children: true });
     }
+    this.studyModal = null;
+    this.shopScene = null;
+    this.dailyQuestScene = null;
+    this.gachaScene = null;
+    this.featurePageModal = null;
+    this.closePurchaseChoice();
   }
 
   private buyShopItem(itemId: ShopItemId | null): void {
@@ -409,8 +429,13 @@ export class HomeScene extends Container {
     }
     const result = this.gameClient.buyShopItem(itemId);
     if (!result.ok) {
-      const messageId = result.reason === "insufficient-gems" ? "shop.insufficientGems" : "shop.insufficientCoins";
+      const messageId = result.reason === "insufficient-coins" ? "shop.insufficientCoins" : "shop.purchaseComingSoon";
       this.notify(message(messageId));
+      return;
+    }
+    this.shopScene?.refresh();
+    if (result.itemType !== "furniture") {
+      this.notify(message("shop.themeStored"));
       return;
     }
     this.showPurchaseChoice(result.itemId, result.furnitureKind);
@@ -421,22 +446,23 @@ export class HomeScene extends Container {
     const panel = new Container();
     const blocker = new Graphics()
       .rect(-this.screenWidth / 2, -this.screenHeight / 2, this.screenWidth, this.screenHeight)
-      .fill({ color: 0x2b1b13, alpha: 0.35 });
+      .fill(0xf8e7ca);
     blocker.eventMode = "static";
     panel.addChild(
       blocker,
-      new Graphics().roundRect(-280, -145, 560, 290, 28).fill(0xfff3dc).stroke({ color: 0x68442f, width: 5 }),
+      new Graphics().roundRect(-470, -270, 940, 540, 32).fill(0xfff3dc).stroke({ color: 0x68442f, width: 5 }),
     );
-    const title = new Text({ text: message("shop.purchaseChoiceTitle"), style: textStyle(25, 0x3d2b22, "800") });
+    const title = new Text({ text: message("shop.purchaseChoiceTitle"), style: textStyle(34, 0x3d2b22, "800") });
     title.anchor.set(0.5);
-    title.position.set(0, -92);
-    const guide = new Text({ text: message("shop.purchaseChoiceGuide"), style: textStyle(17, 0x76533c, "600") });
+    title.position.set(0, -155);
+    const guide = new Text({ text: message("shop.purchaseChoiceGuide"), style: textStyle(20, 0x76533c, "600") });
     guide.anchor.set(0.5);
-    guide.position.set(0, -45);
+    guide.position.set(0, -82);
     const place = new CanvasButton({
       label: message("shop.placeNow"),
       width: 190,
-      height: 60,
+      height: 68,
+      fontSize: 20,
       color: 0x91aa55,
       onPress: () => {
         this.closePurchaseChoice();
@@ -444,11 +470,12 @@ export class HomeScene extends Container {
         this.startPlacement(kind, 0, itemId);
       },
     });
-    place.position.set(-205, 25);
+    place.position.set(-220, 45);
     const store = new CanvasButton({
       label: message("shop.storeNow"),
       width: 190,
-      height: 60,
+      height: 68,
+      fontSize: 20,
       color: 0xd9ad7d,
       onPress: () => {
         this.closePurchaseChoice();
@@ -456,7 +483,7 @@ export class HomeScene extends Container {
         this.notify(message("shop.storedAfterPurchase"));
       },
     });
-    store.position.set(15, 25);
+    store.position.set(30, 45);
     panel.addChild(title, guide, place, store);
     panel.position.set(this.screenWidth / 2, this.screenHeight / 2);
     this.purchaseChoicePanel = panel;
@@ -545,7 +572,7 @@ export class HomeScene extends Container {
     this.closeFurnitureEditor();
     const panel = new Container();
     panel.addChild(
-      new Graphics().roundRect(-330, -42, 660, 84, 24).fill(0xfff3dc).stroke({ color: 0x68442f, width: 4 }),
+      new Graphics().roundRect(-390, -42, 780, 84, 24).fill(0xfff3dc).stroke({ color: 0x68442f, width: 4 }),
     );
     const cancel = new CanvasButton({
       label: "X",
@@ -554,13 +581,13 @@ export class HomeScene extends Container {
       color: 0xc7aa91,
       onPress: () => this.closeFurnitureEditor(),
     });
-    cancel.position.set(-315, -24);
+    cancel.position.set(-375, -24);
     const label = new Text({
       text: message("furniture.editGuide", { item: message(`furniture.${item.kind}`) }),
       style: textStyle(17, 0x4b3021, "700"),
     });
     label.anchor.set(0.5);
-    label.position.set(-165, 0);
+    label.position.set(-230, 0);
     const move = new CanvasButton({
       label: message("furniture.move"),
       width: 105,
@@ -568,7 +595,15 @@ export class HomeScene extends Container {
       color: 0x91aa82,
       onPress: () => this.editPlacedFurniture(item, item.rotation),
     });
-    move.position.set(-35, -24);
+    move.position.set(-80, -24);
+    const rotate = new CanvasButton({
+      label: message("furniture.rotate"),
+      width: 105,
+      height: 48,
+      color: 0xa8b879,
+      onPress: () => this.editPlacedFurniture(item, item.rotation === 0 ? 1 : 0),
+    });
+    rotate.position.set(40, -24);
     const store = new CanvasButton({
       label: message("furniture.store"),
       width: 105,
@@ -576,8 +611,8 @@ export class HomeScene extends Container {
       color: 0xd99278,
       onPress: () => this.storePlacedFurniture(item),
     });
-    store.position.set(140, -24);
-    panel.addChild(cancel, label, move, store);
+    store.position.set(160, -24);
+    panel.addChild(cancel, label, move, rotate, store);
     panel.position.set(this.screenWidth / 2, this.screenHeight - 92);
     this.furnitureEditPanel = panel;
     this.uiLayer.addChild(panel);
@@ -612,6 +647,7 @@ export class HomeScene extends Container {
     }
     this.clearing.syncCats();
     this.clearing.syncFurniture();
+    this.clearing.syncTheme();
     if (this.selectedFurniture && snapshot.inventory[this.selectedFurniture] <= 0) {
       this.stopPlacement();
     }

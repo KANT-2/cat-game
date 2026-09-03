@@ -45,63 +45,99 @@ await page.mouse.up();
 await page.waitForTimeout(900);
 await page.screenshot({ path: screenshotPath("cat-game-drop.png") });
 
-await page.mouse.click(110, 75);
+await page.mouse.click(78, 811);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-settings-account.png") });
 await page.mouse.click(800, 738);
 await page.waitForTimeout(150);
 await page.screenshot({ path: screenshotPath("cat-game-settings-confirm-reset.png") });
-await page.mouse.click(695, 532);
-await page.mouse.click(165, 406);
+await page.mouse.click(695, 587);
+await page.mouse.click(165, 369);
 await page.waitForTimeout(150);
 await page.screenshot({ path: screenshotPath("cat-game-settings-sound.png") });
-await page.mouse.click(165, 478);
+await page.mouse.click(165, 459);
 await page.waitForTimeout(150);
 await page.screenshot({ path: screenshotPath("cat-game-settings-alerts.png") });
-await page.mouse.click(165, 550);
+await page.mouse.click(165, 549);
 await page.waitForTimeout(150);
 await page.screenshot({ path: screenshotPath("cat-game-settings-learning.png") });
-await page.mouse.click(165, 622);
-await page.waitForTimeout(150);
-await page.screenshot({ path: screenshotPath("cat-game-settings-display.png") });
-await page.mouse.click(165, 694);
-await page.waitForTimeout(150);
-await page.screenshot({ path: screenshotPath("cat-game-settings-support.png") });
 await page.mouse.click(63, 60);
 
-await page.mouse.click(1530, 62);
-await page.waitForTimeout(250);
-await page.screenshot({ path: screenshotPath("cat-game-study-options.png") });
-await page.mouse.click(1354, 62);
+await page.mouse.click(1194, 820);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-study.png") });
-await page.mouse.click(800, 686);
-
-await page.mouse.click(1530, 62);
+await page.mouse.click(390, 445);
+await page.waitForTimeout(100);
+await page.screenshot({ path: screenshotPath("cat-game-study-type-select.png") });
+await page.mouse.click(390, 535);
+await page.mouse.click(800, 445);
+await page.waitForTimeout(100);
+await page.screenshot({ path: screenshotPath("cat-game-study-concept-select.png") });
+await page.mouse.click(800, 535);
+await page.mouse.click(1200, 445);
+await page.waitForTimeout(100);
+await page.screenshot({ path: screenshotPath("cat-game-study-difficulty-select.png") });
+await page.mouse.click(1200, 535);
+await page.mouse.click(1395, 350);
 await page.waitForTimeout(200);
-await page.mouse.click(1442, 62);
+await page.screenshot({ path: screenshotPath("cat-game-study-task.png") });
+await page.mouse.click(65, 55);
+await page.waitForTimeout(100);
+await page.mouse.click(940, 813);
+await page.waitForTimeout(100);
+await page.mouse.click(1450, 720);
+await page.waitForTimeout(200);
+await page.screenshot({ path: screenshotPath("cat-game-study-code.png") });
+await page.mouse.click(294, 601);
+await page.waitForTimeout(100);
+await page.screenshot({ path: screenshotPath("cat-game-study-hint-2.png") });
+await page.mouse.click(154, 601);
+await page.waitForTimeout(100);
+await page.screenshot({ path: screenshotPath("cat-game-study-hint-1-again.png") });
+await page.mouse.click(65, 55);
+await page.waitForTimeout(100);
+await page.mouse.click(65, 55);
+
+await page.mouse.click(1302, 820);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-daily-quest.png") });
 await page.mouse.click(65, 54);
 
-await page.mouse.click(1530, 150);
+await page.mouse.click(1530, 811);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-shop-options.png") });
-await page.mouse.click(1266, 150);
+await page.mouse.click(1518, 684);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-shop.png") });
-await page.mouse.click(595, 438);
+await page.mouse.click(180, 282);
+await page.waitForTimeout(150);
+await page.screenshot({ path: screenshotPath("cat-game-shop-wallpaper.png") });
+await page.mouse.click(595, 510);
+await page.waitForTimeout(150);
+await page.mouse.click(180, 198);
+await page.waitForTimeout(150);
+await page.mouse.click(595, 510);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-purchased.png") });
 await page.mouse.click(905, 505);
 await page.waitForTimeout(200);
 
-await page.mouse.click(1530, 150);
-await page.waitForTimeout(200);
-await page.mouse.click(1354, 150);
+await page.mouse.click(1410, 820);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-gacha.png") });
+await page.mouse.click(995, 50);
+await page.waitForTimeout(150);
+await page.screenshot({ path: screenshotPath("cat-game-gacha-policy.png") });
+await page.mouse.click(800, 665);
+await page.waitForTimeout(100);
+await page.mouse.click(805, 50);
+await page.waitForTimeout(150);
+await page.screenshot({ path: screenshotPath("cat-game-gacha-collection.png") });
+await page.mouse.click(800, 680);
 await page.mouse.click(640, 787);
+await page.waitForTimeout(150);
+await page.screenshot({ path: screenshotPath("cat-game-gacha-confirm.png") });
+await page.mouse.click(930, 582);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-gacha-item-result.png") });
 await page.mouse.click(800, 744);
@@ -110,67 +146,64 @@ await page.evaluate(() => {
   Math.random = () => 0.01;
 });
 await page.mouse.click(640, 787);
+await page.waitForTimeout(100);
+await page.mouse.click(930, 582);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-gacha-cat-result.png") });
 await page.mouse.click(780, 744);
 await page.waitForTimeout(400);
 await page.screenshot({ path: screenshotPath("cat-game-home-ink-cat.png") });
 
-await page.mouse.click(1530, 150);
+await page.mouse.click(1530, 811);
 await page.waitForTimeout(200);
-await page.mouse.click(1442, 150);
+await page.mouse.click(1518, 740);
+await page.waitForTimeout(200);
+await page.mouse.click(745, 218);
+await page.waitForTimeout(200);
+await page.screenshot({ path: screenshotPath("cat-game-owned-wallpaper.png") });
+await page.mouse.click(432, 423);
+await page.waitForTimeout(150);
+await page.mouse.click(515, 218);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-owned-siamese-stored.png") });
-await page.mouse.click(862, 346);
+await page.mouse.click(892, 396);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-owned-siamese-on-home.png") });
-await page.mouse.click(472, 346);
+await page.mouse.click(472, 396);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-owned-stored-cat.png") });
 await page.mouse.click(63, 60);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-home-one-cat.png") });
 
-await page.mouse.click(1530, 150);
+await page.mouse.click(1530, 811);
 await page.waitForTimeout(200);
-await page.mouse.click(1442, 150);
+await page.mouse.click(1518, 740);
 await page.waitForTimeout(200);
-await page.mouse.click(472, 346);
+await page.mouse.click(515, 218);
+await page.waitForTimeout(200);
+await page.mouse.click(472, 396);
 await page.waitForTimeout(200);
 await page.mouse.click(63, 60);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-home-three-cats.png") });
-
-await page.mouse.click(1530, 238);
-await page.waitForTimeout(200);
-await page.mouse.click(1354, 238);
-await page.waitForTimeout(200);
-await page.screenshot({ path: screenshotPath("cat-game-add-friend.png") });
-await page.mouse.click(165, 442);
-await page.waitForTimeout(200);
-await page.screenshot({ path: screenshotPath("cat-game-visit-garden-from-sidebar.png") });
-await page.mouse.click(165, 354);
-await page.waitForTimeout(200);
-await page.screenshot({ path: screenshotPath("cat-game-add-friend-from-sidebar.png") });
-await page.mouse.click(63, 60);
-
-await page.mouse.click(1530, 238);
-await page.waitForTimeout(200);
-await page.mouse.click(1442, 238);
-await page.waitForTimeout(200);
-await page.screenshot({ path: screenshotPath("cat-game-visit-garden.png") });
-await page.mouse.click(63, 60);
 
 const savedState = await page.evaluate(() => localStorage.getItem("cozy-code-cat-room-v1"));
 if (!savedState) {
   throw new Error("game state was not persisted");
 }
 const parsedState = JSON.parse(savedState);
-if (parsedState.gems !== 99_940) {
-  throw new Error(`unexpected gems after two draws: ${parsedState.gems}`);
+if (parsedState.coins !== 1_093_040) {
+  throw new Error(`unexpected coins after purchases and two draws: ${parsedState.coins}`);
+}
+if ("gems" in parsedState) {
+  throw new Error("legacy gem currency should not remain in the saved state");
 }
 if (parsedState.shopInventory?.["furniture.desk"] !== 1) {
   throw new Error("gacha furniture reward was not stored with its exact product id");
+}
+if (parsedState.activeWallpaper !== "wallpaper.cream") {
+  throw new Error("purchased wallpaper was not applied from owned inventory");
 }
 if (!parsedState.ownedCats?.includes("ink") || parsedState.activeCat !== "ink") {
   throw new Error("gacha cat reward was not unlocked and selected on the home screen");
