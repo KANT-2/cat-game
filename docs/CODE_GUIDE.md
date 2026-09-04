@@ -19,13 +19,17 @@ src/main.ts
   ├─ GameApp.create()
   │   ├─ PixiJS Application 생성
   │   ├─ GameStateStore 생성
-  │   ├─ LocalGameClient 생성
+  │   ├─ 환경에 따라 LocalGameClient 또는 BackendLearningGameClient 생성
   │   └─ HomeScene에 GameClient 주입
   └─ registerPwa()
       └─ 설치 가능 상태와 service worker 이벤트 연결
 ```
 
 `src/app/GameApp.ts`만 구체적인 게임 클라이언트와 저장소 구현을 조립한다. 장면 코드에서 `LocalGameClient` 또는 `localStorage`를 직접 import하지 않는다.
+
+백엔드 URL이 설정되면 `src/app/createGameClient.ts`가 FastAPI 연결과 추천 과제 초기화를 기다린 뒤 화면에
+클라이언트를 주입한다. 로컬 개발 사용자 UUID를 지정하지 않으면 백엔드의 개발 세션 엔드포인트를 사용한다.
+서버 학습 과제는 공개 UUID를 ID로 사용하며 제목·설명·선택지는 검증된 동적 JSON으로 Canvas에 표시한다.
 
 ## GameClient 데이터 흐름
 
@@ -83,6 +87,10 @@ UI는 `reason`을 메시지 키로 변환해 보여 줄 뿐 충돌을 다시 판
 ### 함수 작성형 과제와 데일리 퀘스트
 
 함수 작성형 과제는 UI가 함수 선언을 고정하고 본문만 `submitCodeChallenge()`로 전달한다. 로컬 클라이언트는 임의 코드를 실행하지 않고 허용된 풀이 형태를 테스트 결과로 변환한다. 서버 채점기로 교체할 때도 아래 결과 계약을 유지한다.
+
+백엔드 학습 모드에서는 코드 또는 객관식 답안을 `POST /api/v1/attempts`에 제출한 뒤 공개 attempt UUID로
+완료 상태를 폴링한다. `COMPLETED`의 `is_correct`만 화면 결과로 사용하고, `FAILED`나 연결 시간 초과는
+사용자 문구 키로 변환한다. 서버가 아직 재화 보상을 커밋하지 않으므로 원격 완료에 로컬 코인을 지급하지 않는다.
 
 ```json
 {

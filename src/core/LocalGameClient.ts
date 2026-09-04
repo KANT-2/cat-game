@@ -290,10 +290,10 @@ export class LocalGameClient implements GameClient {
     }
     return {
       id: quiz.id,
-      titleMessage: quiz.titleMessage,
-      summaryMessage: quiz.summaryMessage,
-      promptMessage: quiz.promptMessage,
-      choices: quiz.choices.map((choice) => ({ ...choice })),
+      title: { messageId: quiz.titleMessage },
+      summary: { messageId: quiz.summaryMessage },
+      prompt: { messageId: quiz.promptMessage },
+      choices: quiz.choices.map((choice) => ({ id: choice.id, label: { messageId: choice.labelMessage } })),
       rewardCoins: quiz.rewardCoins,
       completed: this.state.completedQuizIds.includes(quizId),
     };
@@ -357,8 +357,8 @@ export class LocalGameClient implements GameClient {
       type: task.type,
       concept: task.concept,
       difficulty: task.difficulty,
-      titleMessage: task.titleMessage,
-      summaryMessage: task.summaryMessage,
+      title: { messageId: task.titleMessage },
+      summary: { messageId: task.summaryMessage },
       rewardCoins: task.rewardCoins,
       completed:
         task.type === "quiz"
@@ -377,15 +377,15 @@ export class LocalGameClient implements GameClient {
       type: challenge.type,
       concept: challenge.concept,
       difficulty: challenge.difficulty,
-      titleMessage: challenge.titleMessage,
-      summaryMessage: challenge.summaryMessage,
-      promptMessage: challenge.promptMessage,
+      title: { messageId: challenge.titleMessage },
+      summary: { messageId: challenge.summaryMessage },
+      prompt: { messageId: challenge.promptMessage },
       rewardCoins: challenge.rewardCoins,
       completed: this.state.completedCodeChallengeIds.includes(challengeId),
       signature: challenge.signature,
       starterBody: challenge.starterBody,
-      examplesMessage: challenge.examplesMessage,
-      hintMessages: challenge.hintMessages,
+      examples: { messageId: challenge.examplesMessage },
+      hints: challenge.hintMessages.map((messageId) => ({ messageId })),
       bonusCoins: challenge.bonusCoins,
     };
   }

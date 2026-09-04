@@ -6,7 +6,7 @@ export const CONDITIONAL_QUIZ_ID = "python-conditional-001";
 export const SUM_CODE_ID = "python-sum-001";
 
 export type StudyTaskType = "quiz" | "code";
-export type StudyConcept = "variables" | "conditionals" | "loops" | "functions";
+export type StudyConcept = "variables" | "conditionals" | "loops" | "functions" | "other";
 export type StudyDifficulty = "basic" | "applied" | "challenge";
 
 export type QuizChoice = { id: string; labelMessage: MessageId };

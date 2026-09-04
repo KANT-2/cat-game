@@ -54,6 +54,11 @@ src-tauri/                후속 데스크톱 창 기능을 격리한 선택적 
 - 계약에는 PixiJS 타입, DOM 타입, 저장소 구현 타입을 추가하지 않는다.
 - 새 서버 API가 생기면 같은 계약을 구현하는 원격 클라이언트로 교체한다. 화면은 서버 위치를 알 필요가 없다.
 
+`VITE_CAT_GAME_API_BASE_URL`이 설정된 실행에서는 `BackendLearningGameClient`가 추천 문제 조회와 답안 채점을
+FastAPI에 위임한다. HTTP·JSON·개발 사용자 헤더는 `BackendApiClient`가 담당하고, PixiJS 장면은 계속
+`GameClient`만 사용한다. 서버 라우터가 아직 없는 상점·가챠·하우징 명령은 `LocalGameClient`에 위임하며,
+서버 스냅샷 계약이 준비되기 전에는 원격 저장을 가장한 낙관적 동기화를 하지 않는다.
+
 ## 기능 추가 순서
 
 예를 들어 상점 구매를 추가할 때는 다음 순서로 작업한다.

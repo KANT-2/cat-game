@@ -1,13 +1,13 @@
 import { Application, Assets } from "pixi.js";
 import { assetPath, loadAssetCatalog } from "../assets/AssetCatalog";
 import { findAssetEntry, loadTexture } from "../assets/SpriteSheetLoader";
-import { LocalGameClient } from "../core/LocalGameClient";
+import type { GameClient } from "../core/GameClient";
 import { type CatVariant, catVariants } from "../domain/cats";
 import type { CatAnimationLibrary, CatAnimationSet } from "../game/entities/CatAnimations";
 import type { ForestArt } from "../game/forest/ForestArt";
 import { HomeScene } from "../game/scenes/HomeScene";
 import { LoadingScene } from "../game/scenes/LoadingScene";
-import { GameStateStore } from "../services/gameStateStore";
+import { createGameClient } from "./createGameClient";
 import { loadCatAnimations } from "./loadCatAnimations";
 import { loadForestArt } from "./loadForestArt";
 
@@ -33,9 +33,6 @@ export class GameApp {
     });
     mount.appendChild(renderer.canvas);
 
-    const gameClient = new LocalGameClient(new GameStateStore());
-    const activeCat = gameClient.getSnapshot().activeCat;
-
     const loadingStartedAt = performance.now();
     const loading = new LoadingScene();
     renderer.stage.addChild(loading);
@@ -47,8 +44,11 @@ export class GameApp {
 
     let catAnimations: CatAnimationLibrary;
     let forestArt: ForestArt;
+    let gameClient: GameClient;
     let assetCatalog: Awaited<ReturnType<typeof loadAssetCatalog>>;
     try {
+      gameClient = await createGameClient();
+      const activeCat = gameClient.getSnapshot().activeCat;
       assetCatalog = await loadAssetCatalog();
       loading.setProgress(0.06);
       const [loadingBackground, loadingLogo] = await Promise.all([
