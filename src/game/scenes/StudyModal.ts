@@ -1,4 +1,4 @@
-import { Container, Graphics, Sprite, Text } from "pixi.js";
+import { Container, Graphics, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
 import type {
   CodeChallengeView,
@@ -11,8 +11,8 @@ import type { StudyConcept, StudyDifficulty, StudyTaskType } from "../../domain/
 import { BackButton } from "../components/BackButton";
 import { CanvasButton } from "../components/CanvasButton";
 import { createCozyPageBackground, createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
+import { createCoinAmount } from "../components/CurrencyBar";
 import { layoutToFillViewport } from "../components/fullscreenLayout";
-import { applySmoothTextureSampling } from "../components/smoothSprite";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
 
 type FilterValue<T extends string> = "all" | T;
@@ -53,6 +53,7 @@ export class StudyModal extends Container {
   private readonly background = new Graphics();
   private readonly page = new Container();
   private readonly body = new Container();
+  private readonly feedbackLayer = new Container();
   private readonly options: StudyModalOptions;
   private tasks: StudyTaskView[];
   private typeFilter: FilterValue<StudyTaskType> = "all";
@@ -70,7 +71,7 @@ export class StudyModal extends Container {
     this.background.eventMode = "static";
     this.body.sortableChildren = true;
     this.addChild(this.background, this.page);
-    this.page.addChild(this.body);
+    this.page.addChild(this.body, this.feedbackLayer);
     this.renderDashboard();
   }
 
@@ -89,7 +90,7 @@ export class StudyModal extends Container {
   }
 
   private drawBaseHeader(titleValue: string, subtitleValue: string, onBack: () => void): void {
-    this.body.addChild(createCozyPageBackground(BASE_WIDTH, BASE_HEIGHT, 790));
+    this.body.addChild(createCozyPageBackground(BASE_WIDTH, BASE_HEIGHT));
     const back = new BackButton({ iconSrc: this.options.backIcon, size: 72, onPress: onBack });
     back.position.set(28, 24);
     const title = new Text({ text: titleValue, style: textStyle(34, 0x3f281c, "800") });
@@ -149,7 +150,7 @@ export class StudyModal extends Container {
     });
     metadata.position.set(540, 290);
     const reward = this.createCoinReward(recommended.rewardCoins, 15);
-    reward.position.set(540 + metadata.width + 18, 287);
+    reward.position.set(540 + metadata.width + 18, 299);
     const start = new CanvasButton({
       label: message("study.quickStart"),
       width: 210,
@@ -317,7 +318,7 @@ export class StudyModal extends Container {
       });
       meta.position.set(x + 24, y + 118);
       const reward = this.createCoinReward(task.rewardCoins, 14);
-      reward.position.set(x + 24 + meta.width + 16, y + 115);
+      reward.position.set(x + 24 + meta.width + 16, y + 127);
       const start = new CanvasButton({
         label: message(task.completed ? "study.taskCompleted" : "study.taskStart"),
         width: 145,
@@ -404,13 +405,9 @@ export class StudyModal extends Container {
     code.position.set(145, 260);
     const choicesTitle = new Text({ text: message("study.choicesTitle"), style: textStyle(20, 0x493022, "800") });
     choicesTitle.position.set(115, 445);
-    const reward = new Graphics()
-      .roundRect(1320, 165, 125, 54, 16)
-      .fill(0xfff0cc)
-      .stroke({ color: 0xd39a55, width: 2 });
-    const rewardIndicator = this.createCoinReward(quiz.rewardCoins, 17);
-    rewardIndicator.position.set(1320 + (125 - rewardIndicator.width) / 2, 180);
-    this.body.addChild(problem, prompt, codeBox, code, choicesTitle, reward, rewardIndicator);
+    const reward = this.createCoinRewardBadge(quiz.rewardCoins, 125);
+    reward.position.set(1320, 165);
+    this.body.addChild(problem, prompt, codeBox, code, choicesTitle, reward);
     quiz.choices.forEach((choice, index) => {
       const button = new CanvasButton({
         label: `${String.fromCharCode(65 + index)}   ${message(choice.labelMessage)}`,
@@ -508,12 +505,8 @@ export class StudyModal extends Container {
     editorTitle.position.set(625, 155);
     const editorHelp = new Text({ text: message("study.editorHelp"), style: textStyle(15, 0x76533c, "600") });
     editorHelp.position.set(625, 193);
-    const reward = new Graphics()
-      .roundRect(1370, 150, 130, 54, 16)
-      .fill(0xfff0cc)
-      .stroke({ color: 0xd39a55, width: 2 });
-    const rewardIndicator = this.createCoinReward(challenge.rewardCoins, 17);
-    rewardIndicator.position.set(1370 + (130 - rewardIndicator.width) / 2, 165);
+    const reward = this.createCoinRewardBadge(challenge.rewardCoins, 130);
+    reward.position.set(1370, 150);
     this.codeEditor = new CanvasCodeEditor(challenge.signature, challenge.starterBody);
     this.codeEditor.position.set(625, 235);
     const submit = new CanvasButton({
@@ -538,7 +531,6 @@ export class StudyModal extends Container {
       editorTitle,
       editorHelp,
       reward,
-      rewardIndicator,
       this.codeEditor,
       submit,
     );
@@ -574,52 +566,71 @@ export class StudyModal extends Container {
   }
 
   private showFeedback(passed: boolean, detailValue: string, tests: string[], onContinue: () => void): void {
-    this.clearBody();
-    this.drawBaseHeader(
-      message("study.feedbackTitle"),
-      message(passed ? "study.feedbackSuccessSubtitle" : "study.feedbackRetrySubtitle"),
-      onContinue,
-    );
-    const panel = createCozyPanel(250, 125, 1100, 700, {
+    this.closeFeedback();
+    const blocker = new Graphics().rect(0, 0, BASE_WIDTH, BASE_HEIGHT).fill({ color: 0x2f211b, alpha: 0.58 });
+    blocker.eventMode = "static";
+    const modalTop = tests.length > 0 ? 105 : 155;
+    const testRowY = 420;
+    const closeY = tests.length > 0 ? testRowY + tests.length * 54 + 22 : 480;
+    const panelBottom = closeY + 88;
+    const panel = createCozyPanel(300, modalTop, 1000, panelBottom - modalTop, {
       fill: 0xfff8e8,
       border: passed ? 0x72945e : 0xb36554,
       radius: 30,
     });
+    const title = new Text({ text: message("study.feedbackTitle"), style: textStyle(30, 0x3f281c, "800") });
+    title.anchor.set(0.5);
+    title.position.set(800, modalTop + 42);
+    const subtitle = new Text({
+      text: message(passed ? "study.feedbackSuccessSubtitle" : "study.feedbackRetrySubtitle"),
+      style: textStyle(16, 0x74523d, "600"),
+    });
+    subtitle.anchor.set(0.5);
+    subtitle.position.set(800, modalTop + 79);
     const statusBadge = new Graphics()
-      .circle(800, 235, 48)
+      .circle(800, modalTop + 140, 36)
       .fill(passed ? 0x87a66e : 0xd78b72)
       .stroke({ color: passed ? 0x5f814f : 0xa54f42, width: 4 });
-    const status = new Text({ text: passed ? "✓" : "!", style: textStyle(48, 0xffffff, "800") });
+    const status = new Text({ text: passed ? "✓" : "!", style: textStyle(38, 0xffffff, "800") });
     status.anchor.set(0.5);
-    status.position.set(800, 232);
+    status.position.set(800, modalTop + 137);
     const detailPlate = new Graphics()
-      .roundRect(380, 315, 840, 115, 20)
+      .roundRect(350, modalTop + 195, 900, 105, 20)
       .fill(passed ? 0xe8f0dc : 0xf4dfd4)
       .stroke({ color: passed ? 0x87a66e : 0xd78b72, width: 2 });
     const detail = new Text({
       text: detailValue,
-      style: { ...textStyle(23, 0x493022, "700"), align: "center", wordWrap: true, wordWrapWidth: 760, lineHeight: 34 },
+      style: { ...textStyle(21, 0x493022, "700"), align: "center", wordWrap: true, wordWrapWidth: 820, lineHeight: 31 },
     });
     detail.anchor.set(0.5, 0);
-    detail.position.set(800, 345);
-    this.body.addChild(panel, statusBadge, status, detailPlate, detail);
+    detail.position.set(800, modalTop + 222);
+    this.feedbackLayer.addChild(blocker, panel, title, subtitle, statusBadge, status, detailPlate, detail);
     tests.forEach((test, index) => {
-      const row = new Graphics().roundRect(380, 465 + index * 62, 840, 50, 14).fill(passed ? 0xe5efd9 : 0xf4dfd4);
+      const row = new Graphics().roundRect(350, testRowY + index * 54, 900, 44, 14).fill(passed ? 0xe5efd9 : 0xf4dfd4);
       const label = new Text({ text: `${passed ? "✓" : "×"}  ${test}`, style: textStyle(15, 0x584235, "700") });
       label.anchor.set(0.5);
-      label.position.set(800, 490 + index * 62);
-      this.body.addChild(row, label);
+      label.position.set(800, testRowY + 22 + index * 54);
+      this.feedbackLayer.addChild(row, label);
     });
     const close = new CanvasButton({
       label: message(passed ? "study.backToTasks" : "study.retry"),
-      width: 250,
-      height: 64,
+      width: 220,
+      height: 58,
       fontSize: 20,
       color: passed ? 0x87a66e : 0xe4a05a,
-      onPress: onContinue,
+      onPress: () => {
+        this.closeFeedback();
+        onContinue();
+      },
     });
-    close.position.set(675, 720);
-    this.body.addChild(close);
+    close.position.set(690, closeY);
+    this.feedbackLayer.addChild(close);
+  }
+
+  private closeFeedback(): void {
+    this.feedbackLayer.removeChildren().forEach((child) => {
+      child.destroy({ children: true });
+    });
   }
 
   private markTaskCompleted(taskId: string): void {
@@ -627,20 +638,29 @@ export class StudyModal extends Container {
   }
 
   private createCoinReward(amount: number, fontSize: number): Container {
-    const reward = new Container();
-    const amountLabel = new Text({ text: `+${amount}`, style: textStyle(fontSize, 0x654126, "800") });
-    amountLabel.position.set(0, 1);
-    const coin = Sprite.from(this.options.coinIcon);
-    applySmoothTextureSampling(coin);
-    const iconSize = fontSize + 7;
-    coin.width = iconSize;
-    coin.height = iconSize;
-    coin.position.set(amountLabel.width + 6, 0);
-    reward.addChild(amountLabel, coin);
-    return reward;
+    return createCoinAmount(this.options.coinIcon, `+${amount}`, {
+      fontSize,
+      iconSize: fontSize + 7,
+      gap: 6,
+      order: "amount-first",
+    });
+  }
+
+  private createCoinRewardBadge(amount: number, width: number): Container {
+    const height = 54;
+    const badge = new Container();
+    const frame = new Graphics()
+      .roundRect(0, 0, width, height, 16)
+      .fill(0xfff0cc)
+      .stroke({ color: 0xd39a55, width: 2 });
+    const reward = this.createCoinReward(amount, 17);
+    reward.position.set((width - reward.width) / 2, height / 2);
+    badge.addChild(frame, reward);
+    return badge;
   }
 
   private clearBody(): void {
+    this.closeFeedback();
     this.codeEditor?.destroy();
     this.codeEditor = null;
     this.body.removeChildren().forEach((child) => {

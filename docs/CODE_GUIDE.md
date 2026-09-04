@@ -96,9 +96,26 @@ UI는 `reason`을 메시지 키로 변환해 보여 줄 뿐 충돌을 다시 판
 
 오늘 완료한 서로 다른 과제 ID는 `dailyCompletedTaskIds`에 기록한다. `claimDailyQuest()`와 `claimDailyBonus()`만 재화를 지급하며, `claimedDailyQuestIds`와 `dailyBonusClaimed`로 중복 수령을 막는다. 날짜가 바뀌면 데일리 필드만 초기화되고 전체 학습 진도는 유지된다.
 
+### 출석 체크
+
+`getAttendance()`는 로컬 날짜를 기준으로 오늘 수령 가능 여부, 현재·다음 연속 출석 일수, 월간 달력에 표시할 수령 날짜와 7일 보상표를 반환한다. `claimAttendance()`만 출석 보상을 상태에 반영하며 같은 날짜의 중복 수령을 거부한다.
+
+```json
+{
+  "ok": true,
+  "claimedDate": "2026-09-04",
+  "currentStreak": 3,
+  "dailyCoins": 100,
+  "streakBonus": 150,
+  "coinsAwarded": 250
+}
+```
+
+연속 출석은 바로 전 로컬 날짜에 출석했을 때만 이어진다. 매일 100코인을 지급하고 7일 주기 중 3일차에는 150코인, 7일차에는 500코인을 추가 지급한다. 최근 수령 날짜는 `attendanceClaimedDates`에 최대 62개 보관하여 달력에 표시하며, 기존 저장 데이터에는 빈 출석 상태를 보충한다.
+
 ### 뽑기 보장과 방 테마
 
-학습 보상, 상점 구매, 고양이 뽑기는 모두 `coins` 단일 재화를 사용한다. 저장소는 `economyVersion: 2` 이하의 기존 `coins`와 `gems`를 합산해 `economyVersion: 3`의 `coins`로 마이그레이션한다. 벽지와 바닥재는 `shopInventory`에 상품 ID별로 저장하고 `applyRoomTheme()`가 보유 여부를 확인한 뒤 `activeWallpaper` 또는 `activeFloor`를 갱신한다. UI는 이 상태를 읽어 홈 배경을 다시 그릴 뿐 구매·보유 판정을 하지 않는다.
+학습 보상, 상점 구매, 고양이 뽑기는 모두 `coins` 단일 재화를 사용한다. 저장소는 `economyVersion: 2` 이하의 기존 `coins`와 `gems`를 합산해 `economyVersion: 3`의 `coins`로 마이그레이션한다. 벽지와 바닥재는 `shopInventory`에 상품 ID별로 저장하고 `applyRoomTheme()`가 보유 여부를 확인한 뒤 `activeWallpaper` 또는 `activeFloor`를 갱신한다. UI는 이 상태를 읽어 홈 배경을 다시 그릴 뿐 구매·보유 판정을 하지 않는다. `roomAppearanceVersion: 1`이 없는 기존 저장 데이터는 적용 중인 벽지와 바닥만 한 번 해제하며, 보유 목록과 이후 다시 적용한 테마는 유지한다.
 
 사운드와 화면 움직임 설정은 `GameState.settings`에 저장한다. 고양이 기억은 `catMemories`에 별도로 저장하여 `clearCatMemories()`가 학습 기록, 가구, 고양이 보유 상태를 건드리지 않도록 한다.
 

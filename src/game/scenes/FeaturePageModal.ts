@@ -12,7 +12,7 @@ import { textStyle } from "../config";
 import type { CatAnimationLibrary } from "../entities/CatAnimations";
 import { SettingsPage } from "./SettingsPage";
 
-export type FeaturePageKind = "settings" | "owned" | "addFriend" | "visitGarden";
+export type FeaturePageKind = "profile" | "settings" | "owned" | "addFriend" | "visitGarden";
 
 type Options = {
   kind: FeaturePageKind;
@@ -24,6 +24,7 @@ type Options = {
   onSetCatHome: (variant: CatVariant, visible: boolean) => boolean;
   onApplyTheme: (itemId: ShopItemId) => boolean;
   onEnterRoomEdit: () => void;
+  onOpenAttendance: () => void;
   onUpdateSettings: (patch: Partial<GameSettings>) => GameSettings;
   onResetLearning: () => void;
   catAnimations: CatAnimationLibrary;
@@ -38,7 +39,7 @@ export class FeaturePageModal extends Container {
   private readonly status = new Text({ text: "", style: textStyle(17, 0x537145, "700") });
   private readonly options: Options;
   private readonly requested = new Set<number>();
-  private ownedCategory: "cats" | "furniture" | "wallpaper" | "floor" = "furniture";
+  private ownedCategory: "cats" | "furniture" | "wallpaper" | "floor" = "cats";
 
   constructor(options: Options) {
     super();
@@ -60,16 +61,20 @@ export class FeaturePageModal extends Container {
     back.position.set(28, 28);
     const title = new Text({ text: message(titleFor(this.options.kind)), style: textStyle(36, 0x3d2b22, "800") });
     title.position.set(120, 43);
-    const currency = createCurrencyBar(this.options.coinIcon, this.options.getState().coins);
-    currency.container.position.set(1240, 26);
     this.buildSidebar();
     this.status.anchor.set(0.5);
     this.status.position.set(930, 864);
-    this.page.addChild(back, title, currency.container, this.content, this.status);
+    this.page.addChild(back, title);
+    if (this.options.kind !== "profile" && this.options.kind !== "settings") {
+      const currency = createCurrencyBar(this.options.coinIcon, this.options.getState().coins);
+      currency.container.position.set(1240, 26);
+      this.page.addChild(currency.container);
+    }
+    this.page.addChild(this.content, this.status);
   }
 
   private buildSidebar(): void {
-    if (this.options.kind === "owned") {
+    if (this.options.kind === "owned" || this.options.kind === "profile") {
       return;
     }
     const panel = new Graphics().roundRect(28, 125, 275, 710, 28).fill(0xf2d7b5).stroke({ color: 0x9a633e, width: 4 });
@@ -110,8 +115,10 @@ export class FeaturePageModal extends Container {
     this.content.removeChildren().forEach((child) => {
       child.destroy({ children: true });
     });
-    if (this.options.kind === "settings") {
-      this.renderSettings();
+    if (this.options.kind === "profile") {
+      this.renderSettings("account");
+    } else if (this.options.kind === "settings") {
+      this.renderSettings("settings");
     } else if (this.options.kind === "owned") {
       this.renderOwned();
     } else if (this.options.kind === "addFriend") {
@@ -121,10 +128,12 @@ export class FeaturePageModal extends Container {
     }
   }
 
-  private renderSettings(): void {
+  private renderSettings(mode: "settings" | "account"): void {
     this.content.addChild(
       new SettingsPage({
+        mode,
         onStatus: (id) => this.show(id),
+        onOpenAttendance: this.options.onOpenAttendance,
         getState: this.options.getState,
         onUpdateSettings: (patch) => this.options.onUpdateSettings(patch),
         onResetLearning: this.options.onResetLearning,
@@ -254,8 +263,8 @@ export class FeaturePageModal extends Container {
 
   private buildOwnedTabs(): void {
     const tabs = [
-      ["furniture", "owned.furniture"],
       ["cats", "owned.cats"],
+      ["furniture", "owned.furniture"],
       ["wallpaper", "owned.wallpaper"],
       ["floor", "owned.floor"],
     ] as const;

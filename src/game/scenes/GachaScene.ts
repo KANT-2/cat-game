@@ -7,7 +7,7 @@ import type { GameState } from "../../domain/room";
 import { BackButton } from "../components/BackButton";
 import { CanvasButton } from "../components/CanvasButton";
 import { createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
-import { createCoinIcon, createCurrencyBar } from "../components/CurrencyBar";
+import { createCoinAmount, createCoinIcon } from "../components/CurrencyBar";
 import { layoutToFillViewport } from "../components/fullscreenLayout";
 import { applySmoothTextureSampling } from "../components/smoothSprite";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
@@ -55,11 +55,11 @@ export class GachaScene extends Container {
   private buildHeader(options: GachaSceneOptions): void {
     const back = new BackButton({ iconSrc: options.backIcon, size: 72, onPress: options.onBack });
     back.position.set(24, 20);
-    const title = new Text({ text: message("gacha.title"), style: textStyle(34, 0x3f2418, "800") });
+    const title = new Text({ text: message("gacha.title"), style: textStyle(34, 0x513526, "700") });
     title.position.set(130, 35);
     const ornament = createTitleOrnament(132, 78, 110);
     const state = options.getState();
-    const currency = createCurrencyBar(options.coinIcon, state.coins);
+    const currency = createGachaCurrencyBar(options.coinIcon, state.coins);
     currency.container.position.set(1240, 20);
     this.coinsText = currency.amountText;
     this.headerLayer.addChild(back, title, ornament, currency.container);
@@ -86,7 +86,7 @@ export class GachaScene extends Container {
       title: message("gacha.drawOnceTitle"),
       cost: gachaCost(1),
       coinIcon: this.options.coinIcon,
-      color: 0xcddf91,
+      featured: false,
       onPress: () => this.confirmDraw(1),
     });
     once.position.set(480, 730);
@@ -94,7 +94,7 @@ export class GachaScene extends Container {
       title: message("gacha.drawTenTitle"),
       cost: gachaCost(11),
       coinIcon: this.options.coinIcon,
-      color: 0xf3ad54,
+      featured: true,
       onPress: () => this.confirmDraw(11),
     });
     ten.position.set(820, 730);
@@ -103,7 +103,6 @@ export class GachaScene extends Container {
 
   private confirmDraw(count: GachaDrawCount): void {
     this.closeConfirmation();
-    this.mainLayer.visible = false;
     const panel = createCozyPanel(300, 155, 1000, 590, { fill: 0xfff5df, border: 0x87502e, radius: 32 });
     const displayCount = count === 1 ? 1 : "10+1";
     const coin = createCoinIcon(this.options.coinIcon, 76);
@@ -140,7 +139,6 @@ export class GachaScene extends Container {
     this.confirmLayer.removeChildren().forEach((child) => {
       child.destroy({ children: true });
     });
-    this.mainLayer.visible = true;
   }
 
   private draw(count: GachaDrawCount): void {
@@ -158,7 +156,6 @@ export class GachaScene extends Container {
 
   private showFailure(): void {
     this.clearResults();
-    this.mainLayer.visible = false;
     const panel = createCozyPanel(350, 190, 900, 520, { fill: 0xfff4df, border: 0x7b4b32, radius: 30 });
     const title = centeredText(message("gacha.insufficientCoins"), 800, 355, 32);
     const close = new CanvasButton({
@@ -175,7 +172,6 @@ export class GachaScene extends Container {
 
   private showResults(result: Extract<GachaDrawResult, { ok: true }>): void {
     this.clearResults();
-    this.mainLayer.visible = false;
     const blocker = createBlocker();
     const panel = createCozyPanel(110, 95, 1380, 740, { fill: 0xfff4df, border: 0x7b4b32, radius: 34 });
     const title = centeredText(message("gacha.resultTitle", { count: result.rewards.length }), 800, 155, 36);
@@ -244,15 +240,31 @@ export class GachaScene extends Container {
     this.resultLayer.removeChildren().forEach((child) => {
       child.destroy({ children: true });
     });
-    this.mainLayer.visible = true;
   }
 }
 
 function centeredText(value: string, x: number, y: number, size: number): Text {
-  const text = new Text({ text: value, style: textStyle(size, 0x4b3021, "800") });
+  const text = new Text({ text: value, style: textStyle(size, 0x543726, "700") });
   text.anchor.set(0.5);
   text.position.set(x, y);
   return text;
+}
+
+function createGachaCurrencyBar(iconSrc: string, amount: number): { container: Container; amountText: Text } {
+  const container = new Container();
+  const shadow = new Graphics().roundRect(3, 5, 320, 58, 25).fill({ color: 0x70482f, alpha: 0.16 });
+  const background = new Graphics().roundRect(0, 0, 320, 60, 25).fill(0xf1d8ae).stroke({ color: 0x8a5b3d, width: 3 });
+  const innerWash = new Graphics()
+    .roundRect(8, 7, 304, 46, 19)
+    .fill({ color: 0xffefd1, alpha: 0.48 })
+    .stroke({ color: 0xfff3dc, width: 1, alpha: 0.7 });
+  const icon = createCoinIcon(iconSrc, 44);
+  icon.position.set(16, 8);
+  const amountText = new Text({ text: amount.toLocaleString(), style: textStyle(22, 0x573927, "700") });
+  amountText.anchor.set(1, 0.5);
+  amountText.position.set(294, 30);
+  container.addChild(shadow, background, innerWash, icon, amountText);
+  return { container, amountText };
 }
 function drawMiniCat(color: number): Graphics {
   return new Graphics()
@@ -330,7 +342,7 @@ function drawSofa(): Graphics {
 }
 
 function createBlocker(): Graphics {
-  const blocker = new Graphics().rect(0, 0, BASE_WIDTH, BASE_HEIGHT).fill(0xf8e7ca);
+  const blocker = new Graphics().rect(0, 0, BASE_WIDTH, BASE_HEIGHT).fill({ color: 0x2f211b, alpha: 0.58 });
   blocker.eventMode = "static";
   return blocker;
 }
@@ -347,25 +359,52 @@ type DrawButtonOptions = {
   title: string;
   cost: number;
   coinIcon: string;
-  color: number;
+  featured: boolean;
   onPress: () => void;
 };
 
 function createDrawButton(options: DrawButtonOptions): Container {
   const button = new Container();
-  const background = new Graphics()
-    .roundRect(0, 0, 300, 112, 24)
-    .fill(options.color)
-    .stroke({ color: 0x765039, width: 4 });
-  const pricePanel = new Graphics()
-    .roundRect(25, 57, 250, 42, 15)
-    .fill({ color: 0xffffff, alpha: 0.24 })
-    .stroke({ color: 0x765039, width: 2, alpha: 0.42 });
-  const title = centeredText(options.title, 150, 29, 25);
-  const coin = createCoinIcon(options.coinIcon, 34);
-  coin.position.set(92, 61);
-  const cost = centeredText(options.cost.toLocaleString(), 175, 78, 28);
-  button.addChild(background, pricePanel, title, coin, cost);
+  const woodColor = options.featured ? 0xa96c38 : 0x916041;
+  const innerColor = options.featured ? 0xf3d49a : 0xf4e2c4;
+  const goldColor = options.featured ? 0xe2a943 : 0xc99a58;
+  const shadow = new Graphics().roundRect(14, 13, 276, 96, 18).fill({ color: 0x573724, alpha: 0.22 });
+  const endCaps = new Graphics()
+    .circle(13, 55, 12)
+    .circle(287, 55, 12)
+    .fill(woodColor)
+    .stroke({ color: 0x6e452e, width: 2 });
+  const woodFrame = new Graphics().roundRect(10, 6, 280, 98, 18).fill(woodColor).stroke({ color: 0x6e452e, width: 2 });
+  const signFace = new Graphics()
+    .roundRect(20, 16, 260, 78, 13)
+    .fill(innerColor)
+    .stroke({ color: goldColor, width: options.featured ? 3 : 2 });
+  const woodGrain = new Graphics()
+    .moveTo(30, 99)
+    .lineTo(112, 99)
+    .moveTo(188, 99)
+    .lineTo(270, 99)
+    .stroke({ color: 0xe1b078, width: 2, alpha: 0.5 });
+  const divider = new Graphics().moveTo(80, 54).lineTo(220, 54).stroke({ color: goldColor, width: 2, alpha: 0.65 });
+  const studs = new Graphics()
+    .circle(31, 28, 3)
+    .circle(269, 28, 3)
+    .fill(goldColor)
+    .stroke({ color: 0x8b5a32, width: 1 });
+  const title = centeredText(options.title, 150, 35, 24);
+  const cost = createCoinAmount(options.coinIcon, options.cost, {
+    color: 0x5f3e2a,
+    fontSize: 25,
+    iconSize: 31,
+    gap: 10,
+  });
+  cost.position.set(150 - cost.width / 2, 75);
+  button.addChild(shadow, endCaps, woodFrame, signFace, woodGrain, divider, studs);
+  if (options.featured) {
+    const ornament = new Graphics().star(150, 9, 5, 8, 4).fill(0xffd36a).stroke({ color: 0xa96a31, width: 1 });
+    button.addChild(ornament);
+  }
+  button.addChild(title, cost);
   button.eventMode = "static";
   button.cursor = "pointer";
   button.on("pointerdown", () => button.scale.set(0.98));

@@ -25,8 +25,10 @@ export class GameStateStore implements GameStateRepository {
       const savedActiveCat = readCatVariant(saved.activeCat);
       const activeCat = savedActiveCat && ownedCats.includes(savedActiveCat) ? savedActiveCat : ownedCats[0];
       const homeCats = readHomeCats(saved.homeCats, ownedCats, activeCat);
+      const clearPreviouslyAppliedThemes = saved.roomAppearanceVersion !== 1;
       return {
         economyVersion: 3,
+        roomAppearanceVersion: 1,
         coins: readUnifiedCoins(saved, fallback.coins),
         ownedCats,
         homeCats,
@@ -37,14 +39,18 @@ export class GameStateStore implements GameStateRepository {
         dailyCompletedTaskIds: readStringIds(saved.dailyCompletedTaskIds),
         claimedDailyQuestIds: readDailyQuestIds(saved.claimedDailyQuestIds),
         dailyBonusClaimed: saved.dailyBonusClaimed === true,
+        attendanceLastClaimDate: readDateStamp(saved.attendanceLastClaimDate),
+        attendanceStreak: readCount(saved.attendanceStreak, 0),
+        attendanceLongestStreak: readCount(saved.attendanceLongestStreak, 0),
+        attendanceClaimedDates: readDateStamps(saved.attendanceClaimedDates),
         gachaPityCount: readCount(saved.gachaPityCount, 0),
         catMemories: readCatMemories(saved.catMemories),
         settings: readSettings(saved.settings, fallback.settings),
         furniture: Array.isArray(saved.furniture) ? saved.furniture : fallback.furniture,
         inventory,
         shopInventory: readShopInventory(saved.shopInventory, inventory),
-        activeWallpaper: readActiveTheme(saved.activeWallpaper, "wallpaper"),
-        activeFloor: readActiveTheme(saved.activeFloor, "floor"),
+        activeWallpaper: clearPreviouslyAppliedThemes ? null : readActiveTheme(saved.activeWallpaper, "wallpaper"),
+        activeFloor: clearPreviouslyAppliedThemes ? null : readActiveTheme(saved.activeFloor, "floor"),
       };
     } catch {
       return fallback;
@@ -167,6 +173,16 @@ function readStringIds(value: unknown): string[] {
 function readDailyQuestIds(value: unknown): DailyQuestId[] {
   const validIds = new Set(dailyQuestDefinitions.map((quest) => quest.id));
   return readStringIds(value).filter((id): id is DailyQuestId => validIds.has(id as DailyQuestId));
+}
+
+function readDateStamp(value: unknown): string {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
+}
+
+function readDateStamps(value: unknown): string[] {
+  return Array.isArray(value)
+    ? [...new Set(value.map(readDateStamp).filter((date) => date.length > 0))].slice(-62)
+    : [];
 }
 
 function readCatMemories(value: unknown): Partial<Record<CatVariant, string[]>> {

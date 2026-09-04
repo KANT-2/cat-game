@@ -1,3 +1,9 @@
+import {
+  ATTENDANCE_DAILY_COINS,
+  attendanceRewardForCycleDay,
+  attendanceStreakBonus,
+  nextAttendanceStreak,
+} from "../domain/attendance";
 import type { CatVariant } from "../domain/cats";
 import { type DailyQuestId, dailyQuestDefinitions, dailyQuestProgress } from "../domain/dailyQuest";
 import { drawGachaRewards, GACHA_DUPLICATE_CAT_COINS, type GachaDrawCount, gachaCost } from "../domain/gacha";
@@ -14,6 +20,8 @@ import { type ShopItemId, shopItemDefinitions } from "../domain/shop";
 import { codeChallengeDefinitions, gradeSumChallenge, quizDefinitions, studyTaskDefinitions } from "../domain/study";
 import type {
   ApplyRoomThemeResult,
+  AttendanceClaimResult,
+  AttendanceView,
   CatHomeResult,
   CatMemoryClearResult,
   CatSelectionResult,
@@ -474,6 +482,55 @@ export class LocalGameClient implements GameClient {
     return { ok: true, coinsAwarded: 310 };
   }
 
+  getAttendance(): AttendanceView {
+    const today = this.localDateStamp();
+    const canClaim = this.state.attendanceLastClaimDate !== today;
+    const nextStreak = nextAttendanceStreak(this.state.attendanceLastClaimDate, this.state.attendanceStreak, today);
+    const streakBonus = canClaim ? attendanceStreakBonus(nextStreak) : 0;
+    return {
+      today,
+      canClaim,
+      currentStreak: this.state.attendanceStreak,
+      nextStreak,
+      longestStreak: this.state.attendanceLongestStreak,
+      claimedDates: [...this.state.attendanceClaimedDates],
+      dailyCoins: ATTENDANCE_DAILY_COINS,
+      streakBonus,
+      totalCoins: canClaim ? ATTENDANCE_DAILY_COINS + streakBonus : 0,
+      cycleRewards: Array.from({ length: 7 }, (_, index) => attendanceRewardForCycleDay(index + 1)),
+    };
+  }
+
+  claimAttendance(): AttendanceClaimResult {
+    const attendance = this.getAttendance();
+    if (!attendance.canClaim) {
+      return { ok: false, reason: "already-claimed" };
+    }
+    const currentStreak = attendance.nextStreak;
+    const coinsAwarded = attendance.dailyCoins + attendance.streakBonus;
+    const claimedDates = [
+      ...this.state.attendanceClaimedDates.filter((date) => date !== attendance.today),
+      attendance.today,
+    ];
+    this.state = {
+      ...this.state,
+      coins: this.state.coins + coinsAwarded,
+      attendanceLastClaimDate: attendance.today,
+      attendanceStreak: currentStreak,
+      attendanceLongestStreak: Math.max(this.state.attendanceLongestStreak, currentStreak),
+      attendanceClaimedDates: claimedDates.slice(-62),
+    };
+    this.commit();
+    return {
+      ok: true,
+      claimedDate: attendance.today,
+      currentStreak,
+      dailyCoins: attendance.dailyCoins,
+      streakBonus: attendance.streakBonus,
+      coinsAwarded,
+    };
+  }
+
   resetLearningProgress(): void {
     this.ensureDailyState();
     this.state = {
@@ -545,6 +602,7 @@ function cloneState(state: GameState): GameState {
     completedCodeChallengeIds: [...state.completedCodeChallengeIds],
     dailyCompletedTaskIds: [...state.dailyCompletedTaskIds],
     claimedDailyQuestIds: [...state.claimedDailyQuestIds],
+    attendanceClaimedDates: [...state.attendanceClaimedDates],
     catMemories: Object.fromEntries(
       Object.entries(state.catMemories).map(([variant, memories]) => [variant, memories ? [...memories] : memories]),
     ),

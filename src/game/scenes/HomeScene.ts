@@ -11,6 +11,7 @@ import { ToastLayer } from "../components/ToastLayer";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
 import type { CatAnimationLibrary } from "../entities/CatAnimations";
 import { ForestClearingView } from "../forest/ForestClearingView";
+import { AttendanceModal } from "./AttendanceModal";
 import { DailyQuestScene } from "./DailyQuestScene";
 import { type FeaturePageKind, FeaturePageModal } from "./FeaturePageModal";
 import { GachaScene } from "./GachaScene";
@@ -48,6 +49,7 @@ export class HomeScene extends Container {
   private readonly settingsMenu = new Container();
   private readonly shopOptions = new Container();
   private profilePortrait: Sprite | null = null;
+  private attendanceModal: AttendanceModal | null = null;
   private studyModal: StudyModal | null = null;
   private shopScene: ShopScene | null = null;
   private dailyQuestScene: DailyQuestScene | null = null;
@@ -120,10 +122,18 @@ export class HomeScene extends Container {
       this.toastLayer.visible = false;
     }
     this.gameClient.subscribe((snapshot) => this.syncState(snapshot));
+    this.openAttendance();
   }
 
   update(deltaSeconds: number): void {
-    if (!this.studyModal && !this.shopScene && !this.dailyQuestScene && !this.gachaScene && !this.featurePageModal) {
+    if (
+      !this.attendanceModal &&
+      !this.studyModal &&
+      !this.shopScene &&
+      !this.dailyQuestScene &&
+      !this.gachaScene &&
+      !this.featurePageModal
+    ) {
       this.clearing.update(deltaSeconds);
     }
   }
@@ -149,6 +159,7 @@ export class HomeScene extends Container {
     this.dailyQuestScene?.layout(width, height);
     this.gachaScene?.layout(width, height);
     this.featurePageModal?.layout(width, height);
+    this.attendanceModal?.layout(width, height);
     this.placementPanel?.position.set(width / 2, height - 92);
     this.purchaseChoicePanel?.position.set(width / 2, height / 2);
     this.furnitureEditPanel?.position.set(width / 2, height - 92);
@@ -172,19 +183,18 @@ export class HomeScene extends Container {
     frame.position.set((profileSize - frame.width) / 2, (profileSize - frame.height) / 2);
     const activeAnimations = this.catAnimations[this.state.activeCat];
     const portrait = new Sprite(activeAnimations.idle.textures[0]);
-    portrait.anchor.set(activeAnimations.idle.anchor.x, activeAnimations.idle.anchor.y);
-    const portraitScale = Math.min(72 / portrait.texture.width, 72 / portrait.texture.height);
-    portrait.scale.set(portraitScale);
-    portrait.position.set(78, 113);
     this.profilePortrait = portrait;
-    const level = new Text({ text: message("home.level", { level: 10 }), style: textStyle(18, 0x3d2b22, "800") });
+    this.fitProfilePortrait();
+    const portraitMask = new Graphics().roundRect(40, 36, 76, 68, 16).fill(0xffffff);
+    portrait.mask = portraitMask;
+    const level = new Text({ text: message("home.level", { level: 10 }), style: textStyle(12, 0x3d2b22, "800") });
     level.anchor.set(0.5);
-    level.position.set(78, 128);
-    this.profilePanel.addChild(frame, portrait, level);
+    level.position.set(78, 119);
+    this.profilePanel.addChild(frame, portrait, portraitMask, level);
     this.profilePanel.hitArea = new Rectangle(0, 0, profileSize, profileSize);
     this.profilePanel.eventMode = "static";
     this.profilePanel.cursor = "pointer";
-    this.profilePanel.on("pointertap", () => this.openFeaturePage("settings"));
+    this.profilePanel.on("pointertap", () => this.openFeaturePage("profile"));
   }
 
   private buildSideMenu(): void {
@@ -278,6 +288,33 @@ export class HomeScene extends Container {
     }
     this.clearOpenPages();
     this.leavePage();
+  }
+
+  private openAttendance(showClaimedStatus = false): void {
+    if (
+      this.desktopWidget ||
+      this.attendanceModal ||
+      (!showClaimedStatus && !this.gameClient.getAttendance().canClaim)
+    ) {
+      return;
+    }
+    this.attendanceModal = new AttendanceModal({
+      getAttendance: () => this.gameClient.getAttendance(),
+      onClaim: () => this.gameClient.claimAttendance(),
+      onClose: () => this.closeAttendance(),
+      coinIcon: this.iconSources.coin,
+    });
+    this.addChild(this.attendanceModal);
+    this.attendanceModal.layout(this.screenWidth, this.screenHeight);
+  }
+
+  private closeAttendance(): void {
+    if (!this.attendanceModal) {
+      return;
+    }
+    this.removeChild(this.attendanceModal);
+    this.attendanceModal.destroy({ children: true });
+    this.attendanceModal = null;
   }
 
   private openShop(): void {
@@ -385,6 +422,7 @@ export class HomeScene extends Container {
       },
       onUpdateSettings: (patch) => this.gameClient.updateSettings(patch),
       onResetLearning: () => this.gameClient.resetLearningProgress(),
+      onOpenAttendance: () => this.openAttendance(true),
       catAnimations: this.catAnimations,
       backIcon: this.iconSources.back,
       coinIcon: this.iconSources.coin,
@@ -446,7 +484,7 @@ export class HomeScene extends Container {
     const panel = new Container();
     const blocker = new Graphics()
       .rect(-this.screenWidth / 2, -this.screenHeight / 2, this.screenWidth, this.screenHeight)
-      .fill(0xf8e7ca);
+      .fill({ color: 0x2f211b, alpha: 0.58 });
     blocker.eventMode = "static";
     panel.addChild(
       blocker,
@@ -479,7 +517,7 @@ export class HomeScene extends Container {
       color: 0xd9ad7d,
       onPress: () => {
         this.closePurchaseChoice();
-        this.closeShop();
+        this.shopScene?.refresh();
         this.notify(message("shop.storedAfterPurchase"));
       },
     });
@@ -595,15 +633,7 @@ export class HomeScene extends Container {
       color: 0x91aa82,
       onPress: () => this.editPlacedFurniture(item, item.rotation),
     });
-    move.position.set(-80, -24);
-    const rotate = new CanvasButton({
-      label: message("furniture.rotate"),
-      width: 105,
-      height: 48,
-      color: 0xa8b879,
-      onPress: () => this.editPlacedFurniture(item, item.rotation === 0 ? 1 : 0),
-    });
-    rotate.position.set(40, -24);
+    move.position.set(40, -24);
     const store = new CanvasButton({
       label: message("furniture.store"),
       width: 105,
@@ -612,7 +642,7 @@ export class HomeScene extends Container {
       onPress: () => this.storePlacedFurniture(item),
     });
     store.position.set(160, -24);
-    panel.addChild(cancel, label, move, rotate, store);
+    panel.addChild(cancel, label, move, store);
     panel.position.set(this.screenWidth / 2, this.screenHeight - 92);
     this.furnitureEditPanel = panel;
     this.uiLayer.addChild(panel);
@@ -657,7 +687,18 @@ export class HomeScene extends Container {
     const animations = this.catAnimations[variant];
     if (this.profilePortrait) {
       this.profilePortrait.texture = animations.idle.textures[0];
-      this.profilePortrait.anchor.set(animations.idle.anchor.x, animations.idle.anchor.y);
+      this.fitProfilePortrait();
     }
+  }
+
+  private fitProfilePortrait(): void {
+    if (!this.profilePortrait) {
+      return;
+    }
+
+    const portraitScale = 118 / this.profilePortrait.texture.height;
+    this.profilePortrait.anchor.set(0.5, 0);
+    this.profilePortrait.scale.set(portraitScale);
+    this.profilePortrait.position.set(87, 18);
   }
 }

@@ -5,7 +5,7 @@ import type { ShopItemId } from "../../domain/shop";
 import { BackButton } from "../components/BackButton";
 import { CanvasButton } from "../components/CanvasButton";
 import { createCozyPageBackground, createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
-import { createCoinIcon, createCurrencyBar } from "../components/CurrencyBar";
+import { createCoinAmount, createCoinIcon, createCurrencyBar } from "../components/CurrencyBar";
 import { layoutToFillViewport } from "../components/fullscreenLayout";
 import { applySmoothTextureSampling } from "../components/smoothSprite";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
@@ -80,6 +80,7 @@ export class ShopScene extends Container {
   private readonly content = new Container();
   private readonly navigationLayer = new Container();
   private readonly productLayer = new Container();
+  private readonly modalLayer = new Container();
   private readonly onBuy: (itemId: ShopItemId | null) => void;
   private readonly getState: () => GameState;
   private readonly onBack: () => void;
@@ -100,7 +101,7 @@ export class ShopScene extends Container {
     this.coinIcon = options.coinIcon;
     this.addChild(this.content);
     this.buildBackground();
-    this.content.addChild(this.headerLayer, this.navigationLayer, this.productLayer);
+    this.content.addChild(this.headerLayer, this.navigationLayer, this.productLayer, this.modalLayer);
     this.buildHeader();
     this.renderNavigation();
     this.renderProducts();
@@ -117,33 +118,33 @@ export class ShopScene extends Container {
   }
 
   private buildBackground(): void {
-    this.content.addChild(createCozyPageBackground(BASE_WIDTH, BASE_HEIGHT, 790));
+    this.content.addChild(createCozyPageBackground(BASE_WIDTH, BASE_HEIGHT));
   }
 
   private buildHeader(): void {
     this.clearLayer(this.headerLayer);
     const sign = new Graphics()
-      .roundRect(52, 31, 340, 98, 18)
+      .roundRect(126, 31, 270, 98, 18)
       .fill({ color: 0x4a2919, alpha: 0.25 })
-      .roundRect(48, 24, 340, 98, 18)
+      .roundRect(122, 24, 270, 98, 18)
       .fill(0xd9a266)
       .stroke({ color: 0x6c4028, width: 5 })
-      .roundRect(58, 34, 320, 78, 13)
+      .roundRect(132, 34, 250, 78, 13)
       .stroke({ color: 0xffdaa1, width: 2, alpha: 0.72 })
-      .moveTo(80, 24)
-      .lineTo(80, 0)
-      .moveTo(356, 24)
-      .lineTo(356, 0)
+      .moveTo(150, 24)
+      .lineTo(150, 0)
+      .moveTo(364, 24)
+      .lineTo(364, 0)
       .stroke({ color: 0x67402b, width: 7, cap: "round" });
     const title = new Text({ text: message("shop.title"), style: textStyle(40, 0x4a2919, "800") });
     title.anchor.set(0.5);
-    title.position.set(218, 73);
-    const ornament = createTitleOrnament(153, 102, 130);
+    title.position.set(257, 73);
+    const ornament = createTitleOrnament(192, 102, 130);
     const state = this.getState();
     const currency = createCurrencyBar(this.coinIcon, state.coins);
     currency.container.position.set(1230, 22);
-    const back = new BackButton({ iconSrc: this.backIcon, size: 76, onPress: this.onBack });
-    back.position.set(28, 800);
+    const back = new BackButton({ iconSrc: this.backIcon, size: 72, onPress: this.onBack });
+    back.position.set(24, 20);
     this.headerLayer.addChild(sign, title, ornament, currency.container, back);
   }
 
@@ -231,33 +232,82 @@ export class ShopScene extends Container {
     const badgeText = new Text({ text: message(badgeId), style: textStyle(13, 0xffffff, "800") });
     badgeText.anchor.set(0.5);
     badgeText.position.set(x + 52, y + 29);
-    const name = new Text({ text: message(product.name), style: textStyle(18, 0x3d2b22, "800") });
+    const name = new Text({ text: message(product.name), style: textStyle(17, 0x3d2b22, "800") });
     name.anchor.set(0.5);
-    name.position.set(x + 190, y + 37);
+    name.position.set(x + 275, y + 38);
     const art = drawProduct(product.kind, index);
-    art.scale.set(0.82);
-    art.position.set(x + 120, y + 108);
-    const priceIcon = createCoinIcon(this.coinIcon, 28);
-    priceIcon.position.set(x + 215, y + 69);
-    const price = new Text({ text: product.price, style: textStyle(18, 0x8b571e, "800") });
-    price.anchor.set(0.5);
-    price.position.set(x + 290, y + 83);
+    art.scale.set(0.74);
+    art.position.set(x + 105, y + 112);
+    const price = createCoinAmount(this.coinIcon, product.price, {
+      color: 0x8b571e,
+      fontSize: 18,
+      iconSize: 24,
+      gap: 10,
+    });
+    price.position.set(x + 275 - price.width / 2, y + 82);
     const ownedCount = product.itemId ? (this.getState().shopInventory[product.itemId] ?? 0) : 0;
     const owned = new Text({
       text: message("shop.ownedCount", { count: ownedCount }),
       style: textStyle(14, 0x6f7652, "700"),
     });
     owned.anchor.set(0.5);
-    owned.position.set(x + 265, y + 109);
+    owned.position.set(x + 275, y + 112);
     const buy = new CanvasButton({
-      label: message(ownedCount > 0 ? "shop.buyMore" : "shop.buy"),
+      label: message("shop.buy"),
       width: 140,
       height: 46,
       color: 0x91aa55,
-      onPress: () => this.onBuy(product.itemId ?? null),
+      onPress: () => this.showPurchaseConfirmation(product),
     });
-    buy.position.set(x + 195, y + 132);
-    this.productLayer.addChild(card, badge, badgeText, name, art, priceIcon, price, owned, buy);
+    buy.position.set(x + 205, y + 133);
+    this.productLayer.addChild(card, badge, badgeText, name, art, price, owned, buy);
+  }
+
+  private showPurchaseConfirmation(product: Product): void {
+    this.closePurchaseConfirmation();
+    const blocker = new Graphics().rect(0, 0, BASE_WIDTH, BASE_HEIGHT).fill({ color: 0x2f211b, alpha: 0.58 });
+    blocker.eventMode = "static";
+    const panel = createCozyPanel(420, 205, 760, 490, { fill: 0xfff5df, border: 0x87502e, radius: 32 });
+    const coin = createCoinIcon(this.coinIcon, 72);
+    coin.position.set(764, 250);
+    const title = new Text({
+      text: message("shop.confirmTitle", { item: message(product.name) }),
+      style: { ...textStyle(30, 0x4b3021, "800"), align: "center", wordWrap: true, wordWrapWidth: 650 },
+    });
+    title.anchor.set(0.5, 0);
+    title.position.set(800, 355);
+    const detail = new Text({
+      text: message("shop.confirmDetail", { amount: product.price }),
+      style: { ...textStyle(18, 0x6b4935, "600"), align: "center", wordWrap: true, wordWrapWidth: 620, lineHeight: 29 },
+    });
+    detail.anchor.set(0.5, 0);
+    detail.position.set(800, 430);
+    const cancel = new CanvasButton({
+      label: message("shop.cancel"),
+      width: 190,
+      height: 60,
+      fontSize: 19,
+      color: 0xd8bea0,
+      onPress: () => this.closePurchaseConfirmation(),
+    });
+    cancel.position.set(555, 560);
+    const confirm = new CanvasButton({
+      label: message("shop.confirmPurchase"),
+      width: 190,
+      height: 60,
+      fontSize: 19,
+      color: 0xf2aa4d,
+      onPress: () => {
+        this.closePurchaseConfirmation();
+        this.onBuy(product.itemId ?? null);
+      },
+    });
+    confirm.position.set(855, 560);
+    this.modalLayer.addChild(blocker, panel, coin, title, detail, cancel, confirm);
+  }
+
+  private closePurchaseConfirmation(): void {
+    this.clearLayer(this.modalLayer);
   }
 
   private selectCategory(category: CategoryId): void {

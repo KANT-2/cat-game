@@ -315,6 +315,52 @@ describe("LocalGameClient", () => {
     expect(client.getSnapshot().claimedDailyQuestIds).toEqual([]);
   });
 
+  it("pays attendance once per local day", () => {
+    const repository = new MemoryRepository();
+    const client = new LocalGameClient(
+      repository,
+      () => 0.5,
+      () => new Date(2026, 8, 4),
+    );
+
+    expect(client.getAttendance()).toMatchObject({ canClaim: true, nextStreak: 1, totalCoins: 100 });
+    expect(client.claimAttendance()).toMatchObject({
+      ok: true,
+      claimedDate: "2026-09-04",
+      currentStreak: 1,
+      coinsAwarded: 100,
+    });
+    expect(client.claimAttendance()).toEqual({ ok: false, reason: "already-claimed" });
+    expect(client.getSnapshot().coins).toBe(1_100_100);
+    expect(repository.save).toHaveBeenCalledOnce();
+  });
+
+  it("adds the third-day streak bonus and resets after a missed day", () => {
+    const repository = new MemoryRepository();
+    repository.state.attendanceLastClaimDate = "2026-09-02";
+    repository.state.attendanceStreak = 2;
+    repository.state.attendanceLongestStreak = 2;
+    repository.state.attendanceClaimedDates = ["2026-09-01", "2026-09-02"];
+    let day = 3;
+    const client = new LocalGameClient(
+      repository,
+      () => 0.5,
+      () => new Date(2026, 8, day),
+    );
+
+    expect(client.claimAttendance()).toMatchObject({
+      ok: true,
+      currentStreak: 3,
+      dailyCoins: 100,
+      streakBonus: 150,
+      coinsAwarded: 250,
+    });
+    expect(client.getSnapshot().attendanceLongestStreak).toBe(3);
+
+    day = 5;
+    expect(client.claimAttendance()).toMatchObject({ ok: true, currentStreak: 1, coinsAwarded: 100 });
+  });
+
   it("buys and applies owned wallpaper without adding furniture inventory", () => {
     const repository = new MemoryRepository();
     const client = new LocalGameClient(repository);

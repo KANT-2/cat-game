@@ -6,20 +6,23 @@ import { createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
 import { textStyle } from "../config";
 
 type SettingsSection = "account" | "sound" | "alerts" | "learning";
+type SettingsPageMode = "settings" | "account";
 type ConfirmAction = "dataReset" | "accountDelete" | "learningReset";
 
 type SettingsPageOptions = {
+  mode: SettingsPageMode;
   onStatus: (id: MessageId) => void;
+  onOpenAttendance: () => void;
   getState: () => GameState;
   onUpdateSettings: (patch: Partial<GameSettings>) => GameSettings;
   onResetLearning: () => void;
 };
 
-const sections: readonly SettingsSection[] = ["account", "sound", "alerts", "learning"];
+const settingsSections: readonly SettingsSection[] = ["sound", "alerts", "learning"];
 
 /** 설정 카테고리 탐색과 각 카테고리의 Canvas 컨트롤을 한 화면에서 관리한다. */
 export class SettingsPage extends Container {
-  private activeSection: SettingsSection = "account";
+  private activeSection: SettingsSection;
   private confirmAction: ConfirmAction | null = null;
   private bgmEnabled: boolean;
   private bgmVolume: number;
@@ -36,6 +39,7 @@ export class SettingsPage extends Container {
 
   constructor(private readonly options: SettingsPageOptions) {
     super();
+    this.activeSection = options.mode === "account" ? "account" : "sound";
     const settings = options.getState().settings;
     this.bgmEnabled = settings.bgmEnabled;
     this.bgmVolume = settings.bgmVolume;
@@ -48,7 +52,9 @@ export class SettingsPage extends Container {
     this.removeChildren().forEach((child) => {
       child.destroy({ children: true });
     });
-    this.addChild(createCozyPanel(335, 120, 1225, 715, { fill: 0xfff0dc, border: 0x9a633e, radius: 28 }));
+    const panelX = this.options.mode === "account" ? 28 : 335;
+    const panelWidth = this.options.mode === "account" ? 1532 : 1225;
+    this.addChild(createCozyPanel(panelX, 120, panelWidth, 715, { fill: 0xfff0dc, border: 0x9a633e, radius: 28 }));
     this.renderNavigation();
     this.renderHeader();
     if (this.activeSection === "account") {
@@ -66,7 +72,11 @@ export class SettingsPage extends Container {
   }
 
   private renderNavigation(): void {
-    sections.forEach((section, index) => {
+    if (this.options.mode === "account") {
+      return;
+    }
+
+    settingsSections.forEach((section, index) => {
       const button = new CanvasButton({
         label: message(sectionMessages[section].tab),
         width: 225,
@@ -85,43 +95,56 @@ export class SettingsPage extends Container {
 
   private renderHeader(): void {
     const section = sectionMessages[this.activeSection];
+    const x = this.options.mode === "account" ? 70 : 375;
     const title = new Text({ text: message(section.title), style: textStyle(28, 0x493022, "800") });
-    title.position.set(375, 145);
+    title.position.set(x, 145);
     const description = new Text({ text: message(section.description), style: textStyle(16, 0x76533c, "600") });
-    description.position.set(375, 187);
-    const ornament = createTitleOrnament(375, 214, 180);
+    description.position.set(x, 187);
+    const ornament = createTitleOrnament(x, 214, 180);
     this.addChild(title, description, ornament);
+    if (this.options.mode === "account") {
+      const attendance = new CanvasButton({
+        label: message("attendance.openStatus"),
+        width: 220,
+        height: 54,
+        fontSize: 18,
+        color: 0xe3c49f,
+        onPress: this.options.onOpenAttendance,
+      });
+      attendance.position.set(1290, 155);
+      this.addChild(attendance);
+    }
   }
 
   private renderAccount(): void {
-    this.addCard(370, 225, 555, 125);
-    this.addLabel("settings.profileImage", 400, 245, 20);
-    this.addDetail("settings.profileImageDescription", 400, 280);
-    this.addActionButton("settings.change", 735, 253, 160, () => this.notify("settings.accountActionReady"));
+    this.addCard(70, 225, 710, 125);
+    this.addLabel("settings.profileImage", 100, 245, 20);
+    this.addDetail("settings.profileImageDescription", 100, 280);
+    this.addActionButton("settings.change", 590, 253, 160, () => this.notify("settings.accountActionReady"));
 
-    this.addCard(950, 225, 570, 125);
-    this.addLabel("settings.nickname", 980, 245, 20);
-    this.addDetail("settings.nicknameValue", 980, 280);
+    this.addCard(810, 225, 710, 125);
+    this.addLabel("settings.nickname", 840, 245, 20);
+    this.addDetail("settings.nicknameValue", 840, 280);
     this.addActionButton("settings.change", 1330, 253, 160, () => this.notify("settings.accountActionReady"));
 
-    this.addCard(370, 370, 1150, 125);
-    this.addLabel("settings.accountLink", 400, 390, 20);
-    this.addDetail("settings.accountLinkDescription", 400, 448);
+    this.addCard(70, 370, 1450, 125);
+    this.addLabel("settings.accountLink", 100, 390, 20);
+    this.addDetail("settings.accountLinkDescription", 100, 448);
     this.addActionButton("settings.linkGoogle", 1200, 385, 135, () => this.notify("settings.linkReady"));
     this.addActionButton("settings.linkEmail", 1350, 385, 140, () => this.notify("settings.linkReady"));
 
-    this.addCard(370, 515, 1150, 75);
-    this.addLabel("settings.lastSync", 400, 535, 18);
-    this.addDetail("settings.lastSyncValue", 720, 536);
+    this.addCard(70, 515, 1450, 75);
+    this.addLabel("settings.lastSync", 100, 535, 18);
+    this.addDetail("settings.lastSyncValue", 420, 536);
 
     const danger = new Graphics()
-      .roundRect(370, 610, 1150, 185, 24)
+      .roundRect(70, 610, 1450, 185, 24)
       .fill(0xffe1d5)
       .stroke({ color: 0xb65d49, width: 3 });
     const title = new Text({ text: message("settings.dangerZone"), style: textStyle(21, 0x8c3429, "800") });
-    title.position.set(400, 630);
+    title.position.set(100, 630);
     const detail = new Text({ text: message("settings.dangerDescription"), style: textStyle(15, 0x7e5148, "600") });
-    detail.position.set(400, 667);
+    detail.position.set(100, 667);
     this.addChild(danger, title, detail);
     this.addActionButton("settings.logout", 400, 715, 250, () => this.notify("settings.logoutReady"), 0xe7b080);
     this.addActionButton("settings.dataReset", 675, 715, 250, () => this.askConfirmation("dataReset"), 0xe58c72);
@@ -389,7 +412,7 @@ export class SettingsPage extends Container {
   }
 
   private renderConfirmation(action: ConfirmAction): void {
-    const blocker = new Graphics().rect(0, 0, 1600, 900).fill(0xf8e7ca);
+    const blocker = new Graphics().rect(0, 0, 1600, 900).fill({ color: 0x2f211b, alpha: 0.58 });
     blocker.eventMode = "static";
     const panel = createCozyPanel(300, 155, 1000, 590, { fill: 0xfff4df, border: 0x9d4b3d, radius: 32 });
     const warningBadge = new Graphics().circle(800, 245, 48).fill(0xf6d7ad).stroke({ color: 0x9d4b3d, width: 4 });

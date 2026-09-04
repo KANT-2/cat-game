@@ -127,6 +127,30 @@ export type DailyRewardResult =
   | { ok: true; coinsAwarded: number }
   | { ok: false; reason: "quest-not-found" | "not-complete" | "already-claimed" | "bonus-not-ready" };
 
+export type AttendanceView = {
+  today: string;
+  canClaim: boolean;
+  currentStreak: number;
+  nextStreak: number;
+  longestStreak: number;
+  claimedDates: string[];
+  dailyCoins: number;
+  streakBonus: number;
+  totalCoins: number;
+  cycleRewards: number[];
+};
+
+export type AttendanceClaimResult =
+  | {
+      ok: true;
+      claimedDate: string;
+      currentStreak: number;
+      dailyCoins: number;
+      streakBonus: number;
+      coinsAwarded: number;
+    }
+  | { ok: false; reason: "already-claimed" };
+
 export type CatMemoryClearResult = { ok: true; removed: number };
 
 /** 상태가 커밋될 때 복제된 스냅샷을 받는 구독 함수다. */
@@ -274,6 +298,12 @@ export interface GameClient {
 
   /** 모든 데일리 퀘스트 보상을 수령한 뒤 최종 보너스를 지급한다. */
   claimDailyBonus(): DailyRewardResult;
+
+  /** 오늘의 출석 가능 여부와 7일 연속 보상판을 조회한다. */
+  getAttendance(): AttendanceView;
+
+  /** 로컬 날짜 기준 오늘 출석을 한 번만 인정하고 일일·연속 보상을 함께 지급한다. */
+  claimAttendance(): AttendanceClaimResult;
 
   /** 학습 진도만 초기화하며 보유 가구와 고양이는 유지한다. */
   resetLearningProgress(): void;

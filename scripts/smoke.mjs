@@ -33,6 +33,12 @@ if (box?.width !== 1600 || box.height !== 900) {
   throw new Error(`unexpected canvas bounds: ${JSON.stringify(box)}`);
 }
 
+await page.screenshot({ path: screenshotPath("cat-game-attendance.png") });
+await page.mouse.click(1220, 733);
+await page.waitForTimeout(200);
+await page.screenshot({ path: screenshotPath("cat-game-attendance-claimed.png") });
+await page.mouse.click(1220, 733);
+await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-home.png") });
 
 await page.mouse.move(728, 590);
@@ -45,20 +51,27 @@ await page.mouse.up();
 await page.waitForTimeout(900);
 await page.screenshot({ path: screenshotPath("cat-game-drop.png") });
 
-await page.mouse.click(78, 811);
+await page.mouse.click(90, 90);
 await page.waitForTimeout(200);
-await page.screenshot({ path: screenshotPath("cat-game-settings-account.png") });
+await page.screenshot({ path: screenshotPath("cat-game-profile-account.png") });
+await page.mouse.click(1400, 180);
+await page.waitForTimeout(150);
+await page.screenshot({ path: screenshotPath("cat-game-profile-attendance.png") });
+await page.mouse.click(1220, 733);
+await page.waitForTimeout(150);
 await page.mouse.click(800, 738);
 await page.waitForTimeout(150);
-await page.screenshot({ path: screenshotPath("cat-game-settings-confirm-reset.png") });
+await page.screenshot({ path: screenshotPath("cat-game-profile-confirm-reset.png") });
 await page.mouse.click(695, 587);
-await page.mouse.click(165, 369);
+await page.mouse.click(63, 60);
+
+await page.mouse.click(78, 811);
 await page.waitForTimeout(150);
 await page.screenshot({ path: screenshotPath("cat-game-settings-sound.png") });
-await page.mouse.click(165, 459);
+await page.mouse.click(165, 369);
 await page.waitForTimeout(150);
 await page.screenshot({ path: screenshotPath("cat-game-settings-alerts.png") });
-await page.mouse.click(165, 549);
+await page.mouse.click(165, 459);
 await page.waitForTimeout(150);
 await page.screenshot({ path: screenshotPath("cat-game-settings-learning.png") });
 await page.mouse.click(63, 60);
@@ -81,6 +94,13 @@ await page.mouse.click(1200, 535);
 await page.mouse.click(1395, 350);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-study-task.png") });
+await page.mouse.click(680, 665);
+await page.waitForTimeout(150);
+await page.mouse.click(800, 520);
+await page.waitForTimeout(200);
+await page.screenshot({ path: screenshotPath("cat-game-study-feedback.png") });
+await page.mouse.click(800, 510);
+await page.waitForTimeout(150);
 await page.mouse.click(65, 55);
 await page.waitForTimeout(100);
 await page.mouse.click(940, 813);
@@ -114,12 +134,24 @@ await page.waitForTimeout(150);
 await page.screenshot({ path: screenshotPath("cat-game-shop-wallpaper.png") });
 await page.mouse.click(595, 510);
 await page.waitForTimeout(150);
+await page.screenshot({ path: screenshotPath("cat-game-shop-confirm-wallpaper.png") });
+await page.mouse.click(650, 590);
+await page.waitForTimeout(100);
+await page.mouse.click(595, 510);
+await page.waitForTimeout(100);
+await page.mouse.click(950, 590);
+await page.waitForTimeout(150);
 await page.mouse.click(180, 198);
 await page.waitForTimeout(150);
 await page.mouse.click(595, 510);
 await page.waitForTimeout(200);
+await page.screenshot({ path: screenshotPath("cat-game-shop-confirm.png") });
+await page.mouse.click(950, 590);
+await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-purchased.png") });
 await page.mouse.click(905, 505);
+await page.waitForTimeout(200);
+await page.mouse.click(60, 55);
 await page.waitForTimeout(200);
 
 await page.mouse.click(1410, 820);
@@ -163,7 +195,7 @@ await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-owned-wallpaper.png") });
 await page.mouse.click(432, 423);
 await page.waitForTimeout(150);
-await page.mouse.click(515, 218);
+await page.mouse.click(285, 218);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-owned-siamese-stored.png") });
 await page.mouse.click(892, 396);
@@ -180,7 +212,7 @@ await page.mouse.click(1530, 811);
 await page.waitForTimeout(200);
 await page.mouse.click(1518, 740);
 await page.waitForTimeout(200);
-await page.mouse.click(515, 218);
+await page.mouse.click(285, 218);
 await page.waitForTimeout(200);
 await page.mouse.click(472, 396);
 await page.waitForTimeout(200);
@@ -193,8 +225,11 @@ if (!savedState) {
   throw new Error("game state was not persisted");
 }
 const parsedState = JSON.parse(savedState);
-if (parsedState.coins !== 1_093_040) {
-  throw new Error(`unexpected coins after purchases and two draws: ${parsedState.coins}`);
+if (parsedState.coins !== 1_093_165) {
+  throw new Error(`unexpected coins after attendance, study reward, purchases, and two draws: ${parsedState.coins}`);
+}
+if (parsedState.attendanceStreak !== 1 || parsedState.attendanceLastClaimDate.length !== 10) {
+  throw new Error("attendance was not persisted after the initial claim");
 }
 if ("gems" in parsedState) {
   throw new Error("legacy gem currency should not remain in the saved state");

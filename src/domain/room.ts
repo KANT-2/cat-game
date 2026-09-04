@@ -36,6 +36,7 @@ export type GameSettings = {
 /** 로컬 또는 원격 저장소로 직렬화할 수 있는 게임 스냅샷이다. */
 export type GameState = {
   economyVersion: 3;
+  roomAppearanceVersion: 1;
   coins: number;
   ownedCats: CatVariant[];
   homeCats: CatVariant[];
@@ -46,6 +47,10 @@ export type GameState = {
   dailyCompletedTaskIds: string[];
   claimedDailyQuestIds: DailyQuestId[];
   dailyBonusClaimed: boolean;
+  attendanceLastClaimDate: string;
+  attendanceStreak: number;
+  attendanceLongestStreak: number;
+  attendanceClaimedDates: string[];
   gachaPityCount: number;
   catMemories: Partial<Record<CatVariant, string[]>>;
   settings: GameSettings;
@@ -84,6 +89,7 @@ export const defaultFurniture: PlacedFurniture[] = [
 export function createDefaultState(): GameState {
   return {
     economyVersion: 3,
+    roomAppearanceVersion: 1,
     coins: 1_100_000,
     ownedCats: [DEFAULT_CAT_VARIANT, "siamese"],
     homeCats: [DEFAULT_CAT_VARIANT],
@@ -94,6 +100,10 @@ export function createDefaultState(): GameState {
     dailyCompletedTaskIds: [],
     claimedDailyQuestIds: [],
     dailyBonusClaimed: false,
+    attendanceLastClaimDate: "",
+    attendanceStreak: 0,
+    attendanceLongestStreak: 0,
+    attendanceClaimedDates: [],
     gachaPityCount: 0,
     catMemories: {},
     settings: {

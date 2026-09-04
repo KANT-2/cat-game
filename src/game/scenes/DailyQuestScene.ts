@@ -6,7 +6,7 @@ import type { GameState } from "../../domain/room";
 import { BackButton } from "../components/BackButton";
 import { CanvasButton } from "../components/CanvasButton";
 import { createCozyPageBackground, createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
-import { createCoinIcon, createCurrencyBar } from "../components/CurrencyBar";
+import { createCoinAmount, createCurrencyBar } from "../components/CurrencyBar";
 import { layoutToFillViewport } from "../components/fullscreenLayout";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
 
@@ -59,7 +59,7 @@ export class DailyQuestScene extends Container {
   }
 
   private buildBackground(): void {
-    this.content.addChild(createCozyPageBackground(BASE_WIDTH, BASE_HEIGHT, 735));
+    this.content.addChild(createCozyPageBackground(BASE_WIDTH, BASE_HEIGHT));
   }
 
   private buildHeader(state: GameState): void {
@@ -90,8 +90,13 @@ export class DailyQuestScene extends Container {
       .fill(0xf1dfc6)
       .stroke({ color: 0xcda273, width: 16 });
     const ratio = total === 0 ? 0 : done / total;
+    const progressRing = new Graphics();
     if (ratio > 0) {
-      ring.arc(235, 310, 104, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ratio).stroke({ color: 0x82a367, width: 18 });
+      const startAngle = -Math.PI / 2;
+      progressRing
+        .moveTo(235 + Math.cos(startAngle) * 104, 310 + Math.sin(startAngle) * 104)
+        .arc(235, 310, 104, startAngle, startAngle + Math.PI * 2 * ratio)
+        .stroke({ color: 0x82a367, width: 18 });
     }
     const count = new Text({
       text: message("daily.completedCount", { done, total }),
@@ -117,7 +122,7 @@ export class DailyQuestScene extends Container {
       onPress: this.options.onOpenStudy,
     });
     study.position.set(110, 602);
-    this.content.addChild(panel, title, ring, count, streakCard, streak, study);
+    this.content.addChild(panel, title, ring, progressRing, count, streakCard, streak, study);
   }
 
   private buildQuestList(quests: DailyQuestView[]): void {
@@ -154,11 +159,15 @@ export class DailyQuestScene extends Container {
       });
       progress.position.set(930, y + 80);
       const rewardLabel = new Text({ text: message("daily.rewardLabel"), style: textStyle(16, 0x7b542f, "800") });
-      rewardLabel.position.set(1060, y + 28);
-      const rewardIcon = createCoinIcon(this.options.coinIcon, 24);
-      rewardIcon.position.set(1112, y + 23);
-      const rewardAmount = new Text({ text: `+${quest.rewardCoins}`, style: textStyle(16, 0x7b542f, "800") });
-      rewardAmount.position.set(1140, y + 28);
+      rewardLabel.anchor.set(0, 0.5);
+      rewardLabel.position.set(1060, y + 36);
+      const reward = createCoinAmount(this.options.coinIcon, `+${quest.rewardCoins}`, {
+        color: 0x7b542f,
+        fontSize: 16,
+        iconSize: 24,
+        gap: 6,
+      });
+      reward.position.set(1060 + rewardLabel.width + 16, y + 36);
       let actionLabel: "daily.claimed" | "daily.claim" | "daily.goStudy" = "daily.goStudy";
       let actionColor = 0xadc08d;
       if (quest.claimed) {
@@ -185,8 +194,7 @@ export class DailyQuestScene extends Container {
         progressTrack,
         progress,
         rewardLabel,
-        rewardIcon,
-        rewardAmount,
+        reward,
         action,
       );
     });
@@ -197,10 +205,13 @@ export class DailyQuestScene extends Container {
     const panel = createCozyPanel(55, 715, 1020, 120, { fill: 0xffedc9, border: 0xb67a43 });
     const title = new Text({ text: message("daily.allComplete"), style: textStyle(21, 0x493022, "800") });
     title.position.set(92, 742);
-    const rewardIcon = createCoinIcon(this.options.coinIcon, 26);
-    rewardIcon.position.set(92, 780);
-    const rewards = new Text({ text: message("daily.allRewards"), style: textStyle(17, 0x76503a, "700") });
-    rewards.position.set(124, 785);
+    const rewards = createCoinAmount(this.options.coinIcon, message("daily.allRewards"), {
+      color: 0x76503a,
+      fontSize: 17,
+      iconSize: 26,
+      gap: 7,
+    });
+    rewards.position.set(92, 794);
     let actionColor = 0xc9b9a3;
     if (claimed) {
       actionColor = 0xb8b2a5;
@@ -215,7 +226,7 @@ export class DailyQuestScene extends Container {
       onPress: () => this.claimBonus(),
     });
     action.position.set(820, 745);
-    this.content.addChild(panel, title, rewardIcon, rewards, action);
+    this.content.addChild(panel, title, rewards, action);
   }
 
   private buildFairnessNotice(): void {
