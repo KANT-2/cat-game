@@ -1,0 +1,76 @@
+name: cat-game-integration
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: cat_game
+      POSTGRES_USER: cat_game
+      POSTGRES_PASSWORD: cat_game
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cat_game -d cat_game"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - cat_game_integration_data:/var/lib/postgresql/data
+
+  grader-image:
+    build:
+      context: ${CAT_GAME_BACKEND_PATH:-../cat-game-backend}/infra/docker/grader
+    image: cat-game-python-grader:3.12
+    entrypoint: ["/bin/true"]
+    restart: "no"
+
+  backend:
+    build:
+      context: ${CAT_GAME_BACKEND_PATH:-../cat-game-backend}
+    command:
+      - sh
+      - -c
+      - >-
+        python -m alembic -c alembic.ini.example upgrade head &&
+        python scripts/seed_learning_tasks.py &&
+        exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+    environment:
+      APP_ENV: local
+      DATABASE_URL: postgresql+psycopg://cat_game:cat_game@db:5432/cat_game
+      CORS_ORIGINS: ${CAT_GAME_WEB_ORIGIN:-http://127.0.0.1:4173},http://localhost:4173
+      GRADING_IMAGE: cat-game-python-grader:3.12
+    depends_on:
+      db:
+        condition: service_healthy
+      grader-image:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    ports:
+      - "127.0.0.1:${CAT_GAME_API_PORT:-8000}:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  frontend:
+    build:
+      context: .
+      args:
+        VITE_CAT_GAME_API_BASE_URL: ${CAT_GAME_API_PUBLIC_URL:-http://127.0.0.1:8000}
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "127.0.0.1:${CAT_GAME_WEB_PORT:-4173}:80"
+
+volumes:
+  cat_game_integration_data:

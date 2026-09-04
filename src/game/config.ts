@@ -4,8 +4,8 @@ export const CLEARING_GRID = {
   columns: 10,
   rows: 8,
   centerX: 800,
-  farY: 392,
-  nearY: 832,
+  farY: 560,
+  nearY: 860,
   farWidth: 1240,
   nearWidth: 1560,
 } as const;

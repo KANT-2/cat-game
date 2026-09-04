@@ -68,7 +68,7 @@ export const defaultFurniture: PlacedFurniture[] = [
   { id: "desk-1", kind: "desk", x: 1, y: 1, rotation: 0 },
   { id: "sofa-1", kind: "sofa", x: 5, y: 1, rotation: 0 },
   { id: "plant-1", kind: "plant", x: 8, y: 2, rotation: 0 },
-  { id: "tree-1", kind: "catTree", x: 1, y: 5, rotation: 0 },
+  { id: "tree-1", kind: "catTree", x: 0, y: 5, rotation: 0 },
   { id: "bed-1", kind: "bed", x: 6, y: 5, rotation: 0 },
 ];
 
