@@ -18,6 +18,7 @@
     "art:camera-reference": "node scripts/export-forest-camera-reference.mjs",
     "test": "vitest run",
     "smoke": "node scripts/smoke.mjs",
+    "smoke:integration": "node scripts/integration-smoke.mjs",
     "smoke:desktop": "node scripts/desktop-smoke.mjs",
     "smoke:pwa": "node scripts/pwa-smoke.mjs",
     "desktop:config:check": "node scripts/check-desktop-config.mjs",
