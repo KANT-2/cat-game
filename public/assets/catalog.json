@@ -1024,7 +1024,34 @@
         "src": "/assets/backgrounds/forest/forest-clearing-day-01.png",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["forest", "clearing", "day", "one-point-perspective", "cat-style"]
-
+      },
+      {
+        "id": "environment.rock.mossy-round.01",
+        "kind": "environment",
+        "src": "/assets/backgrounds/forest/environment/rock-mossy-round-01.png",
+        "anchor": { "x": 0.5, "y": 0.88 },
+        "tags": ["forest", "rock", "mossy", "round"]
+      },
+      {
+        "id": "environment.grass.reed-clump.01",
+        "kind": "environment",
+        "src": "/assets/backgrounds/forest/environment/grass-reed-clump-01.png",
+        "anchor": { "x": 0.5, "y": 0.94 },
+        "tags": ["forest", "grass", "reed", "clump"]
+      },
+      {
+        "id": "environment.rock.mossy-angular.01",
+        "kind": "environment",
+        "src": "/assets/backgrounds/forest/environment/rock-mossy-angular-01.png",
+        "anchor": { "x": 0.5, "y": 0.9 },
+        "tags": ["forest", "rock", "mossy", "angular"]
+      },
+      {
+        "id": "furniture.cat-tower.forest.01",
+        "kind": "furniture",
+        "src": "/assets/furniture/cat-tower-forest-01.png",
+        "anchor": { "x": 0.5, "y": 0.96 },
+        "tags": ["forest", "cat-tower", "tree", "moss", "vine"]
       }
     ],
     "study": [],
