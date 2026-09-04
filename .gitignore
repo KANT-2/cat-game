@@ -61,6 +61,9 @@ $RECYCLE.BIN/
 
 cat-sprite-project/
 
+# Local graphic asset sources, drafts, references, and review exports
+asset-workbench/
+
 # Tauri build and generated capability schemas
 /src-tauri/target/
 /src-tauri/gen/schemas/

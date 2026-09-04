@@ -4,7 +4,7 @@ import type { DailyQuestId } from "../domain/dailyQuest";
 import type { GachaDrawCount, GachaRewardId } from "../domain/gacha";
 import type { FurnitureKind, GameSettings, GameState } from "../domain/room";
 import type { ShopItemId } from "../domain/shop";
-import type { CodeTestResult, QuizChoice, StudyConcept, StudyDifficulty, StudyTaskType } from "../domain/study";
+import type { CodeTestResult, StudyConcept, StudyDifficulty, StudyTaskType } from "../domain/study";
 
 /** 가구 배치를 요청할 때 UI가 게임 시스템에 전달하는 직렬화 가능한 명령이다. */
 export type PlacementCommand = {
@@ -59,13 +59,18 @@ export type CatSelectionResult = { ok: true; activeCat: CatVariant } | { ok: fal
 
 export type CatHomeResult = { ok: true; homeCats: CatVariant[] } | { ok: false; reason: "cat-not-owned" };
 
+/** 로컬 메시지 키 또는 서버가 검증해 내려준 동적 학습 문구다. */
+export type GameText = { messageId: MessageId } | { text: string };
+
+export type QuizChoiceView = { id: string; label: GameText };
+
 /** 게임 시스템이 UI에 공개하는 퀴즈 표시 모델이다. 정답은 의도적으로 포함하지 않는다. */
 export type QuizView = {
   id: string;
-  titleMessage: MessageId;
-  summaryMessage: MessageId;
-  promptMessage: MessageId;
-  choices: QuizChoice[];
+  title: GameText;
+  summary: GameText;
+  prompt: GameText;
+  choices: QuizChoiceView[];
   rewardCoins: number;
   completed: boolean;
 };
@@ -78,27 +83,28 @@ export type QuizAnswerResult =
       feedbackMessage: MessageId;
       firstCompletion: boolean;
       coinsAwarded: number;
+      serverAuthoritative?: boolean;
     }
-  | { ok: false; reason: "quiz-not-found" | "choice-not-found" };
+  | { ok: false; reason: "quiz-not-found" | "choice-not-found" | "server-unavailable" | "grading-failed" };
 
 export type StudyTaskView = {
   id: string;
   type: StudyTaskType;
   concept: StudyConcept;
   difficulty: StudyDifficulty;
-  titleMessage: MessageId;
-  summaryMessage: MessageId;
+  title: GameText;
+  summary: GameText;
   rewardCoins: number;
   completed: boolean;
 };
 
 export type CodeChallengeView = StudyTaskView & {
   type: "code";
-  promptMessage: MessageId;
+  prompt: GameText;
   signature: string;
   starterBody: string;
-  examplesMessage: MessageId;
-  hintMessages: readonly MessageId[];
+  examples: GameText;
+  hints: readonly GameText[];
   bonusCoins: number;
 };
 
@@ -109,8 +115,14 @@ export type CodeSubmissionResult =
       tests: CodeTestResult[];
       firstCompletion: boolean;
       coinsAwarded: number;
+      serverAuthoritative?: boolean;
     }
-  | { ok: false; reason: "challenge-not-found" | "empty-code" };
+  | {
+      ok: false;
+      reason: "challenge-not-found" | "empty-code" | "server-unavailable" | "grading-failed";
+    };
+
+export type Awaitable<T> = T | Promise<T>;
 
 export type DailyQuestView = {
   id: DailyQuestId;
@@ -279,7 +291,7 @@ export interface GameClient {
    * 오답과 이미 완료한 퀴즈의 재정답은 재화를 지급하거나 상태를 커밋하지 않는다.
    * UI는 `feedbackMessage`를 JSON 메시지 카탈로그에서 해석해야 한다.
    */
-  answerQuiz(quizId: string, choiceId: string): QuizAnswerResult;
+  answerQuiz(quizId: string, choiceId: string): Awaitable<QuizAnswerResult>;
 
   /** 학습 홈에 표시할 과제 목록과 완료 상태를 반환한다. */
   getStudyTasks(): StudyTaskView[];
@@ -288,7 +300,7 @@ export interface GameClient {
   getCodeChallenge(challengeId: string): CodeChallengeView | null;
 
   /** 안전한 로컬 채점기를 통해 코드 과제를 채점하고 최초 완료 보상을 반영한다. */
-  submitCodeChallenge(challengeId: string, body: string, hintsUsed: number): CodeSubmissionResult;
+  submitCodeChallenge(challengeId: string, body: string, hintsUsed: number): Awaitable<CodeSubmissionResult>;
 
   /** 오늘의 학습 기록에서 계산한 퀘스트 진행도와 수령 상태를 반환한다. */
   getDailyQuests(): DailyQuestView[];

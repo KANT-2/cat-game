@@ -554,6 +554,7 @@ const catNameMessages: Record<CatVariant, MessageId> = {
   fluffy: "cat.fluffyName",
   ink: "cat.inkName",
   siamese: "cat.siameseName",
+  tabby: "cat.tabbyName",
 };
 function titleFor(kind: FeaturePageKind): MessageId {
   return `page.${kind}Title`;

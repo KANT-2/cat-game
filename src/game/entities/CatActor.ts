@@ -1,4 +1,4 @@
-import { AnimatedSprite, Container, type FederatedPointerEvent, Point, Rectangle } from "pixi.js";
+import { AnimatedSprite, Container, type FederatedPointerEvent, Point } from "pixi.js";
 import type { LoadedSpriteSheet } from "../../assets/SpriteSheetLoader";
 import type { CatAction, CatAnimationSet } from "./CatAnimations";
 import { type CatBehaviorCommand, CatBehaviorStateMachine, type CatGait } from "./CatBehaviorStateMachine";
@@ -16,6 +16,8 @@ type CatActorOptions = {
   animations: CatAnimationSet;
   initialGridX?: number;
   initialGridY?: number;
+  initialFacing?: "left" | "right";
+  initialAction?: CatAction;
   label?: string;
 };
 
@@ -128,6 +130,8 @@ export class CatActor extends Container {
       }
     });
     this.syncPosition();
+    this.scale.x = options.initialFacing === "right" ? -1 : 1;
+    this.playAction(options.initialAction ?? "idle");
   }
 
   setPaused(paused: boolean): void {
@@ -161,21 +165,17 @@ export class CatActor extends Container {
   }
 
   /**
-   * 데스크톱 위젯에서 실제 고양이 주변만 입력을 받기 위한 화면 영역을 계산한다.
+   * 다른 고양이가 이동하거나 내려놓을 셀을 예약할 때 현재 위치와 목적지를 확인한다.
    *
-   * @returns WebView 왼쪽 위가 원점인 전역 CSS 픽셀 사각형.
-   *
-   * @remarks 256px 프레임 전체가 아니라 모든 동작의 몸과 꼬리를 포괄하는 작은 영역을 사용한다.
+   * @param x - 공터의 정수 X 셀 좌표.
+   * @param y - 공터의 정수 Y 셀 좌표.
+   * @returns 현재 발 위치 또는 이동 목적지가 지정한 셀과 겹치면 `true`.
+   * @remarks 화면 이동 상태만 읽으며 고양이나 게임 상태를 변경하지 않는다.
    */
-  getPointerInteractionRegion(): Rectangle {
-    const topLeft = this.toGlobal(new Point(-74, this.sprite.y - 130));
-    const bottomRight = this.toGlobal(new Point(74, 12));
-    return new Rectangle(
-      Math.min(topLeft.x, bottomRight.x),
-      Math.min(topLeft.y, bottomRight.y),
-      Math.abs(bottomRight.x - topLeft.x),
-      Math.abs(bottomRight.y - topLeft.y),
-    );
+  reservesCell(x: number, y: number): boolean {
+    const occupiesCurrentCell = Math.round(this.gridX) === x && Math.round(this.gridY) === y;
+    const occupiesTargetCell = Math.round(this.targetX) === x && Math.round(this.targetY) === y;
+    return occupiesCurrentCell || occupiesTargetCell;
   }
 
   private beginPointerInteraction(event: FederatedPointerEvent): void {
@@ -370,6 +370,28 @@ export class CatActor extends Container {
     if (!this.behavior.canStartMovementImmediately) {
       return true;
     }
+    if (this.behavior.isMoving) {
+      this.planMovementToTarget();
+      return true;
+    }
+    this.startExistingMovement("walk");
+    return true;
+  }
+
+  /**
+   * 데스크톱 커서 추적을 위해 현재 비이동 동작을 끊고 지정 셀로 걷기 시작한다.
+   *
+   * @param x - 공터의 좌우 셀 좌표.
+   * @param y - 공터의 깊이 셀 좌표.
+   * @returns 이동 가능한 셀이면 목표를 갱신하고 `true`, 막힌 셀이면 `false`.
+   * @remarks 일반 바닥 클릭과 달리 반응·수면 같은 동작보다 실시간 추적을 우선한다.
+   */
+  followTo(x: number, y: number): boolean {
+    if (!this.canWalk(x, y)) {
+      return false;
+    }
+    this.targetX = x;
+    this.targetY = y;
     if (this.behavior.isMoving) {
       this.planMovementToTarget();
       return true;

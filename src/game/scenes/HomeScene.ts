@@ -10,6 +10,7 @@ import { applySmoothTextureSampling } from "../components/smoothSprite";
 import { ToastLayer } from "../components/ToastLayer";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
 import type { CatAnimationLibrary } from "../entities/CatAnimations";
+import type { ForestArt } from "../forest/ForestArt";
 import { ForestClearingView } from "../forest/ForestClearingView";
 import { AttendanceModal } from "./AttendanceModal";
 import { DailyQuestScene } from "./DailyQuestScene";
@@ -37,7 +38,6 @@ export class HomeScene extends Container {
   private readonly gameClient: GameClient;
   private readonly iconSources: HomeIconSources;
   private readonly catAnimations: CatAnimationLibrary;
-  private readonly desktopWidget: boolean;
   private readonly clearingViewport = new Container();
   private readonly clearing: ForestClearingView;
   private readonly uiLayer = new Container();
@@ -69,17 +69,12 @@ export class HomeScene extends Container {
     gameClient: GameClient,
     iconSources: HomeIconSources,
     catAnimations: CatAnimationLibrary,
-    options: {
-      desktopWidget?: boolean;
-      onCatFocusRequest?: () => void;
-      onCatInteractionRegionChange?: (region: { x: number; y: number; width: number; height: number }) => void;
-    } = {},
+    forestArt: ForestArt,
   ) {
     super();
     this.gameClient = gameClient;
     this.iconSources = iconSources;
     this.catAnimations = catAnimations;
-    this.desktopWidget = options.desktopWidget ?? false;
     this.state = gameClient.getSnapshot();
     this.clearing = new ForestClearingView({
       getFurniture: () => this.state.furniture,
@@ -104,9 +99,7 @@ export class HomeScene extends Container {
       getActiveWallpaper: () => this.state.activeWallpaper,
       getActiveFloor: () => this.state.activeFloor,
       catAnimations,
-      desktopWidget: this.desktopWidget,
-      onCatFocusRequest: options.onCatFocusRequest ?? (() => {}),
-      onCatInteractionRegionChange: options.onCatInteractionRegionChange ?? (() => {}),
+      art: forestArt,
     });
     this.clearingViewport.addChild(this.clearing);
     this.pageLayer.visible = false;
@@ -116,11 +109,6 @@ export class HomeScene extends Container {
     this.buildProfile();
     this.buildSideMenu();
     this.uiLayer.addChild(this.profilePanel, this.sideMenu, this.settingsMenu);
-    if (this.desktopWidget) {
-      this.uiLayer.visible = false;
-      this.pageLayer.visible = false;
-      this.toastLayer.visible = false;
-    }
     this.gameClient.subscribe((snapshot) => this.syncState(snapshot));
     this.openAttendance();
   }
@@ -141,9 +129,7 @@ export class HomeScene extends Container {
   layout(width: number, height: number): void {
     this.screenWidth = width;
     this.screenHeight = height;
-    const clearingScale = this.desktopWidget
-      ? Math.min(width / BASE_WIDTH, height / BASE_HEIGHT)
-      : Math.max(width / BASE_WIDTH, height / BASE_HEIGHT);
+    const clearingScale = Math.max(width / BASE_WIDTH, height / BASE_HEIGHT);
     this.clearingViewport.scale.set(clearingScale);
     this.clearingViewport.position.set(
       (width - BASE_WIDTH * clearingScale) / 2,
@@ -291,11 +277,7 @@ export class HomeScene extends Container {
   }
 
   private openAttendance(showClaimedStatus = false): void {
-    if (
-      this.desktopWidget ||
-      this.attendanceModal ||
-      (!showClaimedStatus && !this.gameClient.getAttendance().canClaim)
-    ) {
+    if (this.attendanceModal || (!showClaimedStatus && !this.gameClient.getAttendance().canClaim)) {
       return;
     }
     this.attendanceModal = new AttendanceModal({

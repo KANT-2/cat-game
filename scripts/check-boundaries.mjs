@@ -30,6 +30,14 @@ for (const file of files.filter((item) => item.endsWith(".ts"))) {
   if (relative.startsWith("services/") && /from ["'][^"']*\/(app|game|pwa|assets)\//.test(source)) {
     errors.push(`${relative}: platform adapters cannot depend on app or presentation layers`);
   }
+  const isDesktopPresentation =
+    relative === "desktop-main.ts" || relative === "app/DesktopWidgetApp.ts" || relative.startsWith("desktop/");
+  if (isDesktopPresentation && /from ["'][^"']*\/(core|services|game\/scenes|game\/forest)\//.test(source)) {
+    errors.push(`${relative}: desktop presentation cannot depend on the game state or home scene`);
+  }
+  if (isDesktopPresentation && source.includes("localStorage")) {
+    errors.push(`${relative}: desktop presentation cannot access game storage`);
+  }
 }
 
 if (errors.length) {

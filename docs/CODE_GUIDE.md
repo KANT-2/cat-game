@@ -19,13 +19,17 @@ src/main.ts
   ├─ GameApp.create()
   │   ├─ PixiJS Application 생성
   │   ├─ GameStateStore 생성
-  │   ├─ LocalGameClient 생성
+  │   ├─ 환경에 따라 LocalGameClient 또는 BackendLearningGameClient 생성
   │   └─ HomeScene에 GameClient 주입
   └─ registerPwa()
       └─ 설치 가능 상태와 service worker 이벤트 연결
 ```
 
 `src/app/GameApp.ts`만 구체적인 게임 클라이언트와 저장소 구현을 조립한다. 장면 코드에서 `LocalGameClient` 또는 `localStorage`를 직접 import하지 않는다.
+
+백엔드 URL이 설정되면 `src/app/createGameClient.ts`가 FastAPI 연결과 추천 과제 초기화를 기다린 뒤 화면에
+클라이언트를 주입한다. 로컬 개발 사용자 UUID를 지정하지 않으면 백엔드의 개발 세션 엔드포인트를 사용한다.
+서버 학습 과제는 공개 UUID를 ID로 사용하며 제목·설명·선택지는 검증된 동적 JSON으로 Canvas에 표시한다.
 
 ## GameClient 데이터 흐름
 
@@ -83,6 +87,10 @@ UI는 `reason`을 메시지 키로 변환해 보여 줄 뿐 충돌을 다시 판
 ### 함수 작성형 과제와 데일리 퀘스트
 
 함수 작성형 과제는 UI가 함수 선언을 고정하고 본문만 `submitCodeChallenge()`로 전달한다. 로컬 클라이언트는 임의 코드를 실행하지 않고 허용된 풀이 형태를 테스트 결과로 변환한다. 서버 채점기로 교체할 때도 아래 결과 계약을 유지한다.
+
+백엔드 학습 모드에서는 코드 또는 객관식 답안을 `POST /api/v1/attempts`에 제출한 뒤 공개 attempt UUID로
+완료 상태를 폴링한다. `COMPLETED`의 `is_correct`만 화면 결과로 사용하고, `FAILED`나 연결 시간 초과는
+사용자 문구 키로 변환한다. 서버가 아직 재화 보상을 커밋하지 않으므로 원격 완료에 로컬 코인을 지급하지 않는다.
 
 ```json
 {
@@ -170,6 +178,13 @@ message("furniture.placed", { item: message("furniture.bed") });
 행 우선 시트를 PixiJS 프레임으로 자른다. `src/app`은 파일 경로 대신 고정 asset ID로 필요한
 동작 세트를 조립해 장면에 주입한다. 장면과 액터는 이미 로드된 텍스처만 사용한다.
 
+홈 공터 이미지는 `loadForestArt()`가 숲 배경과 다섯 가구를 카탈로그 ID로 불러와 장면에 주입한다.
+배경의 잔디 지평선은 기준 화면 `y = 560`이고, 논리 격자의 `farY`도 같은 위치에서 시작한다. 가구는
+아이소메트릭 시점이 아니라 낮은 횡스크롤 벨트뷰로 제작하며, 러그와 방석처럼 바닥에 놓이는 자산은
+세로 깊이를 강하게 축소한다. 렌더링 크기는 바닥 접점의 `y` 깊이에 따라 완만하게 커지지만 충돌
+크기와 저장 좌표는 바뀌지 않는다. 대체 골목·실내 배경은 카탈로그에 보관하되 고정 숲 홈에서는
+로드하지 않는다.
+
 ```json
 {
   "id": "furniture.sofa.green.01",
@@ -232,9 +247,12 @@ Canvas 초기화 전에는 `src/style.css`의 짙은 갈색 앱 셸 배경이 �
 장면의 즉시 표시용 fallback과 맞춰 두며, HTML/DOM UI를 로딩 화면으로 사용하지 않는다. 로딩 장면의
 게임 이름은 Canvas 텍스트 대신 카탈로그의 투명 `{ 냥 }` 로고 이미지를 사용한다.
 
-설치형 PWA는 `catalog.json`, 카탈로그에 등록된 고양이 PNG 시트와 로딩 배경을 service worker에
-미리 저장한다. 가챠로 획득한 고양이도 오프라인에서 바로 표시되어야 하므로 특정 품종을 precache에서
-제외하지 않는다.
+설치형 PWA는 `catalog.json`, 카탈로그에 등록된 네 고양이의 PNG 시트, 로딩 배경과 WebP·PNG 환경 리소스를
+service worker에 미리 저장한다. 가챠로 획득한 고양이도 오프라인에서 바로 표시되어야 하므로 특정 품종을
+precache에서 제외하지 않는다. 공터에 새로 나타나는 고양이는 가구와 다른 고양이를 피한 임의의 셀에서 시작하며,
+좌우 방향과 첫 행동도 무작위로 정한다. 데스크톱 위젯은 `desktop-widget.html`과 `DesktopWidgetApp`에서
+게임 상태 없이 흰 고양이 한 마리만 만들고, Windows 호스트가 전달하는 CSS 픽셀 좌표를 격자 변환 없이
+일정 거리 뒤에서 보행 애니메이션으로 따라간다.
 
 ## 새 기능을 넣을 위치
 

@@ -19,6 +19,7 @@ main.ts
 public/assets/            빌드에 포함되는 이미지와 카탈로그
 src/assets/               카탈로그를 읽는 기술 계약
 src/content/              메시지 ID 타입과 Canvas 런타임 문구
+src/desktop/              게임 상태와 격자를 사용하지 않는 데스크톱 전용 PixiJS 화면
 src/pwa/                  설치와 service worker 연결
 src-tauri/                후속 데스크톱 창 기능을 격리한 선택적 호스트
 ```
@@ -36,6 +37,11 @@ src-tauri/                후속 데스크톱 창 기능을 격리한 선택적 
 
 `src/game/presentation`의 색상과 라벨은 현재 절차형 프로토타입을 위한 UI 표시 데이터다. 실제 이미지 경로는 이곳에 넣지 않고 리소스 카탈로그의 안정적인 ID를 사용한다.
 
+`desktop-widget.html → desktop-main.ts → DesktopWidgetApp → src/desktop`은 게임 진입점과 별도 번들로
+구성한다. 데스크톱 화면은 `GameClient`, `GameStateStore`, `HomeScene`과 숲 격자를 사용하지 않으며,
+공유 리소스 카탈로그와 고양이 애니메이션 타입만 재사용한다. Tauri 명령 호출은 `src/app/desktopWidgetHost.ts`에
+격리한다.
+
 ## GameClient 경계
 
 `src/core/GameClient.ts`가 UI와 게임 시스템 사이의 공개 API다.
@@ -47,6 +53,11 @@ src-tauri/                후속 데스크톱 창 기능을 격리한 선택적 
 - UI는 배치 미리보기에 `domain`의 순수 충돌 규칙을 재사용할 수 있지만 성공 여부는 `placeFurniture()` 결과를 따른다.
 - 계약에는 PixiJS 타입, DOM 타입, 저장소 구현 타입을 추가하지 않는다.
 - 새 서버 API가 생기면 같은 계약을 구현하는 원격 클라이언트로 교체한다. 화면은 서버 위치를 알 필요가 없다.
+
+`VITE_CAT_GAME_API_BASE_URL`이 설정된 실행에서는 `BackendLearningGameClient`가 추천 문제 조회와 답안 채점을
+FastAPI에 위임한다. HTTP·JSON·개발 사용자 헤더는 `BackendApiClient`가 담당하고, PixiJS 장면은 계속
+`GameClient`만 사용한다. 서버 라우터가 아직 없는 상점·가챠·하우징 명령은 `LocalGameClient`에 위임하며,
+서버 스냅샷 계약이 준비되기 전에는 원격 저장을 가장한 낙관적 동기화를 하지 않는다.
 
 ## 기능 추가 순서
 

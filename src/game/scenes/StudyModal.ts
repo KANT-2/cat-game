@@ -1,8 +1,10 @@
 import { Container, Graphics, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
 import type {
+  Awaitable,
   CodeChallengeView,
   CodeSubmissionResult,
+  GameText,
   QuizAnswerResult,
   QuizView,
   StudyTaskView,
@@ -22,21 +24,19 @@ type StudyModalOptions = {
   tasks: StudyTaskView[];
   getQuiz: (quizId: string) => QuizView | null;
   getCodeChallenge: (challengeId: string) => CodeChallengeView | null;
-  onAnswer: (quizId: string, choiceId: string) => QuizAnswerResult;
-  onSubmitCode: (challengeId: string, body: string, hintsUsed: number) => CodeSubmissionResult;
+  onAnswer: (quizId: string, choiceId: string) => Awaitable<QuizAnswerResult>;
+  onSubmitCode: (challengeId: string, body: string, hintsUsed: number) => Awaitable<CodeSubmissionResult>;
   onClose: () => void;
   backIcon: string;
   coinIcon: string;
 };
 
-const conceptMessages: Record<
-  StudyConcept,
-  "study.conceptVariables" | "study.conceptConditionals" | "study.conceptLoops" | "study.conceptFunctions"
-> = {
+const conceptMessages: Record<StudyConcept, MessageId> = {
   variables: "study.conceptVariables",
   conditionals: "study.conceptConditionals",
   loops: "study.conceptLoops",
   functions: "study.conceptFunctions",
+  other: "study.conceptOther",
 };
 
 const difficultyMessages: Record<
@@ -63,6 +63,7 @@ export class StudyModal extends Container {
   private taskPage = 0;
   private codeEditor: CanvasCodeEditor | null = null;
   private hintsUsed = 0;
+  private submissionPending = false;
 
   constructor(options: StudyModalOptions) {
     super();
@@ -140,17 +141,20 @@ export class StudyModal extends Container {
     const badgeText = new Text({ text: message("study.recommendedBadge"), style: textStyle(12, 0xffffff, "800") });
     badgeText.anchor.set(0.5);
     badgeText.position.set(850, 155);
-    const title = new Text({ text: message(recommended.titleMessage), style: textStyle(27, 0x3f281c, "800") });
+    const title = new Text({ text: resolveGameText(recommended.title), style: textStyle(27, 0x3f281c, "800") });
     title.position.set(540, 192);
-    const summary = new Text({ text: message(recommended.summaryMessage), style: textStyle(16, 0x6e4e3a, "600") });
+    const summary = new Text({
+      text: resolveGameText(recommended.summary),
+      style: { ...textStyle(16, 0x6e4e3a, "600"), wordWrap: true, wordWrapWidth: 940, lineHeight: 23 },
+    });
     summary.position.set(540, 235);
     const metadata = new Text({
       text: `${message(conceptMessages[recommended.concept])}  ·  ${message(difficultyMessages[recommended.difficulty])}`,
       style: textStyle(15, 0x7b5336, "700"),
     });
     metadata.position.set(540, 290);
-    const reward = this.createCoinReward(recommended.rewardCoins, 15);
-    reward.position.set(540 + metadata.width + 18, 299);
+    const reward = recommended.rewardCoins > 0 ? this.createCoinReward(recommended.rewardCoins, 15) : null;
+    reward?.position.set(540 + metadata.width + 18, 299);
     const start = new CanvasButton({
       label: message("study.quickStart"),
       width: 210,
@@ -159,7 +163,11 @@ export class StudyModal extends Container {
       onPress: () => this.openTask(recommended),
     });
     start.position.set(1290, 270);
-    this.body.addChild(panel, heading, badge, badgeText, title, summary, metadata, reward, start);
+    this.body.addChild(panel, heading, badge, badgeText, title, summary, metadata);
+    if (reward) {
+      this.body.addChild(reward);
+    }
+    this.body.addChild(start);
   }
 
   private buildFilters(): void {
@@ -196,6 +204,7 @@ export class StudyModal extends Container {
         ["conditionals", "study.filterConditionals"],
         ["loops", "study.filterLoops"],
         ["functions", "study.filterFunctions"],
+        ["other", "study.conceptOther"],
       ],
       this.conceptFilter,
       (value) => {
@@ -308,17 +317,20 @@ export class StudyModal extends Container {
       });
       type.anchor.set(0.5);
       type.position.set(x + 76, y + 37);
-      const title = new Text({ text: message(task.titleMessage), style: textStyle(22, 0x493022, "800") });
+      const title = new Text({ text: resolveGameText(task.title), style: textStyle(22, 0x493022, "800") });
       title.position.set(x + 150, y + 19);
-      const summary = new Text({ text: message(task.summaryMessage), style: textStyle(15, 0x76533c, "600") });
+      const summary = new Text({
+        text: resolveGameText(task.summary),
+        style: { ...textStyle(15, 0x76533c, "600"), wordWrap: true, wordWrapWidth: 675, lineHeight: 21 },
+      });
       summary.position.set(x + 24, y + 67);
       const meta = new Text({
         text: `${message(conceptMessages[task.concept])} · ${message(difficultyMessages[task.difficulty])}`,
         style: textStyle(14, 0x876147, "700"),
       });
       meta.position.set(x + 24, y + 118);
-      const reward = this.createCoinReward(task.rewardCoins, 14);
-      reward.position.set(x + 24 + meta.width + 16, y + 127);
+      const reward = task.rewardCoins > 0 ? this.createCoinReward(task.rewardCoins, 14) : null;
+      reward?.position.set(x + 24 + meta.width + 16, y + 127);
       const start = new CanvasButton({
         label: message(task.completed ? "study.taskCompleted" : "study.taskStart"),
         width: 145,
@@ -327,7 +339,11 @@ export class StudyModal extends Container {
         onPress: () => this.openTask(task),
       });
       start.position.set(x + 560, y + 112);
-      this.body.addChild(card, typeBadge, type, title, summary, meta, reward, start);
+      this.body.addChild(card, typeBadge, type, title, summary, meta);
+      if (reward) {
+        this.body.addChild(reward);
+      }
+      this.body.addChild(start);
     });
     if (filtered.length === 0) {
       const empty = new Text({ text: message("study.noTasks"), style: textStyle(19, 0x76533c, "700") });
@@ -388,9 +404,9 @@ export class StudyModal extends Container {
 
   private renderQuiz(quiz: QuizView): void {
     this.clearBody();
-    this.drawBaseHeader(message(quiz.titleMessage), message(quiz.summaryMessage), () => this.renderDashboard());
+    this.drawBaseHeader(resolveGameText(quiz.title), resolveGameText(quiz.summary), () => this.renderDashboard());
     const problem = createCozyPanel(70, 125, 1460, 700, { fill: 0xfff9ec, border: 0xb77a4f, radius: 28 });
-    const promptValue = message(quiz.promptMessage);
+    const promptValue = resolveGameText(quiz.prompt);
     const [firstLine, ...codeLines] = promptValue.split("\n");
     const prompt = new Text({ text: firstLine, style: textStyle(23, 0x493022, "800") });
     prompt.position.set(115, 175);
@@ -405,12 +421,15 @@ export class StudyModal extends Container {
     code.position.set(145, 260);
     const choicesTitle = new Text({ text: message("study.choicesTitle"), style: textStyle(20, 0x493022, "800") });
     choicesTitle.position.set(115, 445);
-    const reward = this.createCoinRewardBadge(quiz.rewardCoins, 125);
-    reward.position.set(1320, 165);
-    this.body.addChild(problem, prompt, codeBox, code, choicesTitle, reward);
+    this.body.addChild(problem, prompt, codeBox, code, choicesTitle);
+    if (quiz.rewardCoins > 0) {
+      const reward = this.createCoinRewardBadge(quiz.rewardCoins, 125);
+      reward.position.set(1320, 165);
+      this.body.addChild(reward);
+    }
     quiz.choices.forEach((choice, index) => {
       const button = new CanvasButton({
-        label: `${String.fromCharCode(65 + index)}   ${message(choice.labelMessage)}`,
+        label: `${String.fromCharCode(65 + index)}   ${resolveGameText(choice.label)}`,
         width: 1370,
         height: 68,
         color: 0xffefd2,
@@ -422,14 +441,29 @@ export class StudyModal extends Container {
     });
   }
 
-  private answerQuiz(quiz: QuizView, choiceId: string): void {
-    const result = this.options.onAnswer(quiz.id, choiceId);
+  private async answerQuiz(quiz: QuizView, choiceId: string): Promise<void> {
+    if (this.submissionPending) {
+      return;
+    }
+    this.submissionPending = true;
+    let result: QuizAnswerResult;
+    try {
+      result = await this.options.onAnswer(quiz.id, choiceId);
+    } catch (error) {
+      console.error("Quiz submission failed", error);
+      this.showFeedback(false, message("study.answerFailed"), [], () => this.renderQuiz(quiz));
+      return;
+    } finally {
+      this.submissionPending = false;
+    }
     if (!result.ok) {
       this.showFeedback(false, message("study.answerFailed"), [], () => this.renderQuiz(quiz));
       return;
     }
     let detail = message(result.feedbackMessage);
-    if (result.correct && result.firstCompletion) {
+    if (result.correct && result.serverAuthoritative) {
+      detail = message("study.serverGradingComplete", { feedback: message(result.feedbackMessage) });
+    } else if (result.correct && result.firstCompletion) {
       detail = message("study.rewardAwarded", {
         feedback: message(result.feedbackMessage),
         amount: result.coinsAwarded,
@@ -452,7 +486,7 @@ export class StudyModal extends Container {
   private renderCode(challenge: CodeChallengeView): void {
     this.clearBody();
     this.hintsUsed = 0;
-    this.drawBaseHeader(message(challenge.titleMessage), message(challenge.summaryMessage), () =>
+    this.drawBaseHeader(resolveGameText(challenge.title), resolveGameText(challenge.summary), () =>
       this.renderDashboard(),
     );
     const problemPanel = createCozyPanel(55, 120, 500, 720, { fill: 0xfff8e9, border: 0xb77a4f, radius: 28 });
@@ -460,7 +494,7 @@ export class StudyModal extends Container {
     const problemTitle = new Text({ text: message("study.problemTitle"), style: textStyle(24, 0x493022, "800") });
     problemTitle.position.set(92, 155);
     const prompt = new Text({
-      text: message(challenge.promptMessage),
+      text: resolveGameText(challenge.prompt),
       style: { ...textStyle(18, 0x5f4434, "600"), wordWrap: true, wordWrapWidth: 420, lineHeight: 29 },
     });
     prompt.position.set(92, 205);
@@ -468,7 +502,7 @@ export class StudyModal extends Container {
     examplesTitle.position.set(92, 315);
     const examplesBox = new Graphics().roundRect(92, 355, 425, 120, 16).fill(0xefe2ce);
     const examples = new Text({
-      text: message(challenge.examplesMessage),
+      text: resolveGameText(challenge.examples),
       style: { ...textStyle(17, 0x52382a, "700"), lineHeight: 36 },
     });
     examples.position.set(118, 377);
@@ -483,9 +517,9 @@ export class StudyModal extends Container {
     });
     hintText.position.set(92, 650);
     const revealedHints = new Set<number>();
-    const hintButtons = challenge.hintMessages.map((hintMessage, index) => {
+    const hintButtons = challenge.hints.map((hintTextValue, index) => {
       const hintButton = new CanvasButton({
-        label: message("study.showHint", { step: index + 1, total: challenge.hintMessages.length }),
+        label: message("study.showHint", { step: index + 1, total: challenge.hints.length }),
         width: 125,
         height: 52,
         color: 0xa8bb84,
@@ -494,8 +528,8 @@ export class StudyModal extends Container {
           this.hintsUsed = revealedHints.size;
           hintText.text = `${message("study.showHint", {
             step: index + 1,
-            total: challenge.hintMessages.length,
-          })}\n${message(hintMessage)}`;
+            total: challenge.hints.length,
+          })}\n${resolveGameText(hintTextValue)}`;
         },
       });
       hintButton.position.set(92 + index * 140, 575);
@@ -505,8 +539,6 @@ export class StudyModal extends Container {
     editorTitle.position.set(625, 155);
     const editorHelp = new Text({ text: message("study.editorHelp"), style: textStyle(15, 0x76533c, "600") });
     editorHelp.position.set(625, 193);
-    const reward = this.createCoinRewardBadge(challenge.rewardCoins, 130);
-    reward.position.set(1370, 150);
     this.codeEditor = new CanvasCodeEditor(challenge.signature, challenge.starterBody);
     this.codeEditor.position.set(625, 235);
     const submit = new CanvasButton({
@@ -530,22 +562,43 @@ export class StudyModal extends Container {
       hintText,
       editorTitle,
       editorHelp,
-      reward,
       this.codeEditor,
       submit,
     );
+    if (challenge.rewardCoins > 0) {
+      const reward = this.createCoinRewardBadge(challenge.rewardCoins, 130);
+      reward.position.set(1370, 150);
+      this.body.addChild(reward);
+    }
   }
 
-  private submitCode(challenge: CodeChallengeView): void {
-    const body = this.codeEditor?.value ?? "";
-    const result = this.options.onSubmitCode(challenge.id, body, this.hintsUsed);
-    if (!result.ok) {
-      this.showFeedback(false, message("study.emptyCode"), [], () => this.renderCode(challenge));
+  private async submitCode(challenge: CodeChallengeView): Promise<void> {
+    if (this.submissionPending) {
       return;
     }
-    const detail = result.passed
-      ? `${message("study.gradingPassed")}\n${result.firstCompletion ? message("study.gradingReward", { amount: result.coinsAwarded }) : message("study.taskCompleted")}`
-      : message("study.gradingFailed");
+    const body = this.codeEditor?.value ?? "";
+    this.submissionPending = true;
+    let result: CodeSubmissionResult;
+    try {
+      result = await this.options.onSubmitCode(challenge.id, body, this.hintsUsed);
+    } catch (error) {
+      console.error("Code submission failed", error);
+      this.showFeedback(false, message("study.serverGradingUnavailable"), [], () => this.renderCode(challenge));
+      return;
+    } finally {
+      this.submissionPending = false;
+    }
+    if (!result.ok) {
+      const feedback = result.reason === "empty-code" ? "study.emptyCode" : "study.serverGradingUnavailable";
+      this.showFeedback(false, message(feedback), [], () => this.renderCode(challenge));
+      return;
+    }
+    let detail = message("study.gradingFailed");
+    if (result.passed && result.serverAuthoritative) {
+      detail = message("study.serverGradingPassed");
+    } else if (result.passed) {
+      detail = `${message("study.gradingPassed")}\n${result.firstCompletion ? message("study.gradingReward", { amount: result.coinsAwarded }) : message("study.taskCompleted")}`;
+    }
     const testRows = result.tests.map((test) =>
       message("study.testCase", {
         input: test.input,
@@ -667,6 +720,10 @@ export class StudyModal extends Container {
       child.destroy({ children: true });
     });
   }
+}
+
+function resolveGameText(value: GameText): string {
+  return "text" in value ? value.text : message(value.messageId);
 }
 
 class CanvasCodeEditor extends Container {

@@ -349,6 +349,7 @@ function createBlocker(): Graphics {
 
 const rewardNameMessages: Record<GachaRewardId, MessageId> = {
   "cat.ink": "gacha.blackCat",
+  "cat.tabby": "gacha.tabbyCat",
   "furniture.desk": "gacha.studyDesk",
   "furniture.catTower": "gacha.miniCatTower",
   "decor.plant": "shop.productPlant",
