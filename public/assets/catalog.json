@@ -1019,10 +1019,10 @@
     ],
     "home-environment": [
       {
-        "id": "background.forest.clearing-day.01",
+        "id": "background.forest.meadow-day.01",
         "kind": "background",
         "src": "/assets/environment/forest-clearing-day-01.webp",
-        "tags": ["forest", "clearing", "day", "belt-view", "watercolor"]
+        "tags": ["forest", "meadow", "day", "alternate-theme", "watercolor"]
       },
       {
         "id": "furniture.sofa.cat-rug.01",
@@ -1077,6 +1077,15 @@
         "src": "/assets/environment/alley-cardboard-box-01.webp",
         "anchor": { "x": 0.5, "y": 0.97 },
         "tags": ["alley", "cardboard", "box", "transparent", "alternate-theme"]
+      }
+    ],
+    "forest": [
+      {
+        "id": "background.forest.clearing-day.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/forest/forest-clearing-day-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["forest", "clearing", "day", "one-point-perspective", "cat-style"]
       }
     ],
     "study": [],
