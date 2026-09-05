@@ -1083,7 +1083,7 @@
       {
         "id": "background.forest.clearing-day.01",
         "kind": "background",
-        "src": "/assets/backgrounds/forest/forest-clearing-day-01.png",
+        "src": "/assets/backgrounds/01_forest/00_forest_backgrounds.png",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["forest", "clearing", "day", "one-point-perspective", "cat-style"]
       }
