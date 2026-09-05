@@ -15,6 +15,7 @@ export type BackendLearningTask = {
   templateCode: string;
   options: Record<string, string> | null;
   hintText: string | null;
+  rewardCoins: number;
   completed: boolean;
 };
 
@@ -30,6 +31,7 @@ export type BackendAttempt = {
   status: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
   correct: boolean | null;
   resultDetail: string | null;
+  coinsAwarded: number;
 };
 
 export type BackendGameCat = {
@@ -54,6 +56,8 @@ export type BackendGamePlacement = {
   rotation: 0 | 1;
 };
 
+type BackendDailyQuestId = "solve-one" | "solve-three" | "finish-code";
+
 export type BackendGameSnapshot = {
   balance: number;
   mileage: number;
@@ -64,6 +68,11 @@ export type BackendGameSnapshot = {
   attendanceStreak: number;
   attendanceLongestStreak: number;
   attendanceClaimedDates: string[];
+  dailyQuestDate: string;
+  dailyCompletedTaskIds: string[];
+  dailyHasCodeCompletion: boolean;
+  claimedDailyQuestIds: BackendDailyQuestId[];
+  dailyBonusClaimed: boolean;
   settings: {
     bgmEnabled: boolean;
     bgmVolume: number;
@@ -227,6 +236,11 @@ export class BackendApiClient {
     return this.gameMutation("/api/v1/game/attendance/claims", "POST", {});
   }
 
+  /** 서버가 계산한 오늘의 학습 진행도를 기준으로 퀘스트 보상을 요청한다. */
+  async claimGameDailyReward(rewardKey: BackendDailyQuestId | "bonus"): Promise<BackendGameMutation> {
+    return this.gameMutation("/api/v1/game/daily-rewards/claims", "POST", { reward_key: rewardKey });
+  }
+
   /** 학습 답안을 서버 채점 큐에 제출하고 완료 또는 실패 상태까지 폴링한다. */
   async grade(submission: BackendAttemptSubmission, waitTimeoutMs = 20_000): Promise<BackendAttempt> {
     const payload = {
@@ -330,6 +344,7 @@ function parseTask(value: unknown): BackendLearningTask {
     templateCode: readString(record, "template_code"),
     options,
     hintText: readNullableString(record, "hint_text"),
+    rewardCoins: readNumber(record, "reward_coins"),
     completed: readBoolean(record, "completed"),
   };
 }
@@ -341,6 +356,7 @@ function parseAttempt(value: unknown): BackendAttempt {
     status: readEnum(record, "status", ["PENDING", "RUNNING", "COMPLETED", "FAILED"] as const),
     correct: readNullableBoolean(record, "is_correct"),
     resultDetail: readNullableString(record, "result_detail"),
+    coinsAwarded: readNumber(record, "coins_awarded"),
   };
 }
 
@@ -398,6 +414,15 @@ function parseGameSnapshot(value: unknown): BackendGameSnapshot {
       }
       return entry;
     }),
+    dailyQuestDate: readString(record, "daily_quest_date"),
+    dailyCompletedTaskIds: readStringArray(record, "daily_completed_task_ids"),
+    dailyHasCodeCompletion: readBoolean(record, "daily_has_code_completion"),
+    claimedDailyQuestIds: readStringEnumArray(record, "claimed_daily_quest_ids", [
+      "solve-one",
+      "solve-three",
+      "finish-code",
+    ] as const),
+    dailyBonusClaimed: readBoolean(record, "daily_bonus_claimed"),
     settings: {
       bgmEnabled: readBoolean(settings, "bgm_enabled"),
       bgmVolume: readNumber(settings, "bgm_volume"),
@@ -448,6 +473,28 @@ function readArray(record: Record<string, unknown>, key: string): unknown[] {
     throw new Error(`Backend field ${key} is not an array`);
   }
   return value;
+}
+
+function readStringArray(record: Record<string, unknown>, key: string): string[] {
+  return readArray(record, key).map((value) => {
+    if (typeof value !== "string") {
+      throw new Error(`Backend field ${key} contains a non-string value`);
+    }
+    return value;
+  });
+}
+
+function readStringEnumArray<const T extends readonly string[]>(
+  record: Record<string, unknown>,
+  key: string,
+  allowed: T,
+): T[number][] {
+  return readStringArray(record, key).map((value) => {
+    if (!allowed.includes(value as T[number])) {
+      throw new Error(`Backend field ${key} contains an unsupported value`);
+    }
+    return value as T[number];
+  });
 }
 
 function readBoolean(record: Record<string, unknown>, key: string): boolean {

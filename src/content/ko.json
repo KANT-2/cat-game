@@ -146,6 +146,8 @@
   "daily.rewardReceived": "코인 {amount}개를 받았어요.",
   "daily.bonusReceived": "완료 보상으로 코인 {amount}개를 받았어요.",
   "daily.bonusLocked": "각 미션의 보상을 모두 받은 뒤 수령할 수 있어요.",
+  "daily.rewardNotReady": "서버에서 오늘의 학습 기록을 다시 확인했어요.",
+  "daily.serverUnavailable": "보상 확인에 실패했어요. 잠시 후 다시 시도해 주세요.",
   "daily.fairnessTitle": "공정한 보상 운영 안내",
   "daily.fairnessNotice": "같은 문제의 과도한 반복 풀이 또는 반복 방문으로는 추가 재화가 지급되지 않아요. 새로운 학습 완료 기록만 오늘의 목표에 반영됩니다.",
   "daily.back": "←",

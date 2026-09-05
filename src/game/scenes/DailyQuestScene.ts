@@ -253,13 +253,21 @@ export class DailyQuestScene extends Container {
     if (result.ok) {
       this.render();
       this.status.text = message("daily.rewardReceived", { amount: result.coinsAwarded });
+      return;
     }
+    this.render();
+    this.status.text = message(
+      result.reason === "server-unavailable" ? "daily.serverUnavailable" : "daily.rewardNotReady",
+    );
   }
 
   private async claimBonus(): Promise<void> {
     const result = await this.options.onClaimBonus();
     if (!result.ok) {
-      this.status.text = message("daily.bonusLocked");
+      this.render();
+      this.status.text = message(
+        result.reason === "server-unavailable" ? "daily.serverUnavailable" : "daily.bonusLocked",
+      );
       return;
     }
     this.render();

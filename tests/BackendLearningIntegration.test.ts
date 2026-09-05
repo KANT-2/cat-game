@@ -40,6 +40,7 @@ describe("backend learning integration", () => {
   });
 
   it("loads server state and tasks, then keeps game mutations authoritative", async () => {
+    let snapshotReads = 0;
     const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = new URL(String(input));
       const headers = new Headers(init?.headers);
@@ -69,13 +70,30 @@ describe("backend learning integration", () => {
             template_code: "",
             options: { A: "두 값을 더합니다.", B: "고정값만 출력합니다." },
             hint_text: null,
+            reward_coins: 30,
             is_active: true,
             completed: false,
           },
         ]);
       }
       if (url.pathname === "/api/v1/game/snapshot") {
-        return json(gameSnapshot(1_000, 0));
+        snapshotReads += 1;
+        return json(
+          snapshotReads === 1
+            ? gameSnapshot(1_000, 0)
+            : gameSnapshot(1_030, 0, { completedTaskIds: [taskId], hasCodeCompletion: false }),
+        );
+      }
+      if (url.pathname === "/api/v1/game/daily-rewards/claims" && init?.method === "POST") {
+        expect(JSON.parse(String(init.body))).toEqual({ reward_key: "solve-one" });
+        return json({
+          snapshot: gameSnapshot(1_080, 0, {
+            completedTaskIds: [taskId],
+            claimedQuestIds: ["solve-one"],
+            hasCodeCompletion: false,
+          }),
+          result: { reward_key: "solve-one", coins_awarded: 50 },
+        });
       }
       if (url.pathname === "/api/v1/game/shop/purchases" && init?.method === "POST") {
         expect(JSON.parse(String(init.body))).toMatchObject({ item_catalog_key: "furniture.sofa", quantity: 1 });
@@ -99,6 +117,7 @@ describe("backend learning integration", () => {
           used_hint: false,
           attempted_at: "2026-09-04T00:00:00Z",
           result_detail: null,
+          coins_awarded: 30,
         });
       }
       return json({ detail: "not found" }, 404);
@@ -114,10 +133,16 @@ describe("backend learning integration", () => {
     await expect(client.answerQuiz(taskId, "A")).resolves.toMatchObject({
       ok: true,
       correct: true,
+      firstCompletion: true,
+      coinsAwarded: 30,
       serverAuthoritative: true,
     });
     expect(client.getStudyTasks()[0].completed).toBe(true);
-    expect(client.getSnapshot().coins).toBe(1_000);
+    expect(client.getSnapshot().coins).toBe(1_030);
+    expect(client.getDailyQuests()[0]).toMatchObject({ progress: 1, complete: true, claimed: false });
+    await expect(client.claimDailyQuest("solve-one")).resolves.toEqual({ ok: true, coinsAwarded: 50 });
+    expect(client.getDailyQuests()[0].claimed).toBe(true);
+    expect(client.getSnapshot().coins).toBe(1_080);
     await expect(client.buyShopItem("furniture.sofa")).resolves.toMatchObject({ ok: true });
     expect(client.getSnapshot()).toMatchObject({ coins: 500, shopInventory: { "furniture.sofa": 1 } });
   });
@@ -153,7 +178,16 @@ function userPayload() {
   };
 }
 
-function gameSnapshot(balance: number, sofaQuantity: number) {
+function gameSnapshot(
+  balance: number,
+  sofaQuantity: number,
+  daily: {
+    completedTaskIds?: string[];
+    claimedQuestIds?: string[];
+    hasCodeCompletion?: boolean;
+    bonusClaimed?: boolean;
+  } = {},
+) {
   return {
     catalog_version: 1,
     state_version: 1,
@@ -167,6 +201,11 @@ function gameSnapshot(balance: number, sofaQuantity: number) {
     attendance_streak: 0,
     attendance_longest_streak: 0,
     attendance_claimed_dates: [],
+    daily_quest_date: "2026-09-05",
+    daily_completed_task_ids: daily.completedTaskIds ?? [],
+    daily_has_code_completion: daily.hasCodeCompletion ?? false,
+    claimed_daily_quest_ids: daily.claimedQuestIds ?? [],
+    daily_bonus_claimed: daily.bonusClaimed ?? false,
     settings: {
       bgm_enabled: true,
       bgm_volume: 70,

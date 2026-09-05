@@ -56,8 +56,9 @@ src-tauri/                후속 데스크톱 창 기능을 격리한 선택적 
 
 `VITE_CAT_GAME_API_BASE_URL`이 설정된 실행에서는 `BackendLearningGameClient`가 추천 문제 조회와 답안 채점을
 FastAPI에 위임한다. HTTP·JSON·개발 사용자 헤더는 `BackendApiClient`가 담당하고, PixiJS 장면은 계속
-`GameClient`만 사용한다. 서버 라우터가 아직 없는 상점·가챠·하우징 명령은 `LocalGameClient`에 위임하며,
-서버 스냅샷 계약이 준비되기 전에는 원격 저장을 가장한 낙관적 동기화를 하지 않는다.
+`GameClient`만 사용한다. 학습 보상, 데일리·출석 보상, 설정, 상점, 가챠, 고양이 선택과 야외 배치는
+FastAPI 명령 뒤 반환된 서버 스냅샷으로 갱신한다. 원격 명령 실패는 로컬 성공으로 대체하지 않으며,
+아직 이관되지 않은 학습 초기화와 고양이 기억 삭제만 로컬 어댑터에 남아 있다.
 
 ## 기능 추가 순서
 

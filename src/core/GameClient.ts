@@ -141,7 +141,10 @@ export type DailyQuestView = {
 
 export type DailyRewardResult =
   | { ok: true; coinsAwarded: number }
-  | { ok: false; reason: "quest-not-found" | "not-complete" | "already-claimed" | "bonus-not-ready" };
+  | {
+      ok: false;
+      reason: "quest-not-found" | "not-complete" | "already-claimed" | "bonus-not-ready" | "server-unavailable";
+    };
 
 export type AttendanceView = {
   today: string;

@@ -30,7 +30,7 @@ import {
 } from "../domain/attendance";
 import type { CatVariant } from "../domain/cats";
 import { catVariants } from "../domain/cats";
-import type { DailyQuestId } from "../domain/dailyQuest";
+import { type DailyQuestId, dailyQuestDefinitions } from "../domain/dailyQuest";
 import type { GachaDrawCount } from "../domain/gacha";
 import { gachaRewardDefinitions } from "../domain/gacha";
 import type { FurnitureKind, GameSettings, GameState } from "../domain/room";
@@ -47,6 +47,7 @@ export class BackendLearningGameClient implements GameClient {
   private readonly tasks = new Map<string, BackendLearningTask>();
   private readonly listeners = new Set<GameStateListener>();
   private state: GameState;
+  private dailyHasCodeCompletion: boolean;
 
   private constructor(
     private readonly local: GameClient,
@@ -58,6 +59,7 @@ export class BackendLearningGameClient implements GameClient {
       this.tasks.set(task.publicId, task);
     }
     this.state = mergeServerSnapshot(local.getSnapshot(), snapshot);
+    this.dailyHasCodeCompletion = snapshot.dailyHasCodeCompletion;
     this.local.subscribe((localState) => {
       this.state = mergeLocalProgress(this.state, localState);
       this.emit();
@@ -204,7 +206,7 @@ export class BackendLearningGameClient implements GameClient {
       summary: { text: task.description },
       prompt: { text: task.description },
       choices: Object.entries(task.options).map(([id, text]) => ({ id, label: { text } })),
-      rewardCoins: 0,
+      rewardCoins: task.rewardCoins,
       completed: task.completed,
     };
   }
@@ -224,13 +226,14 @@ export class BackendLearningGameClient implements GameClient {
       }
       if (attempt.correct) {
         task.completed = true;
+        this.applyServerSnapshot(await this.api.getGameSnapshot());
       }
       return {
         ok: true,
         correct: attempt.correct,
         feedbackMessage: attempt.correct ? "study.correct" : "study.serverAnswerIncorrect",
-        firstCompletion: false,
-        coinsAwarded: 0,
+        firstCompletion: attempt.coinsAwarded > 0,
+        coinsAwarded: attempt.coinsAwarded,
         serverAuthoritative: true,
       };
     } catch (error) {
@@ -279,13 +282,14 @@ export class BackendLearningGameClient implements GameClient {
       }
       if (attempt.correct) {
         task.completed = true;
+        this.applyServerSnapshot(await this.api.getGameSnapshot());
       }
       return {
         ok: true,
         passed: attempt.correct,
         tests: [],
-        firstCompletion: false,
-        coinsAwarded: 0,
+        firstCompletion: attempt.coinsAwarded > 0,
+        coinsAwarded: attempt.coinsAwarded,
         serverAuthoritative: true,
       };
     } catch (error) {
@@ -295,15 +299,59 @@ export class BackendLearningGameClient implements GameClient {
   }
 
   getDailyQuests(): DailyQuestView[] {
-    return this.local.getDailyQuests();
+    return dailyQuestDefinitions.map((quest) => {
+      const completedCount = this.state.dailyCompletedTaskIds.length;
+      let progress = Math.min(quest.target, completedCount);
+      if (quest.id === "finish-code") {
+        progress = this.dailyHasCodeCompletion ? 1 : 0;
+      }
+      return {
+        ...quest,
+        progress,
+        complete: progress >= quest.target,
+        claimed: this.state.claimedDailyQuestIds.includes(quest.id),
+      };
+    });
   }
 
-  claimDailyQuest(questId: DailyQuestId): Awaitable<DailyRewardResult> {
-    return this.local.claimDailyQuest(questId);
+  async claimDailyQuest(questId: DailyQuestId): Promise<DailyRewardResult> {
+    try {
+      const mutation = await this.api.claimGameDailyReward(questId);
+      const coinsAwarded = readResultNumber(mutation.result, "coins_awarded");
+      this.applyServerSnapshot(mutation.snapshot);
+      return { ok: true, coinsAwarded };
+    } catch (error) {
+      if (isBackendReason(error, "already-claimed")) {
+        await this.refreshSnapshotAfterConflict();
+        return { ok: false, reason: "already-claimed" };
+      }
+      if (isBackendReason(error, "reward-not-ready")) {
+        await this.refreshSnapshotAfterConflict();
+        return { ok: false, reason: "not-complete" };
+      }
+      console.warn("Backend daily quest claim failed", error);
+      return { ok: false, reason: "server-unavailable" };
+    }
   }
 
-  claimDailyBonus(): Awaitable<DailyRewardResult> {
-    return this.local.claimDailyBonus();
+  async claimDailyBonus(): Promise<DailyRewardResult> {
+    try {
+      const mutation = await this.api.claimGameDailyReward("bonus");
+      const coinsAwarded = readResultNumber(mutation.result, "coins_awarded");
+      this.applyServerSnapshot(mutation.snapshot);
+      return { ok: true, coinsAwarded };
+    } catch (error) {
+      if (isBackendReason(error, "already-claimed")) {
+        await this.refreshSnapshotAfterConflict();
+        return { ok: false, reason: "already-claimed" };
+      }
+      if (isBackendReason(error, "reward-not-ready")) {
+        await this.refreshSnapshotAfterConflict();
+        return { ok: false, reason: "bonus-not-ready" };
+      }
+      console.warn("Backend daily bonus claim failed", error);
+      return { ok: false, reason: "server-unavailable" };
+    }
   }
 
   getAttendance(): AttendanceView {
@@ -365,7 +413,16 @@ export class BackendLearningGameClient implements GameClient {
 
   private applyServerSnapshot(snapshot: BackendGameSnapshot): void {
     this.state = mergeServerSnapshot(this.state, snapshot);
+    this.dailyHasCodeCompletion = snapshot.dailyHasCodeCompletion;
     this.emit();
+  }
+
+  private async refreshSnapshotAfterConflict(): Promise<void> {
+    try {
+      this.applyServerSnapshot(await this.api.getGameSnapshot());
+    } catch (error) {
+      console.warn("Backend state refresh after daily reward conflict failed", error);
+    }
   }
 
   private emit(): void {
@@ -446,6 +503,10 @@ function mergeServerSnapshot(base: GameState, server: BackendGameSnapshot): Game
     attendanceStreak: server.attendanceStreak,
     attendanceLongestStreak: server.attendanceLongestStreak,
     attendanceClaimedDates: [...server.attendanceClaimedDates],
+    dailyQuestDate: server.dailyQuestDate,
+    dailyCompletedTaskIds: [...server.dailyCompletedTaskIds],
+    claimedDailyQuestIds: [...server.claimedDailyQuestIds],
+    dailyBonusClaimed: server.dailyBonusClaimed,
   };
 }
 
@@ -454,10 +515,6 @@ function mergeLocalProgress(current: GameState, local: GameState): GameState {
     ...current,
     completedQuizIds: [...local.completedQuizIds],
     completedCodeChallengeIds: [...local.completedCodeChallengeIds],
-    dailyQuestDate: local.dailyQuestDate,
-    dailyCompletedTaskIds: [...local.dailyCompletedTaskIds],
-    claimedDailyQuestIds: [...local.claimedDailyQuestIds],
-    dailyBonusClaimed: local.dailyBonusClaimed,
     catMemories: Object.fromEntries(
       Object.entries(local.catMemories).map(([key, memories]) => [key, memories ? [...memories] : memories]),
     ),
@@ -586,7 +643,7 @@ function toStudyTaskView(task: BackendLearningTask): StudyTaskView {
     difficulty: mapDifficulty(task.difficulty),
     title: { text: cleanTaskTitle(task.title) },
     summary: { text: task.description },
-    rewardCoins: 0,
+    rewardCoins: task.rewardCoins,
     completed: task.completed,
   };
 }
