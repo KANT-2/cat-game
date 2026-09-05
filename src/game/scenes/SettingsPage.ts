@@ -1,5 +1,6 @@
 import { Container, Graphics, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
+import type { Awaitable } from "../../core/GameClient";
 import type { GameSettings, GameState } from "../../domain/room";
 import { CanvasButton } from "../components/CanvasButton";
 import { createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
@@ -14,8 +15,8 @@ type SettingsPageOptions = {
   onStatus: (id: MessageId) => void;
   onOpenAttendance: () => void;
   getState: () => GameState;
-  onUpdateSettings: (patch: Partial<GameSettings>) => GameSettings;
-  onResetLearning: () => void;
+  onUpdateSettings: (patch: Partial<GameSettings>) => Awaitable<GameSettings>;
+  onResetLearning: () => Awaitable<void>;
 };
 
 const settingsSections: readonly SettingsSection[] = ["sound", "alerts", "learning"];
@@ -167,11 +168,11 @@ export class SettingsPage extends Container {
       this.bgmVolume,
       () => {
         this.bgmEnabled = !this.bgmEnabled;
-        this.options.onUpdateSettings({ bgmEnabled: this.bgmEnabled });
+        return this.options.onUpdateSettings({ bgmEnabled: this.bgmEnabled });
       },
       (delta) => {
         this.bgmVolume = clampVolume(this.bgmVolume + delta);
-        this.options.onUpdateSettings({ bgmVolume: this.bgmVolume });
+        return this.options.onUpdateSettings({ bgmVolume: this.bgmVolume });
       },
     );
     this.addSoundControlRow(
@@ -182,11 +183,11 @@ export class SettingsPage extends Container {
       this.effectsVolume,
       () => {
         this.effectsEnabled = !this.effectsEnabled;
-        this.options.onUpdateSettings({ effectsEnabled: this.effectsEnabled });
+        return this.options.onUpdateSettings({ effectsEnabled: this.effectsEnabled });
       },
       (delta) => {
         this.effectsVolume = clampVolume(this.effectsVolume + delta);
-        this.options.onUpdateSettings({ effectsVolume: this.effectsVolume });
+        return this.options.onUpdateSettings({ effectsVolume: this.effectsVolume });
       },
     );
     this.addNotice("settings.vibrationNotice", 655);
@@ -244,7 +245,13 @@ export class SettingsPage extends Container {
     );
   }
 
-  private addToggleRow(y: number, label: MessageId, detail: MessageId, value: boolean, toggle: () => void): void {
+  private addToggleRow(
+    y: number,
+    label: MessageId,
+    detail: MessageId,
+    value: boolean,
+    toggle: () => Awaitable<unknown>,
+  ): void {
     this.addCard(370, y, 1150, 100);
     this.addLabel(label, 400, y + 18, 20);
     this.addDetail(detail, 400, y + 54);
@@ -264,8 +271,8 @@ export class SettingsPage extends Container {
     detail: MessageId,
     enabled: boolean,
     value: number,
-    toggle: () => void,
-    changeVolume: (delta: number) => void,
+    toggle: () => Awaitable<unknown>,
+    changeVolume: (delta: number) => Awaitable<unknown>,
   ): void {
     this.addCard(370, y, 1150, 150);
     this.addLabel(label, 400, y + 24, 22);
@@ -292,7 +299,7 @@ export class SettingsPage extends Container {
     label: MessageId,
     detail: MessageId,
     value: MessageId,
-    select: () => void,
+    select: () => Awaitable<unknown>,
   ): void {
     this.addActionCard(x, y, label, detail, value, () => this.change(select));
   }
@@ -303,7 +310,7 @@ export class SettingsPage extends Container {
     label: MessageId,
     detail: MessageId,
     value: boolean,
-    toggle: () => void,
+    toggle: () => Awaitable<unknown>,
   ): void {
     this.addActionCard(x, y, label, detail, value ? "settings.on" : "settings.off", () => this.change(toggle));
   }
@@ -396,8 +403,8 @@ export class SettingsPage extends Container {
     this.addChild(button);
   }
 
-  private change(change: () => void): void {
-    change();
+  private async change(change: () => Awaitable<unknown>): Promise<void> {
+    await change();
     this.notify("settings.changed");
     this.render();
   }
@@ -446,10 +453,10 @@ export class SettingsPage extends Container {
       height: 64,
       fontSize: 20,
       color: 0xd96c5b,
-      onPress: () => {
+      onPress: async () => {
         this.confirmAction = null;
         if (action === "learningReset") {
-          this.options.onResetLearning();
+          await this.options.onResetLearning();
         }
         this.notify(confirmMessages[action].status);
         this.render();

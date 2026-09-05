@@ -1,6 +1,6 @@
 import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
-import type { GachaDrawResult, GachaReward } from "../../core/GameClient";
+import type { Awaitable, GachaDrawResult, GachaReward } from "../../core/GameClient";
 import type { CatVariant } from "../../domain/cats";
 import { type GachaDrawCount, type GachaRewardId, gachaCost } from "../../domain/gacha";
 import type { GameState } from "../../domain/room";
@@ -15,8 +15,8 @@ import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
 type GachaSceneOptions = {
   getState: () => GameState;
   onBack: () => void;
-  onDraw: (count: GachaDrawCount) => GachaDrawResult;
-  onSelectCat: (variant: CatVariant) => void;
+  onDraw: (count: GachaDrawCount) => Awaitable<GachaDrawResult>;
+  onSelectCat: (variant: CatVariant) => Awaitable<void>;
   backdropArt: string;
   machineArt: string;
   backIcon: string;
@@ -31,6 +31,7 @@ export class GachaScene extends Container {
   private readonly confirmLayer = new Container();
   private coinsText: Text | null = null;
   private readonly options: GachaSceneOptions;
+  private drawPending = false;
 
   constructor(options: GachaSceneOptions) {
     super();
@@ -141,9 +142,14 @@ export class GachaScene extends Container {
     });
   }
 
-  private draw(count: GachaDrawCount): void {
+  private async draw(count: GachaDrawCount): Promise<void> {
+    if (this.drawPending) {
+      return;
+    }
+    this.drawPending = true;
     this.closeConfirmation();
-    const result = this.options.onDraw(count);
+    const result = await this.options.onDraw(count);
+    this.drawPending = false;
     if (!result.ok) {
       this.showFailure();
       return;

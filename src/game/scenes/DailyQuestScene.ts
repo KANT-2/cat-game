@@ -1,6 +1,6 @@
 import { Container, Graphics, Text } from "pixi.js";
 import { message } from "../../content/messages";
-import type { DailyQuestView, DailyRewardResult } from "../../core/GameClient";
+import type { Awaitable, DailyQuestView, DailyRewardResult } from "../../core/GameClient";
 import type { DailyQuestId } from "../../domain/dailyQuest";
 import type { GameState } from "../../domain/room";
 import { BackButton } from "../components/BackButton";
@@ -15,8 +15,8 @@ type DailyQuestSceneOptions = {
   getQuests: () => DailyQuestView[];
   onBack: () => void;
   onOpenStudy: () => void;
-  onClaim: (questId: DailyQuestId) => DailyRewardResult;
-  onClaimBonus: () => DailyRewardResult;
+  onClaim: (questId: DailyQuestId) => Awaitable<DailyRewardResult>;
+  onClaimBonus: () => Awaitable<DailyRewardResult>;
   backIcon: string;
   coinIcon: string;
 };
@@ -241,7 +241,7 @@ export class DailyQuestScene extends Container {
     this.content.addChild(panel, title, notice);
   }
 
-  private handleQuestAction(quest: DailyQuestView): void {
+  private async handleQuestAction(quest: DailyQuestView): Promise<void> {
     if (quest.claimed) {
       return;
     }
@@ -249,15 +249,15 @@ export class DailyQuestScene extends Container {
       this.options.onOpenStudy();
       return;
     }
-    const result = this.options.onClaim(quest.id);
+    const result = await this.options.onClaim(quest.id);
     if (result.ok) {
       this.render();
       this.status.text = message("daily.rewardReceived", { amount: result.coinsAwarded });
     }
   }
 
-  private claimBonus(): void {
-    const result = this.options.onClaimBonus();
+  private async claimBonus(): Promise<void> {
+    const result = await this.options.onClaimBonus();
     if (!result.ok) {
       this.status.text = message("daily.bonusLocked");
       return;

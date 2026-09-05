@@ -32,6 +32,55 @@ export type BackendAttempt = {
   resultDetail: string | null;
 };
 
+export type BackendGameCat = {
+  catalogKey: string;
+  owned: boolean;
+  isHome: boolean;
+};
+
+export type BackendGameItem = {
+  catalogKey: string;
+  category: "FURNITURE" | "WALLPAPER" | "FLOOR";
+  furnitureKind: string | null;
+  ownedQuantity: number;
+  availableQuantity: number;
+};
+
+export type BackendGamePlacement = {
+  publicId: string;
+  itemCatalogKey: string;
+  x: number;
+  y: number;
+  rotation: 0 | 1;
+};
+
+export type BackendGameSnapshot = {
+  balance: number;
+  mileage: number;
+  activeCatKey: string;
+  activeWallpaperKey: string | null;
+  activeFloorKey: string | null;
+  attendanceLastClaimDate: string;
+  attendanceStreak: number;
+  attendanceLongestStreak: number;
+  attendanceClaimedDates: string[];
+  settings: {
+    bgmEnabled: boolean;
+    bgmVolume: number;
+    effectsEnabled: boolean;
+    effectsVolume: number;
+    reducedMotion: boolean;
+  };
+  cats: BackendGameCat[];
+  items: BackendGameItem[];
+  placements: BackendGamePlacement[];
+};
+
+export type BackendGameMutation = {
+  snapshot: BackendGameSnapshot;
+  result: Record<string, unknown>;
+};
+
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 export class BackendApiError extends Error {
@@ -79,6 +128,103 @@ export class BackendApiClient {
       throw new Error("Backend recommendations response is invalid");
     }
     return payload.map(parseTask);
+  }
+
+  /** 서버가 권위 있게 보관한 재화·고양이·인벤토리·배치 상태를 조회한다. */
+  async getGameSnapshot(): Promise<BackendGameSnapshot> {
+    return parseGameSnapshot(await this.request("/api/v1/game/snapshot"));
+  }
+
+  /** 멱등 요청 UUID로 상점 상품을 구매한다. */
+  async buyGameItem(requestId: string, itemCatalogKey: string): Promise<BackendGameMutation> {
+    return this.gameMutation("/api/v1/game/shop/purchases", "POST", {
+      request_id: requestId,
+      item_catalog_key: itemCatalogKey,
+      quantity: 1,
+    });
+  }
+
+  /** 클라이언트가 생성한 공개 UUID를 사용해 가구를 한 번만 배치한다. */
+  async placeGameFurniture(
+    placementPublicId: string,
+    itemCatalogKey: string,
+    x: number,
+    y: number,
+    rotation: 0 | 1,
+  ): Promise<BackendGameMutation> {
+    return this.gameMutation("/api/v1/game/placements", "POST", {
+      placement_public_id: placementPublicId,
+      item_catalog_key: itemCatalogKey,
+      x,
+      y,
+      rotation,
+    });
+  }
+
+  /** 기존 가구 배치를 새 격자 위치로 이동한다. */
+  async moveGameFurniture(
+    placementPublicId: string,
+    x: number,
+    y: number,
+    rotation: 0 | 1,
+  ): Promise<BackendGameMutation> {
+    return this.gameMutation(`/api/v1/game/placements/${encodeURIComponent(placementPublicId)}`, "PATCH", {
+      x,
+      y,
+      rotation,
+    });
+  }
+
+  /** 배치 인스턴스를 제거하되 서버 인벤토리 소유권은 유지한다. */
+  async removeGameFurniture(placementPublicId: string): Promise<BackendGameMutation> {
+    return parseGameMutation(
+      await this.request(`/api/v1/game/placements/${encodeURIComponent(placementPublicId)}`, { method: "DELETE" }),
+    );
+  }
+
+  /** 보유한 벽지 또는 바닥 테마를 서버 상태에 적용한다. */
+  async applyGameTheme(itemCatalogKey: string): Promise<BackendGameMutation> {
+    return this.gameMutation("/api/v1/game/themes", "POST", { item_catalog_key: itemCatalogKey });
+  }
+
+  /** 멱등 요청 UUID로 게임 보상 뽑기를 실행한다. */
+  async drawGameGacha(requestId: string, drawCount: 1 | 11): Promise<BackendGameMutation> {
+    return this.gameMutation("/api/v1/game/gacha", "POST", {
+      request_id: requestId,
+      draw_count: drawCount,
+    });
+  }
+
+  /** 보유 고양이를 활성 고양이로 선택한다. */
+  async selectGameCat(catalogKey: string): Promise<BackendGameMutation> {
+    return this.gameMutation(`/api/v1/game/cats/${encodeURIComponent(catalogKey)}/select`, "POST", {});
+  }
+
+  /** 보유 고양이의 야외 홈 표시 여부를 변경한다. */
+  async setGameCatHome(catalogKey: string, visible: boolean): Promise<BackendGameMutation> {
+    return this.gameMutation(`/api/v1/game/cats/${encodeURIComponent(catalogKey)}/home`, "PUT", { visible });
+  }
+
+  /** 사운드와 접근성 설정 일부를 서버 상태에 병합한다. */
+  async updateGameSettings(patch: {
+    bgmEnabled?: boolean;
+    bgmVolume?: number;
+    effectsEnabled?: boolean;
+    effectsVolume?: number;
+    reducedMotion?: boolean;
+  }): Promise<BackendGameMutation> {
+    return this.gameMutation("/api/v1/game/settings", "PATCH", {
+      bgm_enabled: patch.bgmEnabled,
+      bgm_volume: patch.bgmVolume,
+      effects_enabled: patch.effectsEnabled,
+      effects_volume: patch.effectsVolume,
+      reduced_motion: patch.reducedMotion,
+    });
+  }
+
+  /** 서버 UTC 날짜를 기준으로 오늘 출석 보상을 요청한다. */
+  async claimGameAttendance(): Promise<BackendGameMutation> {
+    return this.gameMutation("/api/v1/game/attendance/claims", "POST", {});
   }
 
   /** 학습 답안을 서버 채점 큐에 제출하고 완료 또는 실패 상태까지 폴링한다. */
@@ -129,6 +275,20 @@ export class BackendApiClient {
     } finally {
       globalThis.clearTimeout(timeout);
     }
+  }
+
+  private async gameMutation(
+    path: string,
+    method: "PATCH" | "POST" | "PUT",
+    payload: Record<string, unknown>,
+  ): Promise<BackendGameMutation> {
+    return parseGameMutation(
+      await this.request(path, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }),
+    );
   }
 }
 
@@ -184,6 +344,73 @@ function parseAttempt(value: unknown): BackendAttempt {
   };
 }
 
+function parseGameMutation(value: unknown): BackendGameMutation {
+  const record = asRecord(value);
+  return {
+    snapshot: parseGameSnapshot(record.snapshot),
+    result: asRecord(record.result),
+  };
+}
+
+function parseGameSnapshot(value: unknown): BackendGameSnapshot {
+  const record = asRecord(value);
+  const settings = asRecord(record.settings);
+  const cats = readArray(record, "cats").map((entry) => {
+    const cat = asRecord(entry);
+    return {
+      catalogKey: readString(cat, "catalog_key"),
+      owned: readBoolean(cat, "owned"),
+      isHome: readBoolean(cat, "is_home"),
+    };
+  });
+  const items = readArray(record, "items").map((entry) => {
+    const item = asRecord(entry);
+    return {
+      catalogKey: readString(item, "catalog_key"),
+      category: readEnum(item, "category", ["FURNITURE", "WALLPAPER", "FLOOR"] as const),
+      furnitureKind: readNullableString(item, "furniture_kind"),
+      ownedQuantity: readNumber(item, "owned_quantity"),
+      availableQuantity: readNumber(item, "available_quantity"),
+    };
+  });
+  const placements = readArray(record, "placements").map((entry) => {
+    const placement = asRecord(entry);
+    return {
+      publicId: readString(placement, "public_id"),
+      itemCatalogKey: readString(placement, "item_catalog_key"),
+      x: readNumber(placement, "x"),
+      y: readNumber(placement, "y"),
+      rotation: readNumberEnum(placement, "rotation", [0, 1] as const),
+    };
+  });
+  return {
+    balance: readNumber(record, "balance"),
+    mileage: readNumber(record, "mileage"),
+    activeCatKey: readString(record, "active_cat_key"),
+    activeWallpaperKey: readNullableString(record, "active_wallpaper_key"),
+    activeFloorKey: readNullableString(record, "active_floor_key"),
+    attendanceLastClaimDate: readString(record, "attendance_last_claim_date"),
+    attendanceStreak: readNumber(record, "attendance_streak"),
+    attendanceLongestStreak: readNumber(record, "attendance_longest_streak"),
+    attendanceClaimedDates: readArray(record, "attendance_claimed_dates").map((entry) => {
+      if (typeof entry !== "string") {
+        throw new Error("Backend attendance date is invalid");
+      }
+      return entry;
+    }),
+    settings: {
+      bgmEnabled: readBoolean(settings, "bgm_enabled"),
+      bgmVolume: readNumber(settings, "bgm_volume"),
+      effectsEnabled: readBoolean(settings, "effects_enabled"),
+      effectsVolume: readNumber(settings, "effects_volume"),
+      reducedMotion: readBoolean(settings, "reduced_motion"),
+    },
+    cats,
+    items,
+    placements,
+  };
+}
+
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("Backend response is not a JSON object");
@@ -215,6 +442,14 @@ function readNumber(record: Record<string, unknown>, key: string): number {
   return value;
 }
 
+function readArray(record: Record<string, unknown>, key: string): unknown[] {
+  const value = record[key];
+  if (!Array.isArray(value)) {
+    throw new Error(`Backend field ${key} is not an array`);
+  }
+  return value;
+}
+
 function readBoolean(record: Record<string, unknown>, key: string): boolean {
   const value = record[key];
   if (typeof value !== "boolean") {
@@ -236,6 +471,18 @@ function readEnum<const T extends readonly string[]>(
   allowed: T,
 ): T[number] {
   const value = readString(record, key);
+  if (!allowed.includes(value as T[number])) {
+    throw new Error(`Backend field ${key} has an unsupported value`);
+  }
+  return value as T[number];
+}
+
+function readNumberEnum<const T extends readonly number[]>(
+  record: Record<string, unknown>,
+  key: string,
+  allowed: T,
+): T[number] {
+  const value = readNumber(record, key);
   if (!allowed.includes(value as T[number])) {
     throw new Error(`Backend field ${key} has an unsupported value`);
   }

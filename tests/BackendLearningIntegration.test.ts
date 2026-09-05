@@ -39,7 +39,7 @@ describe("backend learning integration", () => {
     }
   });
 
-  it("loads server tasks, grades them remotely, and keeps non-learning commands local", async () => {
+  it("loads server state and tasks, then keeps game mutations authoritative", async () => {
     const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = new URL(String(input));
       const headers = new Headers(init?.headers);
@@ -73,6 +73,13 @@ describe("backend learning integration", () => {
             completed: false,
           },
         ]);
+      }
+      if (url.pathname === "/api/v1/game/snapshot") {
+        return json(gameSnapshot(1_000, 0));
+      }
+      if (url.pathname === "/api/v1/game/shop/purchases" && init?.method === "POST") {
+        expect(JSON.parse(String(init.body))).toMatchObject({ item_catalog_key: "furniture.sofa", quantity: 1 });
+        return json({ snapshot: gameSnapshot(500, 1), result: {} });
       }
       if (url.pathname === "/api/v1/attempts" && init?.method === "POST") {
         expect(JSON.parse(String(init.body))).toMatchObject({
@@ -110,7 +117,9 @@ describe("backend learning integration", () => {
       serverAuthoritative: true,
     });
     expect(client.getStudyTasks()[0].completed).toBe(true);
-    expect(client.buyShopItem("furniture.sofa")).toMatchObject({ ok: true });
+    expect(client.getSnapshot().coins).toBe(1_000);
+    await expect(client.buyShopItem("furniture.sofa")).resolves.toMatchObject({ ok: true });
+    expect(client.getSnapshot()).toMatchObject({ coins: 500, shopInventory: { "furniture.sofa": 1 } });
   });
 
   it("rejects malformed server task data instead of leaking it into the UI", async () => {
@@ -141,6 +150,41 @@ function userPayload() {
     mileage: 0,
     house_level: 1,
     created_at: "2026-09-04T00:00:00Z",
+  };
+}
+
+function gameSnapshot(balance: number, sofaQuantity: number) {
+  return {
+    catalog_version: 1,
+    state_version: 1,
+    balance,
+    mileage: 0,
+    house_level: 1,
+    active_cat_key: "fluffy",
+    active_wallpaper_key: null,
+    active_floor_key: null,
+    attendance_last_claim_date: "",
+    attendance_streak: 0,
+    attendance_longest_streak: 0,
+    attendance_claimed_dates: [],
+    settings: {
+      bgm_enabled: true,
+      bgm_volume: 70,
+      effects_enabled: true,
+      effects_volume: 80,
+      reduced_motion: false,
+    },
+    cats: [{ catalog_key: "fluffy", owned: true, is_home: true }],
+    items: [
+      {
+        catalog_key: "furniture.sofa",
+        category: "FURNITURE",
+        furniture_kind: "sofa",
+        owned_quantity: sofaQuantity,
+        available_quantity: sofaQuantity,
+      },
+    ],
+    placements: [],
   };
 }
 

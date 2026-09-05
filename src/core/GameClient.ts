@@ -20,7 +20,7 @@ export type MoveFurnitureCommand = { x: number; y: number; rotation: 0 | 1 };
 /** 가구 배치의 성공 결과 또는 UI가 처리할 수 있는 실패 이유다. */
 export type PlacementResult =
   | { ok: true; instanceId: string }
-  | { ok: false; reason: "outside-room" | "occupied" | "not-owned" };
+  | { ok: false; reason: "outside-room" | "occupied" | "not-owned" | "server-unavailable" };
 
 export type PurchaseResult =
   | {
@@ -36,11 +36,11 @@ export type PurchaseResult =
       itemType: "wallpaper" | "floor";
       remainingCoins: number;
     }
-  | { ok: false; reason: "item-not-found" | "insufficient-coins" };
+  | { ok: false; reason: "item-not-found" | "insufficient-coins" | "server-unavailable" };
 
 export type ApplyRoomThemeResult =
   | { ok: true; itemId: ShopItemId; itemType: "wallpaper" | "floor" }
-  | { ok: false; reason: "item-not-found" | "not-owned" | "not-theme" };
+  | { ok: false; reason: "item-not-found" | "not-owned" | "not-theme" | "server-unavailable" };
 
 export type GachaReward = {
   id: GachaRewardId;
@@ -53,11 +53,15 @@ export type GachaReward = {
 
 export type GachaDrawResult =
   | { ok: true; rewards: GachaReward[]; remainingCoins: number }
-  | { ok: false; reason: "insufficient-coins" };
+  | { ok: false; reason: "insufficient-coins" | "server-unavailable" };
 
-export type CatSelectionResult = { ok: true; activeCat: CatVariant } | { ok: false; reason: "cat-not-owned" };
+export type CatSelectionResult =
+  | { ok: true; activeCat: CatVariant }
+  | { ok: false; reason: "cat-not-owned" | "server-unavailable" };
 
-export type CatHomeResult = { ok: true; homeCats: CatVariant[] } | { ok: false; reason: "cat-not-owned" };
+export type CatHomeResult =
+  | { ok: true; homeCats: CatVariant[] }
+  | { ok: false; reason: "cat-not-owned" | "server-unavailable" };
 
 /** 로컬 메시지 키 또는 서버가 검증해 내려준 동적 학습 문구다. */
 export type GameText = { messageId: MessageId } | { text: string };
@@ -161,7 +165,7 @@ export type AttendanceClaimResult =
       streakBonus: number;
       coinsAwarded: number;
     }
-  | { ok: false; reason: "already-claimed" };
+  | { ok: false; reason: "already-claimed" | "server-unavailable" };
 
 export type CatMemoryClearResult = { ok: true; removed: number };
 
@@ -225,10 +229,10 @@ export interface GameClient {
    *
    * @remarks 실패한 명령은 상태를 저장하지 않고 구독자에게도 알리지 않는다.
    */
-  placeFurniture(command: PlacementCommand): PlacementResult;
+  placeFurniture(command: PlacementCommand): Awaitable<PlacementResult>;
 
   /** 기존 가구를 인벤토리로 회수하지 않고 새 위치로 원자적으로 이동한다. 실패하면 원래 배치를 유지한다. */
-  moveFurniture(instanceId: string, command: MoveFurnitureCommand): PlacementResult;
+  moveFurniture(instanceId: string, command: MoveFurnitureCommand): Awaitable<PlacementResult>;
 
   /**
    * 배치된 가구 인스턴스를 공터 상태에서 제거한다.
@@ -240,7 +244,7 @@ export interface GameClient {
    * 현재 로컬 프로토타입은 인벤토리 소유권을 별도로 저장하지 않는다. 서버 인벤토리가
    * 추가되면 이 명령은 소유권을 유지한 채 공터 배치만 회수해야 하며, 성공한 경우에만 상태를 커밋한다.
    */
-  removeFurniture(instanceId: string): boolean;
+  removeFurniture(instanceId: string): Awaitable<boolean>;
 
   /**
    * 상점 상품의 가격과 잔액을 검증하고 구매한 가구를 보유함에 추가한다.
@@ -250,16 +254,16 @@ export interface GameClient {
    *
    * @remarks 성공한 구매만 상태를 저장하고 구독자에게 새 스냅샷을 알린다.
    */
-  buyShopItem(itemId: ShopItemId): PurchaseResult;
+  buyShopItem(itemId: ShopItemId): Awaitable<PurchaseResult>;
 
   /** 보유한 벽지 또는 바닥재를 현재 방 테마로 적용한다. */
-  applyRoomTheme(itemId: ShopItemId): ApplyRoomThemeResult;
+  applyRoomTheme(itemId: ShopItemId): Awaitable<ApplyRoomThemeResult>;
 
   /** 코인을 차감하고 가중치에 따라 고양이 또는 가구 보상을 지급한다. */
-  drawGacha(count: GachaDrawCount): GachaDrawResult;
+  drawGacha(count: GachaDrawCount): Awaitable<GachaDrawResult>;
 
   /** 보유한 고양이를 메인 공터에서 함께 지낼 고양이로 선택한다. */
-  selectCat(variant: CatVariant): CatSelectionResult;
+  selectCat(variant: CatVariant): Awaitable<CatSelectionResult>;
 
   /**
    * 보유한 고양이를 홈 공터에 표시하거나 보관함으로 옮긴다.
@@ -268,7 +272,7 @@ export interface GameClient {
    * @param visible - `true`면 홈에 배치하고 `false`면 보관한다.
    * @returns 성공 시 갱신된 홈 고양이 목록, 미보유 고양이면 실패 이유.
    */
-  setCatHome(variant: CatVariant, visible: boolean): CatHomeResult;
+  setCatHome(variant: CatVariant, visible: boolean): Awaitable<CatHomeResult>;
 
   /**
    * UI가 렌더링할 수 있는 퀴즈 표시 모델을 조회한다.
@@ -306,23 +310,23 @@ export interface GameClient {
   getDailyQuests(): DailyQuestView[];
 
   /** 완료한 개별 데일리 퀘스트 보상을 한 번만 지급한다. */
-  claimDailyQuest(questId: DailyQuestId): DailyRewardResult;
+  claimDailyQuest(questId: DailyQuestId): Awaitable<DailyRewardResult>;
 
   /** 모든 데일리 퀘스트 보상을 수령한 뒤 최종 보너스를 지급한다. */
-  claimDailyBonus(): DailyRewardResult;
+  claimDailyBonus(): Awaitable<DailyRewardResult>;
 
   /** 오늘의 출석 가능 여부와 7일 연속 보상판을 조회한다. */
   getAttendance(): AttendanceView;
 
   /** 로컬 날짜 기준 오늘 출석을 한 번만 인정하고 일일·연속 보상을 함께 지급한다. */
-  claimAttendance(): AttendanceClaimResult;
+  claimAttendance(): Awaitable<AttendanceClaimResult>;
 
   /** 학습 진도만 초기화하며 보유 가구와 고양이는 유지한다. */
-  resetLearningProgress(): void;
+  resetLearningProgress(): Awaitable<void>;
 
   /** 세션 간 저장된 모든 고양이 기억 문장을 삭제한다. */
-  clearCatMemories(): CatMemoryClearResult;
+  clearCatMemories(): Awaitable<CatMemoryClearResult>;
 
   /** 사운드와 접근성 환경설정을 저장하고 최신 설정을 반환한다. */
-  updateSettings(patch: Partial<GameSettings>): GameSettings;
+  updateSettings(patch: Partial<GameSettings>): Awaitable<GameSettings>;
 }
