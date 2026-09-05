@@ -9,6 +9,43 @@ const screenshotPath = process.env.CAT_GAME_INTEGRATION_SCREENSHOT ?? join(tmpdi
 const session = await requestJson(`${apiUrl}/api/v1/session/development`, { method: "POST" });
 const userPublicId = readString(session, "public_id");
 const authHeaders = { "X-User-Public-ID": userPublicId };
+const initialGame = asRecord(await requestJson(`${apiUrl}/api/v1/game/snapshot`, { headers: authHeaders }));
+const initialBalance = readNumber(initialGame, "balance");
+const purchaseRequestId = crypto.randomUUID();
+const purchasePayload = {
+  request_id: purchaseRequestId,
+  item_catalog_key: "floor.star",
+  quantity: 1,
+};
+const purchase = asRecord(
+  await requestJson(`${apiUrl}/api/v1/game/shop/purchases`, {
+    method: "POST",
+    headers: { ...authHeaders, "Content-Type": "application/json" },
+    body: JSON.stringify(purchasePayload),
+  }),
+);
+const purchaseReplay = asRecord(
+  await requestJson(`${apiUrl}/api/v1/game/shop/purchases`, {
+    method: "POST",
+    headers: { ...authHeaders, "Content-Type": "application/json" },
+    body: JSON.stringify(purchasePayload),
+  }),
+);
+const purchasedBalance = readNumber(asRecord(purchase.snapshot), "balance");
+const replayBalance = readNumber(asRecord(purchaseReplay.snapshot), "balance");
+if (purchasedBalance !== initialBalance - 65 || replayBalance !== purchasedBalance) {
+  throw new Error("backend purchase was not charged exactly once");
+}
+const settingsMutation = asRecord(
+  await requestJson(`${apiUrl}/api/v1/game/settings`, {
+    method: "PATCH",
+    headers: { ...authHeaders, "Content-Type": "application/json" },
+    body: JSON.stringify({ effects_volume: 73 }),
+  }),
+);
+if (readNumber(asRecord(asRecord(settingsMutation.snapshot).settings), "effects_volume") !== 73) {
+  throw new Error("backend settings mutation did not persist");
+}
 const quiz = await findTask(authHeaders, (task) => task.type === "MULTIPLE_CHOICE", "multiple-choice task");
 const accepted = await requestJson(`${apiUrl}/api/v1/attempts`, {
   method: "POST",
@@ -72,7 +109,13 @@ try {
   await browser.close();
 }
 
-for (const path of ["/health", "/api/v1/session/development", "/api/v1/session/me", "/learning/recommendations"]) {
+for (const path of [
+  "/health",
+  "/api/v1/session/development",
+  "/api/v1/session/me",
+  "/learning/recommendations",
+  "/api/v1/game/snapshot",
+]) {
   const response = backendResponses.find((entry) => entry.url.includes(path));
   if (!response || response.status < 200 || response.status >= 300) {
     errors.push(`missing successful browser backend response: ${path}`);
@@ -132,6 +175,14 @@ function readString(record, key) {
   const value = asRecord(record)[key];
   if (typeof value !== "string") {
     throw new Error(`expected string field ${key}`);
+  }
+  return value;
+}
+
+function readNumber(record, key) {
+  const value = asRecord(record)[key];
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new Error(`expected number field ${key}`);
   }
   return value;
 }
