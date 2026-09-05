@@ -134,7 +134,13 @@ UI는 `reason`을 메시지 키로 변환해 보여 줄 뿐 충돌을 다시 판
 
 학습 보상, 상점 구매, 고양이 뽑기는 모두 `coins` 단일 재화를 사용한다. 저장소는 `economyVersion: 2` 이하의 기존 `coins`와 `gems`를 합산해 `economyVersion: 3`의 `coins`로 마이그레이션한다. 벽지와 바닥재는 `shopInventory`에 상품 ID별로 저장하고 `applyRoomTheme()`가 보유 여부를 확인한 뒤 `activeWallpaper` 또는 `activeFloor`를 갱신한다. UI는 이 상태를 읽어 홈 배경을 다시 그릴 뿐 구매·보유 판정을 하지 않는다. `roomAppearanceVersion: 1`이 없는 기존 저장 데이터는 적용 중인 벽지와 바닥만 한 번 해제하며, 보유 목록과 이후 다시 적용한 테마는 유지한다.
 
-사운드와 화면 움직임 설정은 `GameState.settings`에 저장한다. 고양이 기억은 `catMemories`에 별도로 저장하여 `clearCatMemories()`가 학습 기록, 가구, 고양이 보유 상태를 건드리지 않도록 한다.
+원격 모드의 사운드와 화면 움직임 설정은 서버 스냅샷의 `settings`에 저장한다. 보유 고양이별 기억도
+고양이 스냅샷의 `memories`로 읽고 `DELETE /api/v1/game/cat-memories`로만 삭제한다.
+
+학습 초기화는 `POST /api/v1/game/learning/reset`을 호출한다. 서버는 답안과 최초 보상 원장을 삭제하지 않고
+`learning_reset_at` 시각을 기록한다. 추천·완료·숙련도·오늘 진행도는 이 시각 이후 답안만 계산하므로 화면
+진도는 초기화되지만 이미 지급한 과제 보상을 같은 과제로 다시 받을 수 없다. 재화·인벤토리·출석 및 이미
+수령한 데일리 보상 원장도 유지한다.
 
 ## 상태와 저장
 

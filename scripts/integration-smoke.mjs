@@ -9,7 +9,13 @@ const screenshotPath = process.env.CAT_GAME_INTEGRATION_SCREENSHOT ?? join(tmpdi
 const session = await requestJson(`${apiUrl}/api/v1/session/development`, { method: "POST" });
 const userPublicId = readString(session, "public_id");
 const authHeaders = { "X-User-Public-ID": userPublicId };
-const initialGame = asRecord(await requestJson(`${apiUrl}/api/v1/game/snapshot`, { headers: authHeaders }));
+const reset = asRecord(
+  await requestJson(`${apiUrl}/api/v1/game/learning/reset`, {
+    method: "POST",
+    headers: authHeaders,
+  }),
+);
+const initialGame = asRecord(reset.snapshot);
 const initialBalance = readNumber(initialGame, "balance");
 const purchaseRequestId = crypto.randomUUID();
 const purchasePayload = {
@@ -130,7 +136,7 @@ console.log(
 );
 
 async function findTask(headers, predicate, description) {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
     const tasks = await requestJson(`${apiUrl}/api/v1/learning/recommendations?limit=50`, { headers });
     if (!Array.isArray(tasks)) {
       throw new Error("recommendations response is not an array");

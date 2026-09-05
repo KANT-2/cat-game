@@ -80,9 +80,12 @@ describe("backend learning integration", () => {
         snapshotReads += 1;
         return json(
           snapshotReads === 1
-            ? gameSnapshot(1_000, 0)
+            ? gameSnapshot(1_000, 0, { memories: ["반복문을 연습했어요"] })
             : gameSnapshot(1_030, 0, { completedTaskIds: [taskId], hasCodeCompletion: false }),
         );
+      }
+      if (url.pathname === "/api/v1/game/cat-memories" && init?.method === "DELETE") {
+        return json({ snapshot: gameSnapshot(1_000, 0), result: { removed: 1 } });
       }
       if (url.pathname === "/api/v1/game/daily-rewards/claims" && init?.method === "POST") {
         expect(JSON.parse(String(init.body))).toEqual({ reward_key: "solve-one" });
@@ -98,6 +101,12 @@ describe("backend learning integration", () => {
       if (url.pathname === "/api/v1/game/shop/purchases" && init?.method === "POST") {
         expect(JSON.parse(String(init.body))).toMatchObject({ item_catalog_key: "furniture.sofa", quantity: 1 });
         return json({ snapshot: gameSnapshot(500, 1), result: {} });
+      }
+      if (url.pathname === "/api/v1/game/learning/reset" && init?.method === "POST") {
+        return json({
+          snapshot: gameSnapshot(1_080, 0, { claimedQuestIds: ["solve-one"] }),
+          result: { reset_at: "2026-09-05T23:50:00Z", removed_proficiencies: 1 },
+        });
       }
       if (url.pathname === "/api/v1/attempts" && init?.method === "POST") {
         expect(JSON.parse(String(init.body))).toMatchObject({
@@ -129,6 +138,9 @@ describe("backend learning integration", () => {
     expect(client.getStudyTasks()).toMatchObject([
       { id: taskId, type: "quiz", concept: "variables", title: { text: "두 수의 합" }, completed: false },
     ]);
+    expect(client.getSnapshot().catMemories.fluffy).toEqual(["반복문을 연습했어요"]);
+    await expect(client.clearCatMemories()).resolves.toEqual({ ok: true, removed: 1 });
+    expect(client.getSnapshot().catMemories).toEqual({});
     expect(client.getQuiz(taskId)?.choices).toHaveLength(2);
     await expect(client.answerQuiz(taskId, "A")).resolves.toMatchObject({
       ok: true,
@@ -143,6 +155,10 @@ describe("backend learning integration", () => {
     await expect(client.claimDailyQuest("solve-one")).resolves.toEqual({ ok: true, coinsAwarded: 50 });
     expect(client.getDailyQuests()[0].claimed).toBe(true);
     expect(client.getSnapshot().coins).toBe(1_080);
+    await expect(client.resetLearningProgress()).resolves.toEqual({ ok: true });
+    expect(client.getStudyTasks()[0].completed).toBe(false);
+    expect(client.getSnapshot().coins).toBe(1_080);
+    expect(client.getDailyQuests()[0]).toMatchObject({ progress: 0, claimed: true });
     await expect(client.buyShopItem("furniture.sofa")).resolves.toMatchObject({ ok: true });
     expect(client.getSnapshot()).toMatchObject({ coins: 500, shopInventory: { "furniture.sofa": 1 } });
   });
@@ -186,6 +202,7 @@ function gameSnapshot(
     claimedQuestIds?: string[];
     hasCodeCompletion?: boolean;
     bonusClaimed?: boolean;
+    memories?: string[];
   } = {},
 ) {
   return {
@@ -213,7 +230,7 @@ function gameSnapshot(
       effects_volume: 80,
       reduced_motion: false,
     },
-    cats: [{ catalog_key: "fluffy", owned: true, is_home: true }],
+    cats: [{ catalog_key: "fluffy", owned: true, is_home: true, memories: daily.memories ?? [] }],
     items: [
       {
         catalog_key: "furniture.sofa",

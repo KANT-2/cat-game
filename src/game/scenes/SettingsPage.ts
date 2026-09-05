@@ -1,6 +1,6 @@
 import { Container, Graphics, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
-import type { Awaitable } from "../../core/GameClient";
+import type { Awaitable, LearningResetResult } from "../../core/GameClient";
 import type { GameSettings, GameState } from "../../domain/room";
 import { CanvasButton } from "../components/CanvasButton";
 import { createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
@@ -16,7 +16,7 @@ type SettingsPageOptions = {
   onOpenAttendance: () => void;
   getState: () => GameState;
   onUpdateSettings: (patch: Partial<GameSettings>) => Awaitable<GameSettings>;
-  onResetLearning: () => Awaitable<void>;
+  onResetLearning: () => Awaitable<LearningResetResult>;
 };
 
 const settingsSections: readonly SettingsSection[] = ["sound", "alerts", "learning"];
@@ -456,7 +456,12 @@ export class SettingsPage extends Container {
       onPress: async () => {
         this.confirmAction = null;
         if (action === "learningReset") {
-          await this.options.onResetLearning();
+          const result = await this.options.onResetLearning();
+          if (!result.ok) {
+            this.notify("settings.resetFailed");
+            this.render();
+            return;
+          }
         }
         this.notify(confirmMessages[action].status);
         this.render();

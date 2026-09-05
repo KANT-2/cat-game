@@ -170,7 +170,9 @@ export type AttendanceClaimResult =
     }
   | { ok: false; reason: "already-claimed" | "server-unavailable" };
 
-export type CatMemoryClearResult = { ok: true; removed: number };
+export type LearningResetResult = { ok: true } | { ok: false; reason: "server-unavailable" };
+
+export type CatMemoryClearResult = { ok: true; removed: number } | { ok: false; reason: "server-unavailable" };
 
 /** 상태가 커밋될 때 복제된 스냅샷을 받는 구독 함수다. */
 export type GameStateListener = (snapshot: GameState) => void;
@@ -324,10 +326,10 @@ export interface GameClient {
   /** 로컬 날짜 기준 오늘 출석을 한 번만 인정하고 일일·연속 보상을 함께 지급한다. */
   claimAttendance(): Awaitable<AttendanceClaimResult>;
 
-  /** 학습 진도만 초기화하며 보유 가구와 고양이는 유지한다. */
-  resetLearningProgress(): Awaitable<void>;
+  /** 학습 진도만 초기화하며 보상 감사 기록, 재화, 보유 가구와 고양이는 유지한다. */
+  resetLearningProgress(): Awaitable<LearningResetResult>;
 
-  /** 세션 간 저장된 모든 고양이 기억 문장을 삭제한다. */
+  /** 세션 간 저장된 모든 고양이 기억 문장을 삭제하고 처리 결과를 반환한다. */
   clearCatMemories(): Awaitable<CatMemoryClearResult>;
 
   /** 사운드와 접근성 환경설정을 저장하고 최신 설정을 반환한다. */

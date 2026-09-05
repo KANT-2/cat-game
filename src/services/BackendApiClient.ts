@@ -38,6 +38,7 @@ export type BackendGameCat = {
   catalogKey: string;
   owned: boolean;
   isHome: boolean;
+  memories: string[];
 };
 
 export type BackendGameItem = {
@@ -241,6 +242,16 @@ export class BackendApiClient {
     return this.gameMutation("/api/v1/game/daily-rewards/claims", "POST", { reward_key: rewardKey });
   }
 
+  /** 학습 이력만 초기화하고 이미 지급된 재화와 보유 자산은 유지한다. */
+  async resetGameLearning(): Promise<BackendGameMutation> {
+    return this.gameMutation("/api/v1/game/learning/reset", "POST", {});
+  }
+
+  /** 인증 사용자가 보유한 모든 고양이의 서버 기억을 삭제한다. */
+  async clearGameCatMemories(): Promise<BackendGameMutation> {
+    return parseGameMutation(await this.request("/api/v1/game/cat-memories", { method: "DELETE" }));
+  }
+
   /** 학습 답안을 서버 채점 큐에 제출하고 완료 또는 실패 상태까지 폴링한다. */
   async grade(submission: BackendAttemptSubmission, waitTimeoutMs = 20_000): Promise<BackendAttempt> {
     const payload = {
@@ -377,6 +388,7 @@ function parseGameSnapshot(value: unknown): BackendGameSnapshot {
       catalogKey: readString(cat, "catalog_key"),
       owned: readBoolean(cat, "owned"),
       isHome: readBoolean(cat, "is_home"),
+      memories: readStringArray(cat, "memories"),
     };
   });
   const items = readArray(record, "items").map((entry) => {

@@ -2,7 +2,6 @@ import type {
   ApplyRoomThemeResult,
   AttendanceClaimResult,
   AttendanceView,
-  Awaitable,
   CatHomeResult,
   CatMemoryClearResult,
   CatSelectionResult,
@@ -14,6 +13,7 @@ import type {
   GachaReward,
   GameClient,
   GameStateListener,
+  LearningResetResult,
   MoveFurnitureCommand,
   PlacementCommand,
   PlacementResult,
@@ -42,7 +42,7 @@ import {
   type BackendLearningTask,
 } from "./BackendApiClient";
 
-/** FastAPI 상태를 권위 있게 사용하고 아직 이관 중인 진행 기능만 로컬 어댑터에 위임한다. */
+/** FastAPI 상태와 명령을 권위 있게 사용하며 로컬 클라이언트는 초기 상태 형태에만 사용한다. */
 export class BackendLearningGameClient implements GameClient {
   private readonly tasks = new Map<string, BackendLearningTask>();
   private readonly listeners = new Set<GameStateListener>();
@@ -50,7 +50,7 @@ export class BackendLearningGameClient implements GameClient {
   private dailyHasCodeCompletion: boolean;
 
   private constructor(
-    private readonly local: GameClient,
+    local: GameClient,
     private readonly api: BackendApiClient,
     tasks: BackendLearningTask[],
     snapshot: BackendGameSnapshot,
@@ -58,12 +58,8 @@ export class BackendLearningGameClient implements GameClient {
     for (const task of tasks) {
       this.tasks.set(task.publicId, task);
     }
-    this.state = mergeServerSnapshot(local.getSnapshot(), snapshot);
+    this.state = mergeTaskProgress(mergeServerSnapshot(local.getSnapshot(), snapshot), this.tasks.values());
     this.dailyHasCodeCompletion = snapshot.dailyHasCodeCompletion;
-    this.local.subscribe((localState) => {
-      this.state = mergeLocalProgress(this.state, localState);
-      this.emit();
-    });
   }
 
   /** 서버 연결과 추천 과제 초기화를 마친 원격 학습 클라이언트를 만든다. */
@@ -393,12 +389,31 @@ export class BackendLearningGameClient implements GameClient {
     }
   }
 
-  resetLearningProgress(): Awaitable<void> {
-    return this.local.resetLearningProgress();
+  async resetLearningProgress(): Promise<LearningResetResult> {
+    try {
+      const mutation = await this.api.resetGameLearning();
+      const tasks = await this.api.getLearningRecommendations(10);
+      this.tasks.clear();
+      for (const task of tasks) {
+        this.tasks.set(task.publicId, task);
+      }
+      this.applyServerSnapshot(mutation.snapshot);
+      return { ok: true };
+    } catch (error) {
+      console.warn("Backend learning reset failed", error);
+      return { ok: false, reason: "server-unavailable" };
+    }
   }
 
-  clearCatMemories(): Awaitable<CatMemoryClearResult> {
-    return this.local.clearCatMemories();
+  async clearCatMemories(): Promise<CatMemoryClearResult> {
+    try {
+      const mutation = await this.api.clearGameCatMemories();
+      this.applyServerSnapshot(mutation.snapshot);
+      return { ok: true, removed: readResultNumber(mutation.result, "removed") };
+    } catch (error) {
+      console.warn("Backend cat memory clear failed", error);
+      return { ok: false, reason: "server-unavailable" };
+    }
   }
 
   async updateSettings(patch: Partial<GameSettings>): Promise<GameSettings> {
@@ -412,7 +427,7 @@ export class BackendLearningGameClient implements GameClient {
   }
 
   private applyServerSnapshot(snapshot: BackendGameSnapshot): void {
-    this.state = mergeServerSnapshot(this.state, snapshot);
+    this.state = mergeTaskProgress(mergeServerSnapshot(this.state, snapshot), this.tasks.values());
     this.dailyHasCodeCompletion = snapshot.dailyHasCodeCompletion;
     this.emit();
   }
@@ -448,6 +463,12 @@ function mergeServerSnapshot(base: GameState, server: BackendGameSnapshot): Game
   const homeCats = server.cats.flatMap<CatVariant>((cat) =>
     cat.isHome && isCatVariant(cat.catalogKey) ? [cat.catalogKey] : [],
   );
+  const catMemories: GameState["catMemories"] = {};
+  for (const cat of server.cats) {
+    if (cat.owned && isCatVariant(cat.catalogKey) && cat.memories.length > 0) {
+      catMemories[cat.catalogKey] = [...cat.memories];
+    }
+  }
   const activeCat: CatVariant = isCatVariant(server.activeCatKey)
     ? server.activeCatKey
     : (ownedCats[0] ?? base.activeCat);
@@ -507,17 +528,27 @@ function mergeServerSnapshot(base: GameState, server: BackendGameSnapshot): Game
     dailyCompletedTaskIds: [...server.dailyCompletedTaskIds],
     claimedDailyQuestIds: [...server.claimedDailyQuestIds],
     dailyBonusClaimed: server.dailyBonusClaimed,
+    catMemories,
   };
 }
 
-function mergeLocalProgress(current: GameState, local: GameState): GameState {
+function mergeTaskProgress(current: GameState, tasks: Iterable<BackendLearningTask>): GameState {
+  const completedQuizIds: string[] = [];
+  const completedCodeChallengeIds: string[] = [];
+  for (const task of tasks) {
+    if (!task.completed) {
+      continue;
+    }
+    if (task.type === "CODE") {
+      completedCodeChallengeIds.push(task.publicId);
+    } else {
+      completedQuizIds.push(task.publicId);
+    }
+  }
   return {
     ...current,
-    completedQuizIds: [...local.completedQuizIds],
-    completedCodeChallengeIds: [...local.completedCodeChallengeIds],
-    catMemories: Object.fromEntries(
-      Object.entries(local.catMemories).map(([key, memories]) => [key, memories ? [...memories] : memories]),
-    ),
+    completedQuizIds,
+    completedCodeChallengeIds,
   };
 }
 

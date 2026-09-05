@@ -524,6 +524,7 @@
   "settings.learningReset": "학습 기록 초기화",
   "settings.learningResetDescription": "학습 진도만 초기화하며 가구와 고양이는 그대로 유지합니다.",
   "settings.reset": "초기화",
+  "settings.resetFailed": "학습 기록을 초기화하지 못했어요. 잠시 후 다시 시도해 주세요.",
   "settings.learningResetReady": "학습 기록 초기화 요청을 확인했어요.",
   "settings.textSize": "글자 크기",
   "settings.textSizeDescription": "설정과 학습 화면의 기본 글자 크기를 선택합니다.",

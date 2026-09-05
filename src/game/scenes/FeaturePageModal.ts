@@ -1,6 +1,6 @@
 import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
-import type { Awaitable } from "../../core/GameClient";
+import type { Awaitable, LearningResetResult } from "../../core/GameClient";
 import type { CatVariant } from "../../domain/cats";
 import type { FurnitureKind, GameSettings, GameState } from "../../domain/room";
 import { type ShopItemId, shopItemDefinitions } from "../../domain/shop";
@@ -27,7 +27,7 @@ type Options = {
   onEnterRoomEdit: () => void;
   onOpenAttendance: () => void;
   onUpdateSettings: (patch: Partial<GameSettings>) => Awaitable<GameSettings>;
-  onResetLearning: () => Awaitable<void>;
+  onResetLearning: () => Awaitable<LearningResetResult>;
   catAnimations: CatAnimationLibrary;
   backIcon: string;
   coinIcon: string;
