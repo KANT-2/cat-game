@@ -96,9 +96,12 @@ export class StudyModal extends Container {
     this.body.addChild(createCozyPageBackground(BASE_WIDTH, BASE_HEIGHT));
     const back = new BackButton({ iconSrc: this.options.backIcon, size: 72, onPress: onBack });
     back.position.set(28, 24);
-    const title = new Text({ text: titleValue, style: textStyle(34, 0x3f281c, "800") });
+    const title = new Text({ text: summarizeStudyText(titleValue, 44), style: textStyle(34, 0x3f281c, "800") });
     title.position.set(124, 24);
-    const subtitle = new Text({ text: subtitleValue, style: textStyle(17, 0x74523d, "600") });
+    const subtitle = new Text({
+      text: summarizeStudyText(subtitleValue, 78),
+      style: textStyle(17, 0x74523d, "600"),
+    });
     subtitle.position.set(126, 66);
     const ornament = createTitleOrnament(126, 93, 190);
     this.body.addChild(back, title, subtitle, ornament);
@@ -433,38 +436,49 @@ export class StudyModal extends Container {
   private renderQuiz(quiz: QuizView): void {
     this.clearBody();
     this.drawBaseHeader(resolveGameText(quiz.title), resolveGameText(quiz.summary), () => this.renderDashboard());
-    const problem = createCozyPanel(70, 125, 1460, 700, { fill: 0xfff9ec, border: 0xb77a4f, radius: 28 });
+    const problem = createCozyPanel(70, 115, 1460, 750, { fill: 0xfff9ec, border: 0xb77a4f, radius: 28 });
     const promptValue = resolveGameText(quiz.prompt);
-    const [firstLine, ...codeLines] = promptValue.split("\n");
+    const [firstLine, ...codeLines] = promptValue.split(/\r?\n/);
     const prompt = new Text({ text: firstLine, style: textStyle(23, 0x493022, "800") });
-    prompt.position.set(115, 175);
+    prompt.position.set(115, 160);
     const codeBox = new Graphics()
-      .roundRect(115, 235, 1370, 175, 16)
+      .roundRect(115, 220, 1370, 180, 16)
       .fill(0x252b35)
       .stroke({ color: 0x5c6674, width: 2 });
     const code = new Text({
       text: codeLines.join("\n").trim(),
-      style: { ...textStyle(21, 0xdce99a, "600"), fontFamily: "Consolas, monospace", lineHeight: 31 },
+      style: {
+        ...textStyle(20, 0xdce99a, "600"),
+        fontFamily: "Consolas, monospace",
+        lineHeight: 30,
+        wordWrap: true,
+        wordWrapWidth: 1310,
+      },
     });
-    code.position.set(145, 260);
+    code.position.set(145, 245);
     const choicesTitle = new Text({ text: message("study.choicesTitle"), style: textStyle(20, 0x493022, "800") });
-    choicesTitle.position.set(115, 445);
+    choicesTitle.position.set(115, 425);
     this.body.addChild(problem, prompt, codeBox, code, choicesTitle);
     if (quiz.rewardCoins > 0) {
       const reward = this.createCoinRewardBadge(quiz.rewardCoins, 125);
-      reward.position.set(1320, 165);
+      reward.position.set(1320, 145);
       this.body.addChild(reward);
     }
+    const choiceGap = 12;
+    const choiceAreaHeight = 370;
+    const choiceCount = Math.max(1, quiz.choices.length);
+    const choiceHeight = Math.min(68, Math.floor((choiceAreaHeight - choiceGap * (choiceCount - 1)) / choiceCount));
     quiz.choices.forEach((choice, index) => {
       const button = new CanvasButton({
         label: `${String.fromCharCode(65 + index)}   ${resolveGameText(choice.label)}`,
         width: 1370,
-        height: 68,
+        height: choiceHeight,
+        fontSize: 16,
         color: 0xffefd2,
         borderColor: 0xc18a5b,
         onPress: () => this.answerQuiz(quiz, choice.id),
       });
-      button.position.set(115, 490 + index * 88);
+      button.position.set(115, 465 + index * (choiceHeight + choiceGap));
       this.body.addChild(button);
     });
   }
