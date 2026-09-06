@@ -1,7 +1,8 @@
-import { Container, type FederatedPointerEvent, Graphics, type Point, Sprite } from "pixi.js";
+import { Container, type FederatedPointerEvent, type Point, Sprite } from "pixi.js";
 import { type FurnitureKind, furnitureDefinitions, type PlacedFurniture, rotatedSize } from "../../domain/room";
 import type { ShopItemId } from "../../domain/shop";
 import type { BeltGrid } from "../belt";
+import { resolveFurnitureShadow } from "../presentation/furnitureShadow";
 import type { AnchoredTexture } from "./ForestArt";
 
 type FurnitureViewOptions = {
@@ -76,12 +77,21 @@ export class FurnitureView extends Container {
       : Math.min(displaySize.width / art.texture.width, displaySize.height / art.texture.height);
     const displayWidth = (explicitDisplaySize ? displaySize.width : art.texture.width * fitScale) * perspectiveScale;
     const displayHeight = (explicitDisplaySize ? displaySize.height : art.texture.height * fitScale) * perspectiveScale;
-    const shadowAlpha = item.kind === "sofa" || item.kind === "bed" ? 0.1 : 0.18;
-    this.addChild(
-      new Graphics()
-        .ellipse(0, 13, displayWidth * 0.42, Math.max(6, displayHeight * 0.075))
-        .fill({ color: 0x234b2d, alpha: shadowAlpha }),
-    );
+    const shadow = resolveFurnitureShadow(item);
+    if (shadow) {
+      const shadowSprite = new Sprite(art.texture);
+      shadowSprite.anchor.set(art.anchor.x, art.anchor.y);
+      shadowSprite.width = displayWidth * shadow.scaleX;
+      shadowSprite.height = displayHeight * shadow.scaleY;
+      shadowSprite.position.set(0, shadow.offsetY);
+      shadowSprite.tint = 0x182d1d;
+      shadowSprite.alpha = shadow.alpha;
+      shadowSprite.eventMode = "none";
+      if (item.rotation === 1) {
+        shadowSprite.scale.x *= -1;
+      }
+      this.addChild(shadowSprite);
+    }
 
     const sprite = new Sprite(art.texture);
     sprite.anchor.set(art.anchor.x, art.anchor.y);
