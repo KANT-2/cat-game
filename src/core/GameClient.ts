@@ -108,6 +108,7 @@ export type StudyTaskView = {
 
 export type CodeChallengeView = StudyTaskView & {
   type: "code";
+  language: "python" | "sql";
   prompt: GameText;
   signature: string;
   starterBody: string;

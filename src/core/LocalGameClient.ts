@@ -412,6 +412,7 @@ export class LocalGameClient implements GameClient {
     return {
       id: challenge.id,
       type: challenge.type,
+      language: "python",
       concept: challenge.concept,
       difficulty: challenge.difficulty,
       title: { messageId: challenge.titleMessage },

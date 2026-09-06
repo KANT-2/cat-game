@@ -300,6 +300,7 @@ export class BackendLearningGameClient implements GameClient {
     return {
       ...toStudyTaskView(task),
       type: "code",
+      language: task.domain === "SQL" ? "sql" : "python",
       prompt: { text: task.description },
       signature: "",
       starterBody: task.templateCode,
