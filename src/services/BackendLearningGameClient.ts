@@ -65,6 +65,11 @@ export class BackendLearningGameClient implements GameClient {
   /** 서버 연결과 추천 과제 초기화를 마친 원격 학습 클라이언트를 만든다. */
   static async create(local: GameClient, api: BackendApiClient): Promise<BackendLearningGameClient> {
     await api.connect();
+    return BackendLearningGameClient.createConnected(local, api);
+  }
+
+  /** 인증이 끝난 HTTP 어댑터에서 서버 스냅샷과 추천 과제를 병렬로 읽어 원격 클라이언트를 만든다. */
+  static async createConnected(local: GameClient, api: BackendApiClient): Promise<BackendLearningGameClient> {
     const [tasks, snapshot] = await Promise.all([api.getLearningRecommendations(10), api.getGameSnapshot()]);
     return new BackendLearningGameClient(local, api, tasks, snapshot);
   }

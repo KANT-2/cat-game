@@ -213,6 +213,35 @@ describe("backend learning integration", () => {
     expect(new Headers(requests[2].init?.headers).get("X-CSRF-Token")).toBe("csrf-token");
     expect(new Headers(requests[3].init?.headers).get("X-CSRF-Token")).toBe("csrf-token");
   });
+
+  it("uses the public registration and login contracts to rotate browser sessions", async () => {
+    const requests: Array<{ body: unknown; pathname: string }> = [];
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const pathname = new URL(String(input)).pathname;
+      requests.push({ body: init?.body ? JSON.parse(String(init.body)) : null, pathname });
+      if (pathname === "/api/v1/session/logout") {
+        return new Response(null, { status: 204 });
+      }
+      return json(userPayload(), pathname.endsWith("/register") ? 201 : 200);
+    });
+    const api = new BackendApiClient("http://localhost:8000", null, fetcher, 5_000, () => "csrf-token");
+
+    await api.register("cat@example.com", "cat", "correct-horse-2026");
+    await api.logout();
+    await api.login("cat@example.com", "correct-horse-2026");
+
+    expect(requests).toEqual([
+      {
+        pathname: "/api/v1/session/register",
+        body: { email: "cat@example.com", username: "cat", password: "correct-horse-2026" },
+      },
+      { pathname: "/api/v1/session/logout", body: null },
+      {
+        pathname: "/api/v1/session/login",
+        body: { email: "cat@example.com", password: "correct-horse-2026" },
+      },
+    ]);
+  });
 });
 
 function userPayload() {

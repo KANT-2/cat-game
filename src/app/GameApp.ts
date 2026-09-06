@@ -1,12 +1,15 @@
 import { Application, Assets } from "pixi.js";
 import { assetPath, loadAssetCatalog } from "../assets/AssetCatalog";
 import { findAssetEntry, loadTexture } from "../assets/SpriteSheetLoader";
+import type { MessageId } from "../content/messages";
 import type { GameClient } from "../core/GameClient";
 import { type CatVariant, catVariants } from "../domain/cats";
 import type { CatAnimationLibrary, CatAnimationSet } from "../game/entities/CatAnimations";
 import type { ForestArt } from "../game/forest/ForestArt";
+import { type AuthMode, AuthScene, type AuthSubmitResult } from "../game/scenes/AuthScene";
 import { HomeScene } from "../game/scenes/HomeScene";
 import { LoadingScene } from "../game/scenes/LoadingScene";
+import { BackendApiError } from "../services/BackendApiClient";
 import { createGameClient } from "./createGameClient";
 import { loadCatAnimations } from "./loadCatAnimations";
 import { loadForestArt } from "./loadForestArt";
@@ -35,8 +38,12 @@ export class GameApp {
 
     const loadingStartedAt = performance.now();
     const loading = new LoadingScene();
+    let auth: AuthScene | null = null;
     renderer.stage.addChild(loading);
-    const layoutLoading = () => loading.layout(renderer.screen.width, renderer.screen.height);
+    const layoutLoading = () => {
+      loading.layout(renderer.screen.width, renderer.screen.height);
+      auth?.layout(renderer.screen.width, renderer.screen.height);
+    };
     const updateLoading = (ticker: { deltaMS: number }) => loading.update(ticker.deltaMS / 1000);
     window.addEventListener("resize", layoutLoading);
     renderer.ticker.add(updateLoading);
@@ -47,8 +54,6 @@ export class GameApp {
     let gameClient: GameClient;
     let assetCatalog: Awaited<ReturnType<typeof loadAssetCatalog>>;
     try {
-      gameClient = await createGameClient();
-      const activeCat = gameClient.getSnapshot().activeCat;
       assetCatalog = await loadAssetCatalog();
       loading.setProgress(0.06);
       const [loadingBackground, loadingLogo] = await Promise.all([
@@ -58,6 +63,37 @@ export class GameApp {
       loading.setBackground(loadingBackground);
       loading.setLogo(loadingLogo);
       loading.setProgress(0.14);
+      const clientStart = await createGameClient();
+      if (clientStart.kind === "ready") {
+        gameClient = clientStart.client;
+      } else {
+        const authenticate = clientStart.authenticate;
+        const authenticatedClient = createDeferred<GameClient>();
+        const authScene = new AuthScene({
+          background: loadingBackground,
+          logo: loadingLogo,
+          onSubmit: async (mode, email, password) => {
+            try {
+              const client = await authenticate(mode, email, password);
+              authenticatedClient.resolve(client);
+              return { ok: true };
+            } catch (error) {
+              return authenticationFailure(mode, error);
+            }
+          },
+        });
+        auth = authScene;
+        authScene.layout(renderer.screen.width, renderer.screen.height);
+        renderer.stage.addChild(authScene);
+        await delay(Math.max(0, 900 - (performance.now() - loadingStartedAt)));
+        loading.visible = false;
+        gameClient = await authenticatedClient.promise;
+        loading.visible = true;
+        renderer.stage.removeChild(authScene);
+        authScene.destroy({ children: true });
+        auth = null;
+      }
+      const activeCat = gameClient.getSnapshot().activeCat;
       const loadedCats = new Map<CatVariant, CatAnimationSet>();
       const loadOrder = [activeCat, ...catVariants.filter((variant) => variant !== activeCat)];
       for (const [index, variant] of loadOrder.entries()) {
@@ -138,6 +174,28 @@ export class GameApp {
   private layout(): void {
     this.home.layout(this.renderer.screen.width, this.renderer.screen.height);
   }
+}
+
+function authenticationFailure(mode: AuthMode, error: unknown): AuthSubmitResult {
+  let messageId: MessageId = "auth.serverUnavailable";
+  if (error instanceof BackendApiError) {
+    if (mode === "login" && error.status === 401) {
+      messageId = "auth.invalidCredentials";
+    } else if (mode === "register" && error.status === 409) {
+      messageId = "auth.accountExists";
+    } else if (error.status === 422) {
+      messageId = "auth.requestInvalid";
+    }
+  }
+  return { ok: false, messageId };
+}
+
+function createDeferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  let resolvePromise: (value: T) => void = () => {};
+  const promise = new Promise<T>((resolve) => {
+    resolvePromise = resolve;
+  });
+  return { promise, resolve: resolvePromise };
 }
 
 async function delay(milliseconds: number): Promise<void> {
