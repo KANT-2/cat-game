@@ -125,7 +125,7 @@ describe("backend learning integration", () => {
           is_correct: true,
           used_hint: false,
           attempted_at: "2026-09-04T00:00:00Z",
-          result_detail: null,
+          result_detail: { verdict: "ACCEPTED", passed: 1, total: 1 },
           coins_awarded: 30,
         });
       }

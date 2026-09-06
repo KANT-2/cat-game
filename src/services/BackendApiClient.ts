@@ -30,8 +30,22 @@ export type BackendAttempt = {
   publicId: string;
   status: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
   correct: boolean | null;
-  resultDetail: string | null;
+  resultDetail: BackendGradingResult | null;
   coinsAwarded: number;
+};
+
+export type BackendGradingResult = {
+  verdict:
+    | "ACCEPTED"
+    | "WRONG_ANSWER"
+    | "SYNTAX_ERROR"
+    | "RUNTIME_ERROR"
+    | "TIMEOUT"
+    | "OUTPUT_LIMIT"
+    | "MEMORY_LIMIT"
+    | "SYSTEM_ERROR";
+  passed: number;
+  total: number;
 };
 
 export type BackendGameCat = {
@@ -472,8 +486,29 @@ function parseAttempt(value: unknown): BackendAttempt {
     publicId: readString(record, "public_id"),
     status: readEnum(record, "status", ["PENDING", "RUNNING", "COMPLETED", "FAILED"] as const),
     correct: readNullableBoolean(record, "is_correct"),
-    resultDetail: readNullableString(record, "result_detail"),
+    resultDetail: parseGradingResult(record.result_detail),
     coinsAwarded: readNumber(record, "coins_awarded"),
+  };
+}
+
+function parseGradingResult(value: unknown): BackendGradingResult | null {
+  if (value === null) {
+    return null;
+  }
+  const record = asRecord(value);
+  return {
+    verdict: readEnum(record, "verdict", [
+      "ACCEPTED",
+      "WRONG_ANSWER",
+      "SYNTAX_ERROR",
+      "RUNTIME_ERROR",
+      "TIMEOUT",
+      "OUTPUT_LIMIT",
+      "MEMORY_LIMIT",
+      "SYSTEM_ERROR",
+    ] as const),
+    passed: readNumber(record, "passed"),
+    total: readNumber(record, "total"),
   };
 }
 

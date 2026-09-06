@@ -124,6 +124,22 @@ UI는 `reason`을 메시지 키로 변환해 보여 줄 뿐 충돌을 다시 판
 게임 스냅샷을 다시 읽는다. 서버는 사용자·과제별 최초 정답 원장을 만들어 그때만 과제 보상과 잔액을 같은
 트랜잭션으로 반영한다. `FAILED`나 연결 시간 초과는 사용자 문구 키로 변환한다.
 
+완료 응답의 `result_detail`은 공개 판정값과 통과한 테스트 수만 포함하는 구조화된 객체다. 제출 코드,
+테스트 케이스, 표준 오류 같은 채점기 내부 정보는 응답하지 않는다.
+
+```json
+{
+  "status": "COMPLETED",
+  "is_correct": true,
+  "result_detail": {
+    "verdict": "ACCEPTED",
+    "passed": 3,
+    "total": 3
+  },
+  "coins_awarded": 25
+}
+```
+
 ```json
 {
   "ok": true,
