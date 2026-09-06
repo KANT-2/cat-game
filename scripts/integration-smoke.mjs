@@ -17,6 +17,7 @@ const reset = asRecord(
 );
 const initialGame = asRecord(reset.snapshot);
 const initialBalance = readNumber(initialGame, "balance");
+const initialStateVersion = readNumber(initialGame, "state_version");
 const purchaseRequestId = crypto.randomUUID();
 const purchasePayload = {
   request_id: purchaseRequestId,
@@ -39,8 +40,13 @@ const purchaseReplay = asRecord(
 );
 const purchasedBalance = readNumber(asRecord(purchase.snapshot), "balance");
 const replayBalance = readNumber(asRecord(purchaseReplay.snapshot), "balance");
+const purchaseStateVersion = readNumber(asRecord(purchase.snapshot), "state_version");
+const replayStateVersion = readNumber(asRecord(purchaseReplay.snapshot), "state_version");
 if (purchasedBalance !== initialBalance - 65 || replayBalance !== purchasedBalance) {
   throw new Error("backend purchase was not charged exactly once");
+}
+if (purchaseStateVersion <= initialStateVersion || replayStateVersion !== purchaseStateVersion) {
+  throw new Error("backend state version did not preserve idempotent command ordering");
 }
 const settingsMutation = asRecord(
   await requestJson(`${apiUrl}/api/v1/game/settings`, {
@@ -51,6 +57,9 @@ const settingsMutation = asRecord(
 );
 if (readNumber(asRecord(asRecord(settingsMutation.snapshot).settings), "effects_volume") !== 73) {
   throw new Error("backend settings mutation did not persist");
+}
+if (readNumber(asRecord(settingsMutation.snapshot), "state_version") <= purchaseStateVersion) {
+  throw new Error("backend state version did not advance after settings mutation");
 }
 const quiz = await findTask(authHeaders, (task) => task.type === "MULTIPLE_CHOICE", "multiple-choice task");
 const accepted = await requestJson(`${apiUrl}/api/v1/attempts`, {
