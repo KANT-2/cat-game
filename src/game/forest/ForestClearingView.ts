@@ -1,4 +1,4 @@
-import { Container, Graphics, Sprite, Text } from "pixi.js";
+import { Container, Graphics, Sprite } from "pixi.js";
 import { message } from "../../content/messages";
 import type { Awaitable, MoveFurnitureCommand, PlacementCommand, PlacementResult } from "../../core/GameClient";
 import type { CatVariant } from "../../domain/cats";
@@ -14,7 +14,7 @@ import {
 import type { ConsumableEffect, ShopItemId } from "../../domain/shop";
 import { shopItemDefinitions } from "../../domain/shop";
 import { type BeltGrid, gridCellPolygon, gridToScreen, screenToGrid } from "../belt";
-import { CLEARING_GRID, textStyle } from "../config";
+import { CLEARING_GRID } from "../config";
 import { CatActor, type CatDropTarget } from "../entities/CatActor";
 import type { CatAction, CatAnimationLibrary } from "../entities/CatAnimations";
 import { shopItemNameMessages } from "../shopItemPresentation";
@@ -28,6 +28,7 @@ type ForestClearingViewOptions = {
   onMove: (instanceId: string, command: MoveFurnitureCommand) => Awaitable<PlacementResult>;
   onSelectFurniture: (item: PlacedFurniture) => void;
   onToast: (message: string) => void;
+  onTalkToCat: (variant: CatVariant) => void;
   getHomeCats: () => CatVariant[];
   getActiveCat: () => CatVariant;
   getActiveWallpaper: () => ShopItemId | null;
@@ -69,6 +70,7 @@ export class ForestClearingView extends Container {
   private readonly onMove: ForestClearingViewOptions["onMove"];
   private readonly onSelectFurniture: ForestClearingViewOptions["onSelectFurniture"];
   private readonly onToast: ForestClearingViewOptions["onToast"];
+  private readonly onTalkToCat: ForestClearingViewOptions["onTalkToCat"];
   private readonly getHomeCats: ForestClearingViewOptions["getHomeCats"];
   private readonly getActiveCat: ForestClearingViewOptions["getActiveCat"];
   private readonly getActiveWallpaper: ForestClearingViewOptions["getActiveWallpaper"];
@@ -84,9 +86,6 @@ export class ForestClearingView extends Container {
   private movingInstanceId: string | null = null;
   private selectedShopItemId: PlacementCommand["shopItemId"];
   private hoveredCell: { x: number; y: number } | null = null;
-  private catBubble: Container | null = null;
-  private catBubbleTarget: CatActor | null = null;
-  private catBubbleTimer = 0;
   private placementPending = false;
   private activeGrid: BeltGrid = CLEARING_GRID;
 
@@ -97,6 +96,7 @@ export class ForestClearingView extends Container {
     this.onMove = options.onMove;
     this.onSelectFurniture = options.onSelectFurniture;
     this.onToast = options.onToast;
+    this.onTalkToCat = options.onTalkToCat;
     this.getHomeCats = options.getHomeCats;
     this.getActiveCat = options.getActiveCat;
     this.getActiveWallpaper = options.getActiveWallpaper;
@@ -124,9 +124,6 @@ export class ForestClearingView extends Container {
   update(deltaSeconds: number): void {
     for (const cat of this.cats.values()) {
       cat.update(deltaSeconds);
-    }
-    if (this.catBubble && this.catBubbleTarget) {
-      this.catBubble.position.set(this.catBubbleTarget.x, this.catBubbleTarget.y - 130);
     }
   }
 
@@ -174,6 +171,17 @@ export class ForestClearingView extends Container {
     return true;
   }
 
+  /** 홈에 있는 대상 고양이에게 대화 결과와 어울리는 동작을 재생한다. */
+  playConversationReaction(action: CatAction, catVariant: CatVariant): boolean {
+    const cat = this.cats.get(catVariant);
+    if (!cat) {
+      return false;
+    }
+    this.activeCatVariant = catVariant;
+    cat.playAction(action);
+    return true;
+  }
+
   /**
    * 저장 상태의 홈 고양이 목록과 공터에 표시되는 고양이 배우를 일치시킨다.
    *
@@ -184,9 +192,6 @@ export class ForestClearingView extends Container {
     for (const [variant, cat] of this.cats) {
       if (homeCats.includes(variant)) {
         continue;
-      }
-      if (this.catBubbleTarget === cat) {
-        this.removeCatBubble();
       }
       this.cats.delete(variant);
       this.entityLayer.removeChild(cat);
@@ -210,10 +215,9 @@ export class ForestClearingView extends Container {
         },
         onLiftStart: () => {
           this.activeCatVariant = variant;
-          this.removeCatBubble();
         },
         onDragTargetChange: (target) => this.updateCatDropTarget(target),
-        onTap: () => this.showCatBubble(cat),
+        onTap: () => this.onTalkToCat(variant),
         animations: this.catAnimations[variant],
         initialGridX: spawn.x,
         initialGridY: spawn.y,
@@ -494,42 +498,6 @@ export class ForestClearingView extends Container {
         );
       }
     }
-  }
-
-  private showCatBubble(cat: CatActor): void {
-    if (this.catBubble) {
-      this.removeCatBubble();
-    }
-    this.catBubble = new Container();
-    this.catBubble.addChild(
-      new Graphics()
-        .roundRect(-118, -68, 236, 58, 22)
-        .fill(0xffffff)
-        .stroke({ color: 0x553a2b, width: 4 })
-        .poly([-18, -12, 3, 10, 15, -12])
-        .fill(0xffffff)
-        .stroke({ color: 0x553a2b, width: 3 }),
-    );
-    const label = new Text({ text: message("cat.studyInvitation"), style: textStyle(17) });
-    label.anchor.set(0.5);
-    label.position.set(0, -40);
-    this.catBubble.addChild(label);
-    this.catBubbleTarget = cat;
-    this.catBubble.position.set(cat.x, cat.y - 90);
-    this.catBubble.zIndex = 10000;
-    this.entityLayer.addChild(this.catBubble);
-    window.clearTimeout(this.catBubbleTimer);
-    this.catBubbleTimer = window.setTimeout(() => this.removeCatBubble(), 2600);
-  }
-
-  private removeCatBubble(): void {
-    if (!this.catBubble) {
-      return;
-    }
-    this.entityLayer.removeChild(this.catBubble);
-    this.catBubble.destroy({ children: true });
-    this.catBubble = null;
-    this.catBubbleTarget = null;
   }
 }
 

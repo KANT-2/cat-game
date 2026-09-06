@@ -188,6 +188,32 @@ UI는 `reason`을 메시지 키로 변환해 보여 줄 뿐 충돌을 다시 판
 원격 모드의 사운드와 화면 움직임 설정은 서버 스냅샷의 `settings`에 저장한다. 보유 고양이별 기억도
 고양이 스냅샷의 `memories`로 읽고 `DELETE /api/v1/game/cat-memories`로만 삭제한다.
 
+### 고양이 대화와 페르소나
+
+홈 고양이를 누르면 `CatConversationModal`이 고양이 종류별 고정 페르소나와 안전한 상황 선택지를 표시한다.
+답변 문구와 동작은 `game/presentation/catConversation.ts`가 담당하고, 게임 시스템은 답변을 생성하거나
+학습 정답을 조언하지 않는다. `talkToCat()`은 선택한 주제의 민감하지 않은 요약만 해당 고양이 기억에
+누적한다.
+
+자유 입력은 Canvas 입력 상자와 `TextInputBridge`를 통해 `chatWithCat()`으로 전달한다. 서버는 입력을
+정규화한 뒤 프롬프트 제어 시도와 지원하지 않는 지식 질문을 생성 모델보다 먼저 차단한다. 사용자 원문은
+저장하지 않고, 허용된 코딩·일상 대화만 서버가 만든 분류 요약으로 기억한다. 서버 답변도 길이와 내부 지시
+노출 여부를 검사한 뒤 `GameText.text`로 화면에 전달한다.
+
+```json
+{
+  "ok": true,
+  "catVariant": "fluffy",
+  "topic": "feelings",
+  "memoryCount": 3
+}
+```
+
+원격 스냅샷의 `cats[]`는 카탈로그 고양이 UUID인 `public_id`와 보유 자산 UUID인
+`cat_asset_public_id`를 구분한다. 대화 기억 추가는 보유 고양이의 `cat_asset_public_id`로
+`POST /api/v1/cats/{cat_asset_public_id}/memories`를 호출한 뒤 새 스냅샷을 다시 읽는다. 미보유 고양이의
+자산 UUID는 `null`이며 대화 명령은 `cat-not-owned`로 실패한다.
+
 학습 초기화는 `POST /api/v1/game/learning/reset`을 호출한다. 서버는 답안과 최초 보상 원장을 삭제하지 않고
 `learning_reset_at` 시각을 기록한다. 추천·완료·숙련도·오늘 진행도는 이 시각 이후 답안만 계산하므로 화면
 진도는 초기화되지만 이미 지급한 과제 보상을 같은 과제로 다시 받을 수 없다. 재화·인벤토리·출석 및 이미

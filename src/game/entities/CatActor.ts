@@ -125,9 +125,11 @@ export class CatActor extends Container {
       if (this.shouldSuppressTap(event)) {
         return;
       }
-      if (!this.paused && this.queueOrStartReaction()) {
-        options.onTap();
+      if (this.paused) {
+        return;
       }
+      this.queueOrStartReaction();
+      options.onTap();
     });
     this.syncPosition();
     this.scale.x = options.initialFacing === "right" ? -1 : 1;
