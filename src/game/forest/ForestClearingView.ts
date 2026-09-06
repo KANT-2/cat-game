@@ -362,15 +362,17 @@ export class ForestClearingView extends Container {
       return;
     }
 
+    const placedKind = this.selectedFurniture;
+    const placedShopItemId = this.selectedShopItemId;
     this.placementPending = true;
     const result = await (this.movingInstanceId
       ? this.onMove(this.movingInstanceId, { x, y, rotation: this.placementRotation })
       : this.onPlace({
-          kind: this.selectedFurniture,
+          kind: placedKind,
           x,
           y,
           rotation: this.placementRotation,
-          shopItemId: this.selectedShopItemId,
+          shopItemId: placedShopItemId,
         }));
     this.placementPending = false;
     if (!result.ok) {
@@ -379,9 +381,9 @@ export class ForestClearingView extends Container {
       );
       return;
     }
-    const itemName = this.selectedShopItemId
-      ? message(shopItemNameMessages[this.selectedShopItemId])
-      : message(`furniture.${this.selectedFurniture}`);
+    const itemName = placedShopItemId
+      ? message(shopItemNameMessages[placedShopItemId])
+      : message(`furniture.${placedKind}`);
     this.onToast(
       message("furniture.placed", {
         item: itemName,
