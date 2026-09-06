@@ -36,6 +36,12 @@ export class GameApp {
     });
     mount.appendChild(renderer.canvas);
 
+    let connectionWasInterrupted = !navigator.onLine;
+    const rememberOffline = () => {
+      connectionWasInterrupted = true;
+    };
+    window.addEventListener("offline", rememberOffline);
+
     const loadingStartedAt = performance.now();
     const loading = new LoadingScene();
     let auth: AuthScene | null = null;
@@ -180,11 +186,12 @@ export class GameApp {
     loading.destroy({ children: true });
 
     window.addEventListener("resize", () => game.layout());
+    window.removeEventListener("offline", rememberOffline);
     if (gameSession) {
       gameSession.onExpired(() => window.location.reload());
       let refreshing = false;
       window.addEventListener("offline", () => home.notify(message("connection.offline")));
-      window.addEventListener("online", async () => {
+      const refreshAfterReconnect = async () => {
         if (refreshing) {
           return;
         }
@@ -199,7 +206,13 @@ export class GameApp {
         } finally {
           refreshing = false;
         }
-      });
+      };
+      window.addEventListener("online", refreshAfterReconnect);
+      if (!navigator.onLine) {
+        home.notify(message("connection.offline"));
+      } else if (connectionWasInterrupted) {
+        void refreshAfterReconnect();
+      }
     }
     renderer.ticker.add((ticker) => home.update(ticker.deltaMS / 1000));
     return game;

@@ -150,11 +150,13 @@ try {
 
   tolerateOfflineErrors = true;
   await page.context().setOffline(true);
+  await page.evaluate(() => window.dispatchEvent(new Event("offline")));
   await page.waitForTimeout(150);
   const reconnectSnapshot = page.waitForResponse(
     (response) => response.url().includes("/api/v1/game/snapshot") && response.status() === 200,
   );
   await page.context().setOffline(false);
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
   await reconnectSnapshot;
   await page.waitForTimeout(500);
   tolerateOfflineErrors = false;
