@@ -16,6 +16,7 @@ import { createBackgroundPreview } from "../forest/BackgroundPreview";
 import type { BackgroundArtCollection, ForestArt, FurnitureArtCollection } from "../forest/ForestArt";
 import { resolveFurnitureArt } from "../forest/ForestArt";
 import { createFurniturePreview } from "../forest/FurniturePreview";
+import { getOwnedFurnitureEntries } from "../presentation/ownedFurniture";
 import { shopItemNameMessages } from "../shopItemPresentation";
 import { SettingsPage } from "./SettingsPage";
 
@@ -193,53 +194,7 @@ export class FeaturePageModal extends Container {
       this.renderOwnedConsumables(state);
       return;
     }
-    const entries: Array<{
-      key: string;
-      itemId?: ShopItemId;
-      kind: FurnitureKind;
-      name: MessageId;
-      stored: number;
-      placed: number;
-    }> = [];
-    for (const itemId of Object.keys(shopItemDefinitions) as ShopItemId[]) {
-      const definition = shopItemDefinitions[itemId];
-      if (definition.kind !== "furniture") {
-        continue;
-      }
-      const kind = definition.furnitureKind;
-      const storedCount = state.shopInventory[itemId] ?? 0;
-      const placed = state.furniture.filter((item) => item.shopItemId === itemId).length;
-      if (storedCount > 0 || placed > 0) {
-        entries.push({ key: itemId, itemId, kind, name: shopItemNameMessages[itemId], stored: storedCount, placed });
-      }
-    }
-    for (const kind of Object.keys(state.inventory) as FurnitureKind[]) {
-      const exactStored = (Object.keys(shopItemDefinitions) as ShopItemId[])
-        .filter((itemId) => {
-          const definition = shopItemDefinitions[itemId];
-          return definition.kind === "furniture" && definition.furnitureKind === kind;
-        })
-        .reduce((sum, itemId) => sum + (state.shopInventory[itemId] ?? 0), 0);
-      const genericStored = Math.max(0, state.inventory[kind] - exactStored);
-      const genericPlaced = state.furniture.filter((item) => item.kind === kind && !item.shopItemId).length;
-      if (genericStored > 0 || genericPlaced > 0) {
-        const canonicalId = canonicalProductIds[kind];
-        const existing = entries.find((entry) => entry.itemId === canonicalId);
-        if (existing) {
-          existing.stored += genericStored;
-          existing.placed += genericPlaced;
-        } else {
-          entries.push({
-            key: canonicalId,
-            itemId: genericStored > 0 ? canonicalId : undefined,
-            kind,
-            name: genericProductNameMessages[kind],
-            stored: genericStored,
-            placed: genericPlaced,
-          });
-        }
-      }
-    }
+    const entries = getOwnedFurnitureEntries(state);
     if (entries.length === 0) {
       const empty = new Text({ text: message("owned.noProducts"), style: textStyle(22, 0x76533c, "700") });
       empty.anchor.set(0.5);
@@ -648,28 +603,6 @@ const friendNames: MessageId[] = [
   "friends.nameCodeMeow",
   "friends.nameStudyCat",
 ];
-const genericProductNameMessages: Record<FurnitureKind, MessageId> = {
-  sofa: "shop.productSofa",
-  desk: "shop.productDesk",
-  plant: "shop.productPlant",
-  catTree: "shop.productCatTower",
-  bed: "shop.productBed",
-  rug: "shop.productForestRug",
-  hideout: "shop.productForestHideout",
-  scratcher: "shop.productForestScratcher",
-  litterBox: "shop.productForestLitterBox",
-};
-const canonicalProductIds: Record<FurnitureKind, ShopItemId> = {
-  sofa: "furniture.sofa",
-  desk: "furniture.desk",
-  plant: "decor.plant",
-  catTree: "furniture.catTower",
-  bed: "furniture.bed",
-  rug: "furniture.forest.rug",
-  hideout: "furniture.forest.hideout",
-  scratcher: "furniture.forest.scratcher",
-  litterBox: "furniture.forest.litter-box",
-};
 const catNameMessages: Record<CatVariant, MessageId> = {
   fluffy: "cat.fluffyName",
   ink: "cat.inkName",

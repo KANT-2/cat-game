@@ -17,7 +17,7 @@ import { gridCellPolygon, gridToScreen, screenToGrid } from "../belt";
 import { CLEARING_GRID, textStyle } from "../config";
 import { CatActor, type CatDropTarget } from "../entities/CatActor";
 import type { CatAction, CatAnimationLibrary } from "../entities/CatAnimations";
-import { furniturePresentation } from "../presentation/furniturePresentation";
+import { shopItemNameMessages } from "../shopItemPresentation";
 import { type ForestArt, resolveBackgroundArt, resolveFurnitureArt } from "./ForestArt";
 import { FurnitureView } from "./FurnitureView";
 
@@ -336,7 +336,6 @@ export class ForestClearingView extends Container {
       return;
     }
     const definition = furnitureDefinitions[this.selectedFurniture];
-    const presentation = furniturePresentation[this.selectedFurniture];
     const size = rotatedSize(definition, this.placementRotation);
     if (!this.isAreaFree(x, y, size.width, size.height)) {
       this.onToast(message("furniture.invalidPlacement"));
@@ -360,9 +359,12 @@ export class ForestClearingView extends Container {
       );
       return;
     }
+    const itemName = this.selectedShopItemId
+      ? message(shopItemNameMessages[this.selectedShopItemId])
+      : message(`furniture.${this.selectedFurniture}`);
     this.onToast(
       message("furniture.placed", {
-        item: message(presentation.labelMessage),
+        item: itemName,
       }),
     );
   }
