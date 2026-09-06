@@ -92,11 +92,6 @@ const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
 const errors = [];
 const backendResponses = [];
-page.on("console", (message) => {
-  if (message.type() === "error") {
-    errors.push(`console: ${message.text()}`);
-  }
-});
 page.on("pageerror", (error) => errors.push(`page: ${error.message}`));
 page.on("response", (response) => {
   if (response.url().startsWith(apiUrl)) {
@@ -105,9 +100,43 @@ page.on("response", (response) => {
 });
 
 try {
+  const anonymousSessionResponse = page.waitForResponse(
+    (response) => response.url().includes("/api/v1/session/me") && response.status() === 401,
+  );
   await page.goto(gameUrl, { waitUntil: "domcontentloaded" });
   await page.locator("canvas").waitFor({ state: "visible" });
-  await page.waitForTimeout(5_000);
+  await anonymousSessionResponse;
+  await page.waitForTimeout(400);
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      errors.push(`console: ${message.text()}`);
+    }
+  });
+  const registrationResponse = page.waitForResponse(
+    (response) => response.url().includes("/api/v1/session/register") && response.status() === 201,
+  );
+  const firstSnapshotResponse = page.waitForResponse(
+    (response) => response.url().includes("/api/v1/game/snapshot") && response.status() === 200,
+  );
+  await page.mouse.click(900, 380);
+  await page.mouse.click(700, 490);
+  await page.keyboard.type(`integration-${Date.now()}@example.com`);
+  await page.keyboard.press("Tab");
+  await page.keyboard.type("integration-pass-2026");
+  await page.keyboard.press("Enter");
+  await Promise.all([registrationResponse, firstSnapshotResponse]);
+  await page.waitForTimeout(4_000);
+  const attendanceResponse = page.waitForResponse(
+    (response) => response.url().includes("/api/v1/game/attendance/claims") && response.status() === 200,
+  );
+  await page.mouse.click(1220, 733);
+  await attendanceResponse;
+  const resumedSessionResponse = page.waitForResponse(
+    (response) => response.url().includes("/api/v1/session/me") && response.status() === 200,
+  );
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await resumedSessionResponse;
+  await page.waitForTimeout(4_000);
   await page.mouse.click(1194, 820);
   await page.waitForTimeout(500);
   await page.screenshot({ path: screenshotPath });
@@ -117,13 +146,16 @@ try {
 
 for (const path of [
   "/health",
-  "/api/v1/session/development",
+  "/api/v1/session/register",
   "/api/v1/session/me",
   "/learning/recommendations",
   "/api/v1/game/snapshot",
+  "/api/v1/game/attendance/claims",
 ]) {
-  const response = backendResponses.find((entry) => entry.url.includes(path));
-  if (!response || response.status < 200 || response.status >= 300) {
+  const succeeded = backendResponses.some(
+    (entry) => entry.url.includes(path) && entry.status >= 200 && entry.status < 300,
+  );
+  if (!succeeded) {
     errors.push(`missing successful browser backend response: ${path}`);
   }
 }
@@ -132,7 +164,7 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `Integration smoke passed: API quiz and sandbox code grading, ${backendResponses.length} browser API responses, screenshot ${screenshotPath}`,
+  `Integration smoke passed: browser registration/session/CSRF, API quiz and sandbox grading, ${backendResponses.length} browser API responses, screenshot ${screenshotPath}`,
 );
 
 async function findTask(headers, predicate, description) {
