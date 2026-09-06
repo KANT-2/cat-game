@@ -66,6 +66,11 @@ FastAPI 명령 뒤 반환된 서버 스냅샷으로 갱신한다. 원격 명령 
 운영 백엔드 연결 실패를 로컬 저장으로 대체하지 않는다. Vite 개발 모드에서만 별도 설정 없이 개발 세션을
 사용할 수 있고, 명시적인 사용자 UUID 헤더도 로컬·테스트 백엔드에 한정한다.
 
+코드 작성 과제의 입력 영역은 브라우저 표준 편집 동작과 접근성을 제공하기 위해 CodeMirror DOM 오버레이를
+사용하는 유일한 예외다. `game` 계층은 DOM이나 CodeMirror를 직접 import하지 않고
+`CodeEditorOverlayFactory` 계약만 사용하며, 실제 DOM 수명주기와 Canvas 좌표 동기화는 `app` 계층의
+`CodeMirrorEditorOverlayFactory`가 소유한다. 문제 설명, 버튼, 피드백 등 나머지 학습 화면은 계속 Canvas에 둔다.
+
 브라우저 연결 상태와 로그인 세션의 수명주기는 게임 규칙 계약에 넣지 않고 `app` 조립 계층이 소유한다.
 연결 복구 시 `BackendLearningGameClient`가 권위 스냅샷과 추천 과제를 다시 읽어 기존 구독자에게 전달하며,
 로그아웃과 세션 만료는 Canvas 인증 화면으로 복귀시킨다. 따라서 `game` 장면은 쿠키나 HTTP 상태 코드를

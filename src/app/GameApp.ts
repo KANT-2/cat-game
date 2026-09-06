@@ -10,6 +10,7 @@ import { type AuthMode, AuthScene, type AuthSubmitResult } from "../game/scenes/
 import { HomeScene } from "../game/scenes/HomeScene";
 import { LoadingScene } from "../game/scenes/LoadingScene";
 import { BackendApiError } from "../services/BackendApiClient";
+import { CodeMirrorEditorOverlayFactory } from "./CodeMirrorEditorOverlay";
 import { createGameClient, type GameSession, type ReadyGameClient } from "./createGameClient";
 import { loadCatAnimations } from "./loadCatAnimations";
 import { loadForestArt } from "./loadForestArt";
@@ -153,11 +154,13 @@ export class GameApp {
       gachaMachine: assetPath(assetCatalog, "ui.scene.gacha-machine-cutout.01"),
     };
     await Assets.load(Object.values(iconSources));
+    const codeEditorFactory = new CodeMirrorEditorOverlayFactory(mount);
     const home = new HomeScene(
       gameClient,
       iconSources,
       catAnimations,
       forestArt,
+      codeEditorFactory,
       gameSession
         ? async () => {
             try {

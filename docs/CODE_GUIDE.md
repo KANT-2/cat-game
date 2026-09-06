@@ -119,6 +119,11 @@ UI는 `reason`을 메시지 키로 변환해 보여 줄 뿐 충돌을 다시 판
 
 함수 작성형 과제는 UI가 함수 선언을 고정하고 본문만 `submitCodeChallenge()`로 전달한다. 로컬 클라이언트는 임의 코드를 실행하지 않고 허용된 풀이 형태를 테스트 결과로 변환한다. 서버 채점기로 교체할 때도 아래 결과 계약을 유지한다.
 
+코드 입력은 `StudyModal`이 `CodeEditorOverlayFactory` 계약으로 생성하고, `app/CodeMirrorEditorOverlay.ts`가
+코드 과제를 열 때만 CodeMirror 런타임을 불러와 Canvas의 논리 편집 영역에 맞춰 배치한다. 함수 선언은 읽기 전용 행으로 분리하고 실제 제출에는
+편집 가능한 본문만 사용한다. 학습 화면 전환이나 피드백 표시 때 오버레이를 숨기거나 폐기하여 다른 Canvas 입력을
+가리지 않도록 한다.
+
 백엔드 학습 모드에서는 코드 또는 객관식 답안을 `POST /api/v1/attempts`에 제출한 뒤 공개 attempt UUID로
 완료 상태를 폴링한다. `COMPLETED`의 `is_correct`와 `coins_awarded`만 화면 결과로 사용하고, 정답이면
 게임 스냅샷을 다시 읽는다. 서버는 사용자·과제별 최초 정답 원장을 만들어 그때만 과제 보상과 잔액을 같은
