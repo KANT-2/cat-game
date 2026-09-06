@@ -80,6 +80,12 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.modules.grading.health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
     read_only: true
     tmpfs:
       - /tmp:size=64m,mode=1777

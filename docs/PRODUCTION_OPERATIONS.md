@@ -23,9 +23,11 @@ docker compose --env-file production.env -f compose.production.yml ps
 curl -fsS https://nyang.example.com/ready
 ```
 
-`backend`, `grading-worker`, `frontend`, `db`가 모두 실행 중이어야 한다. 워커가 재시작되더라도 제한 시간을
-넘긴 `RUNNING` 임대를 다시 가져오므로 제출을 수동으로 재생성하지 않는다. 기본 임대 시간은 60초이며 실제
-샌드박스 제한보다 충분히 길게 `CAT_GAME_GRADING_LEASE_SECONDS`로 조정한다.
+`backend`, `grading-worker`, `frontend`, `db`가 모두 `healthy`여야 한다. 워커 healthcheck는 PostgreSQL 큐를
+정상 조회한 뒤 기록되는 heartbeat를 검사하므로, 프로세스가 살아 있어도 DB 폴링 루프가 멈추면
+`unhealthy`가 된다. 워커가 재시작되더라도 제한 시간을 넘긴 `RUNNING` 임대를 다시 가져오므로 제출을
+수동으로 재생성하지 않는다. 기본 임대 시간은 60초이며 실제 샌드박스 제한보다 충분히 길게
+`CAT_GAME_GRADING_LEASE_SECONDS`로 조정한다.
 메모리·CPU·PID·출력 제한은 `production.env.example`의 `CAT_GAME_GRADING_*` 값을 기준으로 조정한다.
 특히 출력 상한은 학생 프로세스와 Docker CLI 양쪽에 적용되므로 워커가 무한 출력을 메모리에 쌓지 않는다.
 
@@ -62,6 +64,8 @@ docker compose --env-file production.env -f compose.production.yml \
 
 - `/health`: FastAPI 프로세스가 요청을 처리하는지 확인한다.
 - `/ready`: PostgreSQL 연결까지 성공했는지 확인한다. nginx와 오케스트레이터는 이 경로를 사용한다.
+- `grading-worker` healthcheck: 최근 큐 DB 조회가 성공했는지 확인한다. `unhealthy`이면 워커 로그의
+  `grading_worker_poll_failed`와 PostgreSQL 연결 상태를 함께 확인한다.
 - `X-Request-ID`: 사용자 오류 응답과 구조화 로그를 연결한다. 로그에는 쿼리, 헤더, 비밀번호, 세션 토큰,
   제출 코드를 기록하지 않는다.
 - API가 복구되면 클라이언트의 안전한 조회는 한 번 재시도한다. 상태 변경은 자동 재시도하지 않고 업무별
