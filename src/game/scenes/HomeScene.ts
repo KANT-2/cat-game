@@ -445,7 +445,7 @@ export class HomeScene extends Container {
         }
         return (await this.gameClient.applyRoomTheme(itemId)).ok;
       },
-      onUseConsumable: (itemId) => this.useConsumable(itemId),
+      onUseConsumable: (itemId, catVariant) => this.useConsumable(itemId, catVariant),
       onEnterRoomEdit: () => {
         this.closeFeaturePage();
         this.enterRoomEditMode();
@@ -523,14 +523,14 @@ export class HomeScene extends Container {
     this.showPurchaseChoice(result.itemId, result.furnitureKind);
   }
 
-  private async useConsumable(itemId: ShopItemId): Promise<boolean> {
-    const result = await this.gameClient.useConsumable(itemId, this.state.activeCat);
+  private async useConsumable(itemId: ShopItemId, catVariant: CatVariant): Promise<boolean> {
+    const result = await this.gameClient.useConsumable(itemId, catVariant);
     if (!result.ok) {
       this.notify(message(result.reason === "not-owned" ? "consumable.empty" : "shop.purchaseComingSoon"));
       return false;
     }
     this.closeFeaturePage();
-    this.clearing.playConsumableEffect(result.effect);
+    this.clearing.playConsumableEffect(result.effect, catVariant);
     this.notify(message(`consumable.used.${result.effect}`));
     return true;
   }

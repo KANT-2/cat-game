@@ -296,6 +296,32 @@ if (
   throw new Error("owned cats were not restored to the home clearing");
 }
 
+parsedState.shopInventory["consumable.salmon-cubes"] = 1;
+await page.evaluate((state) => {
+  localStorage.setItem("cozy-code-cat-room-v1", JSON.stringify(state));
+}, parsedState);
+await page.reload({ waitUntil: "domcontentloaded" });
+await page.waitForFunction(() => document.documentElement.dataset.gameReady === "ready", undefined, {
+  timeout: 120_000,
+});
+await page.waitForTimeout(300);
+await page.mouse.click(1530, 811);
+await page.waitForTimeout(150);
+await page.mouse.click(1518, 740);
+await page.waitForTimeout(150);
+await page.mouse.click(690, 218);
+await page.waitForTimeout(150);
+await page.mouse.click(422, 433);
+await page.waitForTimeout(150);
+await page.screenshot({ path: screenshotPath("cat-game-consumable-cat-picker.png") });
+await page.mouse.click(522, 604);
+await page.waitForTimeout(450);
+await page.screenshot({ path: screenshotPath("cat-game-consumable-selected-cat-reaction.png") });
+const stateAfterConsumable = JSON.parse(await page.evaluate(() => localStorage.getItem("cozy-code-cat-room-v1")));
+if (stateAfterConsumable.shopInventory?.["consumable.salmon-cubes"] !== 0) {
+  throw new Error("selected-cat consumable flow did not consume exactly one item");
+}
+
 const compactPage = await browser.newPage({ viewport: { width: 1024, height: 640 } });
 compactPage.on("console", (message) => {
   if (message.type() === "error") {

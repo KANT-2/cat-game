@@ -157,11 +157,21 @@ export class ForestClearingView extends Container {
     this.updateSelection();
   }
 
-  /** 현재 선택된 홈 고양이에게 소모품 효과에 맞는 긍정적 동작을 즉시 재생한다. */
-  playConsumableEffect(effect: ConsumableEffect): void {
-    const activeVariant = this.activeCatVariant ?? this.getActiveCat();
-    const cat = this.cats.get(activeVariant) ?? this.cats.values().next().value;
-    cat?.playAction(CONSUMABLE_ACTIONS[effect]);
+  /**
+   * 선택한 홈 고양이에게 소모품 효과에 맞는 긍정적 동작을 즉시 재생한다.
+   *
+   * @param effect - 사용한 간식이 지정한 화면 반응 종류.
+   * @param catVariant - 간식을 받은 홈 고양이 종류.
+   * @returns 대상 고양이가 현재 홈에 있어 반응을 재생했으면 `true`.
+   */
+  playConsumableEffect(effect: ConsumableEffect, catVariant: CatVariant): boolean {
+    const cat = this.cats.get(catVariant);
+    if (!cat) {
+      return false;
+    }
+    this.activeCatVariant = catVariant;
+    cat.playAction(CONSUMABLE_ACTIONS[effect]);
+    return true;
   }
 
   /**

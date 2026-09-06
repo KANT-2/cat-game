@@ -390,7 +390,9 @@ UI는 가격이나 잔액을 판정하지 않고 `buyShopItem()` 결과를 따�
 ## 간식 구매와 사용
 
 간식 구매도 `buyShopItem()`을 사용하지만 성공 결과의 `itemType`은 `consumable`이다. 구매한 수량은
-`shopInventory`에 보관하며, UI가 수량을 직접 줄이지 않고 `useConsumable()` 명령을 호출한다.
+`shopInventory`에 보관한다. 보관함에서 간식을 누르면 현재 홈에 나온 고양이를 먼저 고르고, UI가 수량을
+직접 줄이지 않고 선택한 `catVariant`와 함께 `useConsumable()` 명령을 호출한다. 성공 뒤에는 같은 고양이의
+홈 액터가 간식 효과에 맞는 짧은 동작을 재생한다.
 
 `CodeChallengeView.language`은 `python` 또는 `sql`이며 풀이 화면의 편집기 안내를 결정한다. Python의
 `signature`는 고정 선언부이고 `starterBody`만 수정하지만, SQL은 빈 `signature`와 전체 쿼리 초안을
@@ -399,7 +401,7 @@ UI는 가격이나 잔액을 판정하지 않고 `buyShopItem()` 결과를 따�
 ```json
 {
   "itemId": "consumable.salmon-cubes",
-  "catVariant": "inkBlack"
+  "catVariant": "ink"
 }
 ```
 
