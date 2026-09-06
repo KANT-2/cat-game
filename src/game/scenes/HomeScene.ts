@@ -64,30 +64,33 @@ export class HomeScene extends Container {
   private movingInstanceId: string | null = null;
   private screenWidth = BASE_WIDTH;
   private screenHeight = BASE_HEIGHT;
+  private readonly onLogout: (() => Promise<boolean>) | null;
 
   constructor(
     gameClient: GameClient,
     iconSources: HomeIconSources,
     catAnimations: CatAnimationLibrary,
     forestArt: ForestArt,
+    onLogout: (() => Promise<boolean>) | null = null,
   ) {
     super();
     this.gameClient = gameClient;
     this.iconSources = iconSources;
     this.catAnimations = catAnimations;
+    this.onLogout = onLogout;
     this.state = gameClient.getSnapshot();
     this.clearing = new ForestClearingView({
       getFurniture: () => this.state.furniture,
-      onPlace: (command) => {
-        const result = this.gameClient.placeFurniture(command);
+      onPlace: async (command) => {
+        const result = await this.gameClient.placeFurniture(command);
         if (result.ok) {
           queueMicrotask(() => this.stopPlacement());
         }
         return result;
       },
       onSelectFurniture: (item) => this.openFurnitureEditor(item),
-      onMove: (instanceId, command) => {
-        const result = this.gameClient.moveFurniture(instanceId, command);
+      onMove: async (instanceId, command) => {
+        const result = await this.gameClient.moveFurniture(instanceId, command);
         if (result.ok) {
           queueMicrotask(() => this.stopPlacement());
         }
@@ -363,8 +366,8 @@ export class HomeScene extends Container {
       getState: () => this.state,
       onBack: () => this.closeGacha(),
       onDraw: (count) => this.gameClient.drawGacha(count),
-      onSelectCat: (variant) => {
-        if (this.gameClient.selectCat(variant).ok) {
+      onSelectCat: async (variant) => {
+        if ((await this.gameClient.selectCat(variant)).ok) {
           this.closeGacha();
         }
       },
@@ -395,15 +398,16 @@ export class HomeScene extends Container {
         this.closeFeaturePage();
         this.startPlacement(furnitureKind, 0, itemId);
       },
-      onSelectCat: (variant) => this.gameClient.selectCat(variant).ok,
-      onSetCatHome: (variant, visible) => this.gameClient.setCatHome(variant, visible).ok,
-      onApplyTheme: (itemId) => this.gameClient.applyRoomTheme(itemId).ok,
+      onSelectCat: async (variant) => (await this.gameClient.selectCat(variant)).ok,
+      onSetCatHome: async (variant, visible) => (await this.gameClient.setCatHome(variant, visible)).ok,
+      onApplyTheme: async (itemId) => (await this.gameClient.applyRoomTheme(itemId)).ok,
       onEnterRoomEdit: () => {
         this.closeFeaturePage();
         this.notify(message("owned.editGuide"));
       },
       onUpdateSettings: (patch) => this.gameClient.updateSettings(patch),
       onResetLearning: () => this.gameClient.resetLearningProgress(),
+      onLogout: this.onLogout,
       onOpenAttendance: () => this.openAttendance(true),
       catAnimations: this.catAnimations,
       backIcon: this.iconSources.back,
@@ -442,12 +446,12 @@ export class HomeScene extends Container {
     this.closePurchaseChoice();
   }
 
-  private buyShopItem(itemId: ShopItemId | null): void {
+  private async buyShopItem(itemId: ShopItemId | null): Promise<void> {
     if (!itemId) {
       this.notify(message("shop.itemNotPlaceable"));
       return;
     }
-    const result = this.gameClient.buyShopItem(itemId);
+    const result = await this.gameClient.buyShopItem(itemId);
     if (!result.ok) {
       const messageId = result.reason === "insufficient-coins" ? "shop.insufficientCoins" : "shop.purchaseComingSoon";
       this.notify(message(messageId));
@@ -635,8 +639,8 @@ export class HomeScene extends Container {
     this.startPlacement(item.kind, rotation, item.shopItemId, item.id);
   }
 
-  private storePlacedFurniture(item: PlacedFurniture): void {
-    if (this.gameClient.removeFurniture(item.id)) {
+  private async storePlacedFurniture(item: PlacedFurniture): Promise<void> {
+    if (await this.gameClient.removeFurniture(item.id)) {
       this.notify(message("furniture.stored", { item: message(`furniture.${item.kind}`) }));
     }
     this.closeFurnitureEditor();

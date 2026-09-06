@@ -1,5 +1,6 @@
 import { Container, Graphics, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
+import type { Awaitable, LearningResetResult } from "../../core/GameClient";
 import type { GameSettings, GameState } from "../../domain/room";
 import { CanvasButton } from "../components/CanvasButton";
 import { createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
@@ -7,15 +8,16 @@ import { textStyle } from "../config";
 
 type SettingsSection = "account" | "sound" | "alerts" | "learning";
 type SettingsPageMode = "settings" | "account";
-type ConfirmAction = "dataReset" | "accountDelete" | "learningReset";
+type ConfirmAction = "logout" | "dataReset" | "accountDelete" | "learningReset";
 
 type SettingsPageOptions = {
   mode: SettingsPageMode;
   onStatus: (id: MessageId) => void;
   onOpenAttendance: () => void;
   getState: () => GameState;
-  onUpdateSettings: (patch: Partial<GameSettings>) => GameSettings;
-  onResetLearning: () => void;
+  onUpdateSettings: (patch: Partial<GameSettings>) => Awaitable<GameSettings>;
+  onResetLearning: () => Awaitable<LearningResetResult>;
+  onLogout: (() => Awaitable<boolean>) | null;
 };
 
 const settingsSections: readonly SettingsSection[] = ["sound", "alerts", "learning"];
@@ -146,7 +148,20 @@ export class SettingsPage extends Container {
     const detail = new Text({ text: message("settings.dangerDescription"), style: textStyle(15, 0x7e5148, "600") });
     detail.position.set(100, 667);
     this.addChild(danger, title, detail);
-    this.addActionButton("settings.logout", 400, 715, 250, () => this.notify("settings.logoutReady"), 0xe7b080);
+    this.addActionButton(
+      "settings.logout",
+      400,
+      715,
+      250,
+      () => {
+        if (!this.options.onLogout) {
+          this.notify("settings.logoutUnavailable");
+          return;
+        }
+        this.askConfirmation("logout");
+      },
+      0xe7b080,
+    );
     this.addActionButton("settings.dataReset", 675, 715, 250, () => this.askConfirmation("dataReset"), 0xe58c72);
     this.addActionButton(
       "settings.accountDelete",
@@ -167,11 +182,11 @@ export class SettingsPage extends Container {
       this.bgmVolume,
       () => {
         this.bgmEnabled = !this.bgmEnabled;
-        this.options.onUpdateSettings({ bgmEnabled: this.bgmEnabled });
+        return this.options.onUpdateSettings({ bgmEnabled: this.bgmEnabled });
       },
       (delta) => {
         this.bgmVolume = clampVolume(this.bgmVolume + delta);
-        this.options.onUpdateSettings({ bgmVolume: this.bgmVolume });
+        return this.options.onUpdateSettings({ bgmVolume: this.bgmVolume });
       },
     );
     this.addSoundControlRow(
@@ -182,11 +197,11 @@ export class SettingsPage extends Container {
       this.effectsVolume,
       () => {
         this.effectsEnabled = !this.effectsEnabled;
-        this.options.onUpdateSettings({ effectsEnabled: this.effectsEnabled });
+        return this.options.onUpdateSettings({ effectsEnabled: this.effectsEnabled });
       },
       (delta) => {
         this.effectsVolume = clampVolume(this.effectsVolume + delta);
-        this.options.onUpdateSettings({ effectsVolume: this.effectsVolume });
+        return this.options.onUpdateSettings({ effectsVolume: this.effectsVolume });
       },
     );
     this.addNotice("settings.vibrationNotice", 655);
@@ -244,7 +259,13 @@ export class SettingsPage extends Container {
     );
   }
 
-  private addToggleRow(y: number, label: MessageId, detail: MessageId, value: boolean, toggle: () => void): void {
+  private addToggleRow(
+    y: number,
+    label: MessageId,
+    detail: MessageId,
+    value: boolean,
+    toggle: () => Awaitable<unknown>,
+  ): void {
     this.addCard(370, y, 1150, 100);
     this.addLabel(label, 400, y + 18, 20);
     this.addDetail(detail, 400, y + 54);
@@ -264,8 +285,8 @@ export class SettingsPage extends Container {
     detail: MessageId,
     enabled: boolean,
     value: number,
-    toggle: () => void,
-    changeVolume: (delta: number) => void,
+    toggle: () => Awaitable<unknown>,
+    changeVolume: (delta: number) => Awaitable<unknown>,
   ): void {
     this.addCard(370, y, 1150, 150);
     this.addLabel(label, 400, y + 24, 22);
@@ -292,7 +313,7 @@ export class SettingsPage extends Container {
     label: MessageId,
     detail: MessageId,
     value: MessageId,
-    select: () => void,
+    select: () => Awaitable<unknown>,
   ): void {
     this.addActionCard(x, y, label, detail, value, () => this.change(select));
   }
@@ -303,7 +324,7 @@ export class SettingsPage extends Container {
     label: MessageId,
     detail: MessageId,
     value: boolean,
-    toggle: () => void,
+    toggle: () => Awaitable<unknown>,
   ): void {
     this.addActionCard(x, y, label, detail, value ? "settings.on" : "settings.off", () => this.change(toggle));
   }
@@ -396,8 +417,8 @@ export class SettingsPage extends Container {
     this.addChild(button);
   }
 
-  private change(change: () => void): void {
-    change();
+  private async change(change: () => Awaitable<unknown>): Promise<void> {
+    await change();
     this.notify("settings.changed");
     this.render();
   }
@@ -446,10 +467,23 @@ export class SettingsPage extends Container {
       height: 64,
       fontSize: 20,
       color: 0xd96c5b,
-      onPress: () => {
+      onPress: async () => {
         this.confirmAction = null;
+        if (action === "logout") {
+          const loggedOut = await this.options.onLogout?.();
+          if (!loggedOut) {
+            this.notify("settings.logoutFailed");
+            this.render();
+            return;
+          }
+        }
         if (action === "learningReset") {
-          this.options.onResetLearning();
+          const result = await this.options.onResetLearning();
+          if (!result.ok) {
+            this.notify("settings.resetFailed");
+            this.render();
+            return;
+          }
         }
         this.notify(confirmMessages[action].status);
         this.render();
@@ -472,6 +506,11 @@ const sectionMessages: Record<SettingsSection, { tab: MessageId; title: MessageI
 };
 
 const confirmMessages: Record<ConfirmAction, { title: MessageId; description: MessageId; status: MessageId }> = {
+  logout: {
+    title: "settings.confirmLogoutTitle",
+    description: "settings.confirmLogoutDescription",
+    status: "settings.logoutComplete",
+  },
   dataReset: {
     title: "settings.confirmDataResetTitle",
     description: "settings.confirmDataResetDescription",

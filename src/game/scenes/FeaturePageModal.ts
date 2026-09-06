@@ -1,5 +1,6 @@
 import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
+import type { Awaitable, LearningResetResult } from "../../core/GameClient";
 import type { CatVariant } from "../../domain/cats";
 import type { FurnitureKind, GameSettings, GameState } from "../../domain/room";
 import { type ShopItemId, shopItemDefinitions } from "../../domain/shop";
@@ -20,13 +21,14 @@ type Options = {
   onClose: () => void;
   onNavigate: (kind: FeaturePageKind) => void;
   onPlaceOwned: (itemId: ShopItemId | undefined, kind: FurnitureKind) => void;
-  onSelectCat: (variant: CatVariant) => boolean;
-  onSetCatHome: (variant: CatVariant, visible: boolean) => boolean;
-  onApplyTheme: (itemId: ShopItemId) => boolean;
+  onSelectCat: (variant: CatVariant) => Awaitable<boolean>;
+  onSetCatHome: (variant: CatVariant, visible: boolean) => Awaitable<boolean>;
+  onApplyTheme: (itemId: ShopItemId) => Awaitable<boolean>;
   onEnterRoomEdit: () => void;
   onOpenAttendance: () => void;
-  onUpdateSettings: (patch: Partial<GameSettings>) => GameSettings;
-  onResetLearning: () => void;
+  onUpdateSettings: (patch: Partial<GameSettings>) => Awaitable<GameSettings>;
+  onResetLearning: () => Awaitable<LearningResetResult>;
+  onLogout: (() => Awaitable<boolean>) | null;
   catAnimations: CatAnimationLibrary;
   backIcon: string;
   coinIcon: string;
@@ -137,6 +139,7 @@ export class FeaturePageModal extends Container {
         getState: this.options.getState,
         onUpdateSettings: (patch) => this.options.onUpdateSettings(patch),
         onResetLearning: this.options.onResetLearning,
+        onLogout: this.options.onLogout,
       }),
     );
   }
@@ -327,8 +330,8 @@ export class FeaturePageModal extends Container {
         width: 155,
         height: 46,
         color: active ? 0xa8b49b : 0x91aa82,
-        onPress: () => {
-          if (!active && this.options.onApplyTheme(itemId)) {
+        onPress: async () => {
+          if (!active && (await this.options.onApplyTheme(itemId))) {
             this.render();
           }
         },
@@ -360,8 +363,8 @@ export class FeaturePageModal extends Container {
       width: 105,
       height: 40,
       color: active ? 0xc7aa91 : 0x91aa82,
-      onPress: () => {
-        if (!active && this.options.onSelectCat(variant)) {
+      onPress: async () => {
+        if (!active && (await this.options.onSelectCat(variant))) {
           this.render();
         }
       },
@@ -372,8 +375,8 @@ export class FeaturePageModal extends Container {
       width: 105,
       height: 40,
       color: visibleAtHome ? 0xd7ad7e : 0x91aa82,
-      onPress: () => {
-        if (this.options.onSetCatHome(variant, !visibleAtHome)) {
+      onPress: async () => {
+        if (await this.options.onSetCatHome(variant, !visibleAtHome)) {
           this.render();
         }
       },

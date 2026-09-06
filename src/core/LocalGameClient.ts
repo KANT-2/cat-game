@@ -33,6 +33,7 @@ import type {
   GameClient,
   GameStateListener,
   GameStateRepository,
+  LearningResetResult,
   MoveFurnitureCommand,
   PlacementCommand,
   PlacementResult,
@@ -531,7 +532,7 @@ export class LocalGameClient implements GameClient {
     };
   }
 
-  resetLearningProgress(): void {
+  resetLearningProgress(): LearningResetResult {
     this.ensureDailyState();
     this.state = {
       ...this.state,
@@ -542,6 +543,7 @@ export class LocalGameClient implements GameClient {
       dailyBonusClaimed: false,
     };
     this.commit();
+    return { ok: true };
   }
 
   clearCatMemories(): CatMemoryClearResult {
