@@ -16,6 +16,7 @@ import { createCozyPageBackground, createCozyPanel, createTitleOrnament } from "
 import { createCoinAmount } from "../components/CurrencyBar";
 import { layoutToFillViewport } from "../components/fullscreenLayout";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
+import { summarizeStudyText } from "../presentation/studyPresentation";
 
 type FilterValue<T extends string> = "all" | T;
 type FilterSelectId = "type" | "concept" | "difficulty";
@@ -127,6 +128,12 @@ export class StudyModal extends Container {
       value.position.set(438, y - 3);
       this.body.addChild(label, track, value);
     });
+    const notice = new Text({
+      text: message("study.masteryNotice"),
+      style: textStyle(12, 0x85634d, "600"),
+    });
+    notice.position.set(78, 335);
+    this.body.addChild(notice);
   }
 
   private buildRecommendation(): void {
@@ -138,14 +145,21 @@ export class StudyModal extends Container {
     const heading = new Text({ text: message("study.recommendedTitle"), style: textStyle(20, 0x5a3725, "800") });
     heading.position.set(540, 143);
     const badge = new Graphics().roundRect(775, 140, 150, 30, 11).fill(0xd9783c);
-    const badgeText = new Text({ text: message("study.recommendedBadge"), style: textStyle(12, 0xffffff, "800") });
+    const completedCount = this.tasks.filter((task) => task.completed).length;
+    const badgeText = new Text({
+      text: message("study.progressBadge", { completed: completedCount, total: this.tasks.length }),
+      style: textStyle(12, 0xffffff, "800"),
+    });
     badgeText.anchor.set(0.5);
     badgeText.position.set(850, 155);
-    const title = new Text({ text: resolveGameText(recommended.title), style: textStyle(27, 0x3f281c, "800") });
+    const title = new Text({
+      text: summarizeStudyText(resolveGameText(recommended.title), 36),
+      style: textStyle(25, 0x3f281c, "800"),
+    });
     title.position.set(540, 192);
     const summary = new Text({
-      text: resolveGameText(recommended.summary),
-      style: { ...textStyle(16, 0x6e4e3a, "600"), wordWrap: true, wordWrapWidth: 940, lineHeight: 23 },
+      text: summarizeStudyText(resolveGameText(recommended.summary), 72),
+      style: { ...textStyle(16, 0x6e4e3a, "600"), wordWrap: true, wordWrapWidth: 690, lineHeight: 23 },
     });
     summary.position.set(540, 235);
     const metadata = new Text({
@@ -156,7 +170,7 @@ export class StudyModal extends Container {
     const reward = recommended.rewardCoins > 0 ? this.createCoinReward(recommended.rewardCoins, 15) : null;
     reward?.position.set(540 + metadata.width + 18, 299);
     const start = new CanvasButton({
-      label: message("study.quickStart"),
+      label: message(recommended.completed ? "study.reviewTask" : "study.quickStart"),
       width: 210,
       height: 56,
       color: 0xe99b45,
@@ -174,7 +188,13 @@ export class StudyModal extends Container {
     const panel = createCozyPanel(45, 390, 1510, 112, { fill: 0xfff6e5, border: 0xb68a61, radius: 18 });
     const title = new Text({ text: message("study.filterTitle"), style: textStyle(20, 0x493022, "800") });
     title.position.set(72, 425);
-    this.body.addChild(panel, title);
+    const resultCount = new Text({
+      text: message("study.filteredCount", { count: this.filteredTasks().length }),
+      style: textStyle(15, 0x76533c, "800"),
+    });
+    resultCount.anchor.set(1, 0.5);
+    resultCount.position.set(1515, 457);
+    this.body.addChild(panel, title, resultCount);
     this.addFilterSelect(
       "type",
       230,
@@ -290,12 +310,7 @@ export class StudyModal extends Container {
   }
 
   private buildTaskList(): void {
-    const filtered = this.tasks.filter(
-      (task) =>
-        (this.typeFilter === "all" || task.type === this.typeFilter) &&
-        (this.conceptFilter === "all" || task.concept === this.conceptFilter) &&
-        (this.difficultyFilter === "all" || task.difficulty === this.difficultyFilter),
-    );
+    const filtered = this.filteredTasks();
     const pageSize = 2;
     const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
     this.taskPage = Math.min(this.taskPage, pageCount - 1);
@@ -317,11 +332,14 @@ export class StudyModal extends Container {
       });
       type.anchor.set(0.5);
       type.position.set(x + 76, y + 37);
-      const title = new Text({ text: resolveGameText(task.title), style: textStyle(22, 0x493022, "800") });
+      const title = new Text({
+        text: summarizeStudyText(resolveGameText(task.title), 34),
+        style: textStyle(21, 0x493022, "800"),
+      });
       title.position.set(x + 150, y + 19);
       const summary = new Text({
-        text: resolveGameText(task.summary),
-        style: { ...textStyle(15, 0x76533c, "600"), wordWrap: true, wordWrapWidth: 675, lineHeight: 21 },
+        text: summarizeStudyText(resolveGameText(task.summary), 68),
+        style: { ...textStyle(15, 0x76533c, "600"), wordWrap: true, wordWrapWidth: 650, lineHeight: 21 },
       });
       summary.position.set(x + 24, y + 67);
       const meta = new Text({
@@ -332,7 +350,7 @@ export class StudyModal extends Container {
       const reward = task.rewardCoins > 0 ? this.createCoinReward(task.rewardCoins, 14) : null;
       reward?.position.set(x + 24 + meta.width + 16, y + 127);
       const start = new CanvasButton({
-        label: message(task.completed ? "study.taskCompleted" : "study.taskStart"),
+        label: message(task.completed ? "study.reviewTask" : "study.taskStart"),
         width: 145,
         height: 44,
         color: task.completed ? 0xa9b699 : 0xe8a451,
@@ -386,6 +404,15 @@ export class StudyModal extends Container {
     });
     next.position.set(875, 750);
     this.body.addChild(previous, page, next);
+  }
+
+  private filteredTasks(): StudyTaskView[] {
+    return this.tasks.filter(
+      (task) =>
+        (this.typeFilter === "all" || task.type === this.typeFilter) &&
+        (this.conceptFilter === "all" || task.concept === this.conceptFilter) &&
+        (this.difficultyFilter === "all" || task.difficulty === this.difficultyFilter),
+    );
   }
 
   private openTask(task: StudyTaskView): void {

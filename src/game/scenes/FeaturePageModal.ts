@@ -51,7 +51,7 @@ export class FeaturePageModal extends Container {
   private readonly status = new Text({ text: "", style: textStyle(17, 0x537145, "700") });
   private readonly options: Options;
   private readonly requested = new Set<number>();
-  private ownedCategory: "cats" | "furniture" | "consumable" | "wallpaper" | "floor" = "cats";
+  private ownedCategory: "cats" | "furniture" | "consumable" | "wallpaper" = "cats";
   private ownedThemePage = 0;
 
   constructor(options: Options) {
@@ -185,8 +185,8 @@ export class FeaturePageModal extends Container {
       });
       return;
     }
-    if (this.ownedCategory === "wallpaper" || this.ownedCategory === "floor") {
-      this.renderOwnedThemes(this.ownedCategory, state);
+    if (this.ownedCategory === "wallpaper") {
+      this.renderOwnedThemes(state);
       return;
     }
     if (this.ownedCategory === "consumable") {
@@ -289,7 +289,6 @@ export class FeaturePageModal extends Container {
       ["furniture", "owned.furniture"],
       ["consumable", "owned.consumable"],
       ["wallpaper", "owned.wallpaper"],
-      ["floor", "owned.floor"],
     ] as const;
     tabs.forEach(([category, label], index) => {
       const active = category === this.ownedCategory;
@@ -358,10 +357,10 @@ export class FeaturePageModal extends Container {
     });
   }
 
-  private renderOwnedThemes(category: "wallpaper" | "floor", state: GameState): void {
+  private renderOwnedThemes(state: GameState): void {
     const entries = (Object.keys(shopItemDefinitions) as ShopItemId[]).filter((itemId) => {
       const item = shopItemDefinitions[itemId];
-      return item.kind === category && (state.shopInventory[itemId] ?? 0) > 0;
+      return item.kind === "wallpaper" && (state.shopInventory[itemId] ?? 0) > 0;
     });
     if (entries.length === 0) {
       const empty = new Text({ text: message("owned.noThemes"), style: textStyle(21, 0x76533c, "700") });
@@ -375,28 +374,19 @@ export class FeaturePageModal extends Container {
     const start = this.ownedThemePage * OWNED_THEMES_PER_PAGE;
     entries.slice(start, start + OWNED_THEMES_PER_PAGE).forEach((itemId, index) => {
       const definition = shopItemDefinitions[itemId];
-      if (definition.kind !== category) {
+      if (definition.kind !== "wallpaper") {
         return;
       }
       const x = 180 + (index % 3) * 420;
       const y = 285 + Math.floor(index / 3) * 220;
-      const active = category === "wallpaper" ? state.activeWallpaper === itemId : state.activeFloor === itemId;
+      const active = state.activeWallpaper === itemId;
       const card = createCozyPanel(x, y, 380, 190, {
         fill: 0xfff5df,
         border: active ? 0x79945f : 0xb77a4f,
         radius: 22,
       });
-      let preview: Container;
-      if (category === "wallpaper") {
-        preview = createBackgroundPreview(this.options.backgroundArt, itemId, 125, 76);
-        preview.position.set(x + 90, y + 93);
-      } else {
-        preview = new Graphics()
-          .roundRect(-62, -62, 125, 125, 16)
-          .fill(definition.themeColor)
-          .stroke({ color: 0x68442f, width: 3 });
-        preview.position.set(x + 90, y + 90);
-      }
+      const preview = createBackgroundPreview(this.options.backgroundArt, itemId, 125, 76);
+      preview.position.set(x + 90, y + 93);
       const name = new Text({ text: message(shopItemNameMessages[itemId]), style: textStyle(19, 0x493022, "800") });
       name.position.set(x + 175, y + 37);
       const count = new Text({

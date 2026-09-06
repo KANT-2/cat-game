@@ -26,15 +26,14 @@ type ShopSceneOptions = {
   backgroundArt: BackgroundArtCollection;
   consumableArt: ForestArt["consumables"];
 };
-type CategoryId = "furniture" | "consumable" | "wallpaper" | "floor" | "decor";
-type TabId = "recommended" | "new" | "popular";
+type CategoryId = "furniture" | "consumable" | "wallpaper" | "decor";
+type ThemeId = "all" | "forest" | "alley" | "room" | "desk" | "ocean";
 type ProductKind =
   | "sofa"
   | "table"
   | "catTower"
   | "bed"
   | "wallpaper"
-  | "floor"
   | "curtain"
   | "plant"
   | "lamp"
@@ -48,15 +47,24 @@ const categories: Array<{ id: CategoryId; label: MessageId }> = [
   { id: "furniture", label: "shop.categoryFurnitureWithTower" },
   { id: "consumable", label: "shop.categoryConsumable" },
   { id: "wallpaper", label: "shop.categoryWallpaper" },
-  { id: "floor", label: "shop.categoryFloor" },
   { id: "decor", label: "shop.categoryDecor" },
 ];
 
-const tabs: Array<{ id: TabId; label: MessageId }> = [
-  { id: "recommended", label: "shop.tabRecommended" },
-  { id: "new", label: "shop.tabNew" },
-  { id: "popular", label: "shop.tabPopular" },
-];
+const themeLabels: Record<ThemeId, MessageId> = {
+  all: "shop.filterAll",
+  forest: "shop.filterForest",
+  alley: "shop.filterAlley",
+  room: "shop.filterRoom",
+  desk: "shop.filterDesk",
+  ocean: "shop.filterOcean",
+};
+
+const categoryThemes: Record<CategoryId, ThemeId[]> = {
+  furniture: ["all", "forest", "alley", "room", "desk", "ocean"],
+  consumable: ["all"],
+  wallpaper: ["all", "forest", "alley", "room", "desk", "ocean"],
+  decor: ["all", "forest", "alley", "room"],
+};
 
 const catalog: Record<CategoryId, Product[]> = {
   furniture: [
@@ -148,14 +156,6 @@ const catalog: Record<CategoryId, Product[]> = {
     { kind: "wallpaper", itemId: "wallpaper.seasidePromenade" },
     { kind: "wallpaper", itemId: "wallpaper.workingHarbor" },
   ],
-  floor: [
-    { kind: "floor", itemId: "floor.oak" },
-    { kind: "floor", itemId: "floor.check" },
-    { kind: "floor", itemId: "floor.stone" },
-    { kind: "floor", itemId: "floor.cream" },
-    { kind: "floor", itemId: "floor.star" },
-    { kind: "floor", itemId: "floor.walnut" },
-  ],
   decor: [
     { kind: "plant", itemId: "decor.plant" },
     { kind: "plant", itemId: "decor.reed-clump" },
@@ -198,7 +198,7 @@ export class ShopScene extends Container {
   private readonly consumableArt: ForestArt["consumables"];
   private readonly headerLayer = new Container();
   private activeCategory: CategoryId = "furniture";
-  private activeTab: TabId = "recommended";
+  private activeTheme: ThemeId = "all";
   private activePage = 0;
 
   constructor(options: ShopSceneOptions) {
@@ -263,7 +263,7 @@ export class ShopScene extends Container {
 
   private renderNavigation(): void {
     this.clearLayer(this.navigationLayer);
-    this.navigationLayer.addChild(createCozyPanel(55, 145, 255, 630, { fill: 0xf6dcb7, border: 0x9a623b }));
+    this.navigationLayer.addChild(createCozyPanel(55, 145, 255, 470, { fill: 0xf6dcb7, border: 0x9a623b }));
     categories.forEach((category, index) => {
       const active = category.id === this.activeCategory;
       const button = new CanvasButton({
@@ -273,19 +273,7 @@ export class ShopScene extends Container {
         color: active ? 0xffc466 : 0xffedd0,
         onPress: () => this.selectCategory(category.id),
       });
-      button.position.set(70, 165 + index * 84);
-      this.navigationLayer.addChild(button);
-    });
-    tabs.forEach((tab, index) => {
-      const active = tab.id === this.activeTab;
-      const button = new CanvasButton({
-        label: message(tab.label),
-        width: 210,
-        height: 58,
-        color: active ? 0xffc45f : 0xd9ad7d,
-        onPress: () => this.selectTab(tab.id),
-      });
-      button.position.set(390 + index * 225, 820);
+      button.position.set(70, 165 + index * 96);
       this.navigationLayer.addChild(button);
     });
   }
@@ -293,18 +281,22 @@ export class ShopScene extends Container {
   private renderProducts(): void {
     this.clearLayer(this.productLayer);
     const category = categories.find((item) => item.id === this.activeCategory);
-    const tab = tabs.find((item) => item.id === this.activeTab);
-    if (!category || !tab) {
+    if (!category) {
       return;
     }
+    const products = this.filteredProductsForView();
+    const themeLabel = message(themeLabels[this.activeTheme]);
     const headingPanel = createCozyPanel(330, 145, 1215, 190, { fill: 0xfff4dc, border: 0xa96d43 });
     const title = new Text({
-      text: message("shop.viewTitle", { category: message(category.label), tab: message(tab.label) }),
+      text: message("shop.collectionTitle", { category: message(category.label), theme: themeLabel }),
       style: textStyle(28, 0x493022, "800"),
     });
     title.position.set(370, 168);
     const description = new Text({
-      text: message(tabDescription(this.activeTab)),
+      text: message(this.activeTheme === "all" ? "shop.allProductsDescription" : "shop.themeProductsDescription", {
+        count: products.length,
+        theme: themeLabel,
+      }),
       style: textStyle(17, 0x76533c, "600"),
     });
     description.position.set(370, 211);
@@ -318,27 +310,44 @@ export class ShopScene extends Container {
     const featured = new Text({ text: message("shop.badgePick"), style: textStyle(14, 0xffe9b2, "800") });
     featured.position.set(1138, 175);
     this.productLayer.addChild(headingPanel, title, description, heroFrame, hero, featured);
-    const products = this.productsForView();
-    products.forEach((product, index) => {
+    this.buildThemeFilters();
+    this.productsForPage(products).forEach((product, index) => {
       this.buildProductCard(product, index);
     });
-    this.renderPageControls(this.orderedProductsForView().length);
+    this.renderPageControls(products.length);
   }
 
-  private productsForView(): Product[] {
+  private productsForPage(products: Product[]): Product[] {
     const start = this.activePage * PRODUCTS_PER_PAGE;
-    return this.orderedProductsForView().slice(start, start + PRODUCTS_PER_PAGE);
+    return products.slice(start, start + PRODUCTS_PER_PAGE);
   }
 
-  private orderedProductsForView(): Product[] {
-    const source = catalog[this.activeCategory];
-    if (this.activeTab === "new") {
-      return [...source.slice(2), ...source.slice(0, 2)];
+  private filteredProductsForView(): Product[] {
+    if (this.activeTheme === "all") {
+      return catalog[this.activeCategory];
     }
-    if (this.activeTab === "popular") {
-      return [...source].reverse();
+    return catalog[this.activeCategory].filter((product) => productTheme(product.itemId) === this.activeTheme);
+  }
+
+  private buildThemeFilters(): void {
+    const themes = categoryThemes[this.activeCategory];
+    if (themes.length <= 1) {
+      return;
     }
-    return source;
+    themes.forEach((theme, index) => {
+      const active = theme === this.activeTheme;
+      const button = new CanvasButton({
+        label: message(themeLabels[theme]),
+        width: 106,
+        height: 42,
+        fontSize: 14,
+        color: active ? 0xe99b45 : 0xe6cfaf,
+        textColor: active ? 0xffffff : 0x493022,
+        onPress: () => this.selectTheme(theme),
+      });
+      button.position.set(370 + index * 116, 267);
+      this.productLayer.addChild(button);
+    });
   }
 
   private renderPageControls(productCount: number): void {
@@ -354,13 +363,13 @@ export class ShopScene extends Container {
       color: this.activePage > 0 ? 0xd9ad7d : 0xcbbca9,
       onPress: () => this.changePage(-1, pageCount),
     });
-    previous.position.set(1110, 770);
+    previous.position.set(770, 805);
     const page = new Text({
       text: message("shop.pageIndicator", { current: this.activePage + 1, total: pageCount }),
       style: textStyle(15, 0x604637, "800"),
     });
     page.anchor.set(0.5);
-    page.position.set(1325, 789);
+    page.position.set(1000, 824);
     const next = new CanvasButton({
       label: message("shop.nextPage"),
       width: 92,
@@ -369,7 +378,7 @@ export class ShopScene extends Container {
       color: this.activePage < pageCount - 1 ? 0xd9ad7d : 0xcbbca9,
       onPress: () => this.changePage(1, pageCount),
     });
-    next.position.set(1400, 770);
+    next.position.set(1110, 805);
     this.productLayer.addChild(previous, page, next);
   }
 
@@ -388,9 +397,13 @@ export class ShopScene extends Container {
     const x = 330 + column * 405;
     const y = 355 + row * 210;
     const card = createCozyPanel(x, y, 380, 195, { fill: 0xfff5e1, border: 0xb77a4f, radius: 18 });
-    const badgeId = tabBadge(this.activeTab);
+    const theme = productTheme(product.itemId);
+    const badgeLabel = theme ? themeLabels[theme] : categories.find((item) => item.id === this.activeCategory)?.label;
     const badge = new Graphics().roundRect(x + 15, y + 15, 74, 28, 10).fill(0xe98a48);
-    const badgeText = new Text({ text: message(badgeId), style: textStyle(13, 0xffffff, "800") });
+    const badgeText = new Text({
+      text: badgeLabel ? message(badgeLabel) : "",
+      style: textStyle(13, 0xffffff, "800"),
+    });
     badgeText.anchor.set(0.5);
     badgeText.position.set(x + 52, y + 29);
     const name = new Text({
@@ -507,6 +520,7 @@ export class ShopScene extends Container {
       return;
     }
     this.activeCategory = category;
+    this.activeTheme = "all";
     this.activePage = 0;
     this.renderNavigation();
     this.renderProducts();
@@ -514,13 +528,12 @@ export class ShopScene extends Container {
       this.preloadBackgroundProducts();
     }
   }
-  private selectTab(tab: TabId): void {
-    if (tab === this.activeTab) {
+  private selectTheme(theme: ThemeId): void {
+    if (theme === this.activeTheme) {
       return;
     }
-    this.activeTab = tab;
+    this.activeTheme = theme;
     this.activePage = 0;
-    this.renderNavigation();
     this.renderProducts();
   }
 
@@ -546,24 +559,71 @@ export class ShopScene extends Container {
 
 const PRODUCTS_PER_PAGE = 6;
 
-function tabDescription(tab: TabId): MessageId {
-  if (tab === "new") {
-    return "shop.newDescription";
-  }
-  if (tab === "popular") {
-    return "shop.popularDescription";
-  }
-  return "shop.recommendedDescription";
-}
+const wallpaperThemes: Partial<Record<ShopItemId, Exclude<ThemeId, "all">>> = {
+  "wallpaper.cream": "forest",
+  "wallpaper.cloud": "forest",
+  "wallpaper.forest": "forest",
+  "wallpaper.flower": "alley",
+  "wallpaper.modernAlley": "alley",
+  "wallpaper.villageAlley": "alley",
+  "wallpaper.cat": "room",
+  "wallpaper.sunnyStudio": "room",
+  "wallpaper.livingRoom": "room",
+  "wallpaper.cityOffice": "room",
+  "wallpaper.night": "desk",
+  "wallpaper.botanicalDesk": "desk",
+  "wallpaper.musicDesk": "desk",
+  "wallpaper.sandyCove": "ocean",
+  "wallpaper.seasidePromenade": "ocean",
+  "wallpaper.workingHarbor": "ocean",
+};
 
-function tabBadge(tab: TabId): MessageId {
-  if (tab === "new") {
-    return "shop.badgeNew";
+const forestDecor = new Set<ShopItemId>([
+  "decor.plant",
+  "decor.reed-clump",
+  "decor.rock-angular",
+  "decor.rock-round",
+  "decor.fallen-log",
+]);
+const roomDecor = new Set<ShopItemId>([
+  "decor.litter-scoop",
+  "decor.yarn-ball",
+  "decor.teaser-set",
+  "decor.fur-pile",
+  "decor.room-water-bowl",
+  "decor.room-food-bowl",
+]);
+
+function productTheme(itemId: ShopItemId): Exclude<ThemeId, "all"> | null {
+  const wallpaperTheme = wallpaperThemes[itemId];
+  if (wallpaperTheme) {
+    return wallpaperTheme;
   }
-  if (tab === "popular") {
-    return "shop.badgeHot";
+  if (itemId.startsWith("furniture.alley.")) {
+    return "alley";
   }
-  return "shop.badgePick";
+  if (itemId.startsWith("furniture.room.")) {
+    return "room";
+  }
+  if (itemId.startsWith("furniture.desk-theme.")) {
+    return "desk";
+  }
+  if (itemId.startsWith("furniture.ocean.")) {
+    return "ocean";
+  }
+  if (itemId.startsWith("furniture.")) {
+    return "forest";
+  }
+  if (forestDecor.has(itemId)) {
+    return "forest";
+  }
+  if (roomDecor.has(itemId)) {
+    return "room";
+  }
+  if (itemId.startsWith("decor.")) {
+    return "alley";
+  }
+  return null;
 }
 
 function drawProduct(kind: ProductKind, variant: number): Graphics {
@@ -607,17 +667,6 @@ function drawProduct(kind: ProductKind, variant: number): Graphics {
       .moveTo(-55, 25)
       .bezierCurveTo(-20, -25, 18, 55, 55, -15)
       .stroke({ color: 0xffefd0, width: 10 });
-  }
-  if (kind === "floor") {
-    return art
-      .poly([-75, 0, 0, -42, 75, 0, 0, 42])
-      .fill(accent)
-      .stroke({ color: 0x543426, width: 4 })
-      .moveTo(-37, -20)
-      .lineTo(37, 20)
-      .moveTo(-37, 20)
-      .lineTo(37, -20)
-      .stroke({ color: 0xf3d3a9, width: 3 });
   }
   if (kind === "curtain") {
     return art
