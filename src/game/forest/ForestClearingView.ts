@@ -1,6 +1,6 @@
 import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { message } from "../../content/messages";
-import type { MoveFurnitureCommand, PlacementCommand, PlacementResult } from "../../core/GameClient";
+import type { Awaitable, MoveFurnitureCommand, PlacementCommand, PlacementResult } from "../../core/GameClient";
 import type { CatVariant } from "../../domain/cats";
 import {
   type FurnitureKind,
@@ -23,8 +23,8 @@ import { FurnitureView } from "./FurnitureView";
 
 type ForestClearingViewOptions = {
   getFurniture: () => PlacedFurniture[];
-  onPlace: (command: PlacementCommand) => PlacementResult;
-  onMove: (instanceId: string, command: MoveFurnitureCommand) => PlacementResult;
+  onPlace: (command: PlacementCommand) => Awaitable<PlacementResult>;
+  onMove: (instanceId: string, command: MoveFurnitureCommand) => Awaitable<PlacementResult>;
   onSelectFurniture: (item: PlacedFurniture) => void;
   onToast: (message: string) => void;
   getHomeCats: () => CatVariant[];
@@ -80,6 +80,7 @@ export class ForestClearingView extends Container {
   private catBubble: Container | null = null;
   private catBubbleTarget: CatActor | null = null;
   private catBubbleTimer = 0;
+  private placementPending = false;
 
   constructor(options: ForestClearingViewOptions) {
     super({ label: "forest-clearing" });
@@ -314,14 +315,14 @@ export class ForestClearingView extends Container {
     this.onToast(message("furniture.finishCurrentPlacement"));
   }
 
-  private handleGroundTap(x: number, y: number): void {
+  private async handleGroundTap(x: number, y: number): Promise<void> {
     if (!this.editMode) {
       const activeVariant = this.activeCatVariant ?? this.getActiveCat();
       const activeCat = this.cats.get(activeVariant) ?? this.cats.values().next().value;
       activeCat?.walkTo(x, y);
       return;
     }
-    if (!this.selectedFurniture) {
+    if (!this.selectedFurniture || this.placementPending) {
       return;
     }
     const definition = furnitureDefinitions[this.selectedFurniture];
@@ -332,7 +333,8 @@ export class ForestClearingView extends Container {
       return;
     }
 
-    const result = this.movingInstanceId
+    this.placementPending = true;
+    const result = await (this.movingInstanceId
       ? this.onMove(this.movingInstanceId, { x, y, rotation: this.placementRotation })
       : this.onPlace({
           kind: this.selectedFurniture,
@@ -340,7 +342,8 @@ export class ForestClearingView extends Container {
           y,
           rotation: this.placementRotation,
           shopItemId: this.selectedShopItemId,
-        });
+        }));
+    this.placementPending = false;
     if (!result.ok) {
       this.onToast(
         message(result.reason === "outside-room" ? "furniture.outsideClearing" : "furniture.invalidPlacement"),

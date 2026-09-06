@@ -25,8 +25,8 @@ docker compose -f compose.integration.yml ps
 npm run smoke:integration
 ```
 
-브라우저에서는 `http://127.0.0.1:4173`을 연다. 자동 스모크는 개발 세션 발급, 추천 과제 조회,
-객관식 제출, 격리 컨테이너의 Python 코드 채점, Canvas 학습 화면의 백엔드 요청을 확인하고
+브라우저에서는 `http://127.0.0.1:4173`을 연다. 자동 스모크는 Canvas 계정 가입, CSRF가 필요한 출석 보상,
+새로고침 후 쿠키 세션 복원, 추천 과제 조회, 객관식 제출, 격리 컨테이너의 Python 코드 채점을 확인하고
 `/tmp/cat-game-integration.png`를 남긴다.
 
 ## 종료와 초기화

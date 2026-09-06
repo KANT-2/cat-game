@@ -1,3 +1,4 @@
+import "pixi.js/unsafe-eval";
 import { DesktopWidgetApp } from "./app/DesktopWidgetApp";
 import {
   focusDesktopWidget,

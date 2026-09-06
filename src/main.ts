@@ -1,3 +1,4 @@
+import "pixi.js/unsafe-eval";
 import { GameApp } from "./app/GameApp";
 import { message } from "./content/messages";
 import { registerPwa } from "./pwa/registerPwa";
@@ -9,9 +10,15 @@ if (!mount) {
 }
 
 document.documentElement.dataset.displayMode = "game";
-const game = await GameApp.create(mount);
-
-registerPwa({
-  onInstallAvailable: (install) => game.setInstallHandler(install),
-  onMessage: (messageId) => game.notify(message(messageId)),
-});
+document.documentElement.dataset.gameReady = "loading";
+try {
+  const game = await GameApp.create(mount);
+  document.documentElement.dataset.gameReady = "ready";
+  registerPwa({
+    onInstallAvailable: (install) => game.setInstallHandler(install),
+    onMessage: (messageId) => game.notify(message(messageId)),
+  });
+} catch (error) {
+  document.documentElement.dataset.gameReady = "error";
+  console.warn("Game startup is waiting for a recoverable reload", error);
+}

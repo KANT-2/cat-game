@@ -1,6 +1,6 @@
 import { Container, Graphics, Text } from "pixi.js";
 import { message } from "../../content/messages";
-import type { AttendanceClaimResult, AttendanceView } from "../../core/GameClient";
+import type { AttendanceClaimResult, AttendanceView, Awaitable } from "../../core/GameClient";
 import { CanvasButton } from "../components/CanvasButton";
 import { createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
 import { createCoinAmount } from "../components/CurrencyBar";
@@ -9,7 +9,7 @@ import { textStyle } from "../config";
 
 type AttendanceModalOptions = {
   getAttendance: () => AttendanceView;
-  onClaim: () => AttendanceClaimResult;
+  onClaim: () => Awaitable<AttendanceClaimResult>;
   onClose: () => void;
   coinIcon: string;
 };
@@ -242,12 +242,12 @@ export class AttendanceModal extends Container {
     this.content.addChild(label, value);
   }
 
-  private handleAction(): void {
+  private async handleAction(): Promise<void> {
     if (this.claimedCoins !== null || !this.options.getAttendance().canClaim) {
       this.options.onClose();
       return;
     }
-    const result = this.options.onClaim();
+    const result = await this.options.onClaim();
     if (!result.ok) {
       this.options.onClose();
       return;
