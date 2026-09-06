@@ -28,7 +28,7 @@ run_compose() {
 }
 
 run_compose exec -T db pg_restore --list <"$backup_path" >/dev/null
-run_compose stop backend
+run_compose stop backend grading-worker
 run_compose exec -T db pg_restore \
   --username cat_game \
   --dbname cat_game \
@@ -36,5 +36,5 @@ run_compose exec -T db pg_restore \
   --if-exists \
   --no-owner \
   --no-privileges <"$backup_path"
-run_compose up -d backend frontend
+run_compose up -d backend grading-worker frontend
 echo "restore completed; verify /ready and run the production smoke check"

@@ -39,7 +39,8 @@ PWA와 `/api`, `/health`, `/ready`는 같은 공개 호스트를 사용한다. �
 
 ## 백업과 복구
 
-백업 파일은 새 절대 경로만 허용하고 생성 후 `pg_restore --list`로 형식을 검증한다.
+백업 파일은 새 절대 경로만 허용한다. 같은 디렉터리의 `.partial` 파일에 먼저 기록하고
+`pg_restore --list` 검증이 성공한 뒤에만 최종 이름으로 원자적으로 바꾼다. 실패한 임시 파일은 제거한다.
 
 ```bash
 CAT_GAME_ENV_FILE=/srv/nyang/production.env \
@@ -47,6 +48,9 @@ CAT_GAME_ENV_FILE=/srv/nyang/production.env \
 ```
 
 복구는 현재 DB 객체를 교체하는 파괴적 작업이므로 백업을 별도 보관한 뒤 확인 문자열을 명시해야 한다.
+복구 중 새 API 명령이나 채점 완료가 DB를 변경하지 않도록 `backend`와 `grading-worker`를 함께 멈추고,
+성공한 뒤 두 서비스를 다시 시작한다. 복구가 실패하면 부분 상태를 서비스하지 않도록 두 서비스는 정지된
+상태로 유지되며 운영자가 로그와 백업을 확인한 뒤 다시 실행한다.
 
 ```bash
 CAT_GAME_ENV_FILE=/srv/nyang/production.env \
