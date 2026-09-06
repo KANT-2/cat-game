@@ -54,9 +54,12 @@ try {
         }
         return response.json();
       };
-      const tasks = await requestJson("/api/v1/learning/recommendations?limit=50");
+      const [tasks, pythonCodeTasks] = await Promise.all([
+        requestJson("/api/v1/learning/recommendations?limit=50"),
+        requestJson("/api/v1/learning/tasks?type=CODE&domain=PYTHON&limit=50"),
+      ]);
       const quiz = tasks.find((task) => task.type === "MULTIPLE_CHOICE");
-      const code = tasks.find((task) => task.type === "CODE" && task.title.includes("두 수의 합"));
+      const code = pythonCodeTasks.find((task) => task.title.includes("두 수의 합"));
       if (!quiz || !code) {
         throw new Error("seeded quiz or Python code task is missing");
       }
@@ -98,6 +101,7 @@ try {
     "/api/v1/session/development",
     "/api/v1/session/me",
     "/api/v1/learning/recommendations",
+    "/api/v1/learning/tasks",
     "/api/v1/game/snapshot",
     "/api/v1/attempts",
   ]) {

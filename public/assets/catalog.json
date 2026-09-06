@@ -1114,6 +1114,111 @@
         "src": "/assets/backgrounds/forest/forest-clearing-day-01.png",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["forest", "clearing", "day", "one-point-perspective", "cat-style"]
+      },
+      {
+        "id": "background.forest.clearing-sunny.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/forest/forest-clearing-sunny-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["forest", "clearing", "sunny", "belt-view", "cat-style"]
+      },
+      {
+        "id": "background.forest.waterfall-day.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/forest/forest-waterfall-day-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["forest", "waterfall", "day", "belt-view", "cat-style"]
+      },
+      {
+        "id": "background.alley.stone-courtyard.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/alley/stone-courtyard-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["alley", "stone", "courtyard", "day", "belt-view"]
+      },
+      {
+        "id": "background.alley.modern-courtyard.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/alley/modern-courtyard-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["alley", "modern", "courtyard", "day", "belt-view"]
+      },
+      {
+        "id": "background.alley.village-yard.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/alley/village-yard-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["alley", "village", "yard", "day", "belt-view"]
+      },
+      {
+        "id": "background.room.cottage.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/room/cottage-room-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["room", "cottage", "wood", "day", "belt-view"]
+      },
+      {
+        "id": "background.room.sunny-studio.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/room/sunny-studio-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["room", "studio", "sunny", "day", "belt-view"]
+      },
+      {
+        "id": "background.room.living-room.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/room/living-room-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["room", "living-room", "sunny", "day", "belt-view"]
+      },
+      {
+        "id": "background.room.city-office.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/room/city-office-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["room", "office", "city", "day", "belt-view"]
+      },
+      {
+        "id": "background.desk.botanical.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/desk/botanical-desk-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["desk", "botanical", "sunny", "day", "belt-view"]
+      },
+      {
+        "id": "background.desk.music.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/desk/music-desk-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["desk", "music", "sunny", "day", "belt-view"]
+      },
+      {
+        "id": "background.desk.executive.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/desk/executive-desk-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["desk", "executive", "city", "evening", "belt-view"]
+      },
+      {
+        "id": "background.ocean.sandy-cove.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/ocean/sandy-cove-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["ocean", "beach", "sand", "day", "belt-view"]
+      },
+      {
+        "id": "background.ocean.seaside-promenade.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/ocean/seaside-promenade-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["ocean", "promenade", "city", "day", "belt-view"]
+      },
+      {
+        "id": "background.ocean.working-harbor.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/ocean/working-harbor-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["ocean", "harbor", "boats", "day", "belt-view"]
       }
     ],
     "study": [],

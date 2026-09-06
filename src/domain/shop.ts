@@ -14,6 +14,16 @@ export type ShopItemId =
   | "wallpaper.flower"
   | "wallpaper.night"
   | "wallpaper.cat"
+  | "wallpaper.modernAlley"
+  | "wallpaper.villageAlley"
+  | "wallpaper.sunnyStudio"
+  | "wallpaper.livingRoom"
+  | "wallpaper.cityOffice"
+  | "wallpaper.botanicalDesk"
+  | "wallpaper.musicDesk"
+  | "wallpaper.sandyCove"
+  | "wallpaper.seasidePromenade"
+  | "wallpaper.workingHarbor"
   | "floor.oak"
   | "floor.check"
   | "floor.stone"
@@ -41,6 +51,16 @@ export const shopItemDefinitions: Record<ShopItemId, ShopItemDefinition> = {
   "wallpaper.flower": { kind: "wallpaper", themeColor: 0xf1d7d7, price: 2_600 },
   "wallpaper.night": { kind: "wallpaper", themeColor: 0x5d657c, price: 70 },
   "wallpaper.cat": { kind: "wallpaper", themeColor: 0xf3d5aa, price: 3_000 },
+  "wallpaper.modernAlley": { kind: "wallpaper", themeColor: 0xbfc7c5, price: 2_900 },
+  "wallpaper.villageAlley": { kind: "wallpaper", themeColor: 0xb8aa94, price: 3_100 },
+  "wallpaper.sunnyStudio": { kind: "wallpaper", themeColor: 0xe6d4b4, price: 3_200 },
+  "wallpaper.livingRoom": { kind: "wallpaper", themeColor: 0xd9bd91, price: 3_400 },
+  "wallpaper.cityOffice": { kind: "wallpaper", themeColor: 0xb9c4c8, price: 3_600 },
+  "wallpaper.botanicalDesk": { kind: "wallpaper", themeColor: 0xd7b27d, price: 2_700 },
+  "wallpaper.musicDesk": { kind: "wallpaper", themeColor: 0xd8c4a1, price: 3_000 },
+  "wallpaper.sandyCove": { kind: "wallpaper", themeColor: 0xe9d2a3, price: 3_300 },
+  "wallpaper.seasidePromenade": { kind: "wallpaper", themeColor: 0xb7d9e5, price: 3_500 },
+  "wallpaper.workingHarbor": { kind: "wallpaper", themeColor: 0x9fbbc4, price: 3_800 },
   "floor.oak": { kind: "floor", themeColor: 0xb98355, price: 2_300 },
   "floor.check": { kind: "floor", themeColor: 0xd3a582, price: 2_600 },
   "floor.stone": { kind: "floor", themeColor: 0x98998d, price: 2_800 },

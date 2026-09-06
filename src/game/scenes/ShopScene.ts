@@ -9,7 +9,8 @@ import { createCoinAmount, createCoinIcon, createCurrencyBar } from "../componen
 import { layoutToFillViewport } from "../components/fullscreenLayout";
 import { applySmoothTextureSampling } from "../components/smoothSprite";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
-import type { FurnitureArtCollection } from "../forest/ForestArt";
+import { createBackgroundPreview } from "../forest/BackgroundPreview";
+import type { BackgroundArtCollection, FurnitureArtCollection } from "../forest/ForestArt";
 import { resolveFurnitureArt } from "../forest/ForestArt";
 import { createFurniturePreview } from "../forest/FurniturePreview";
 import { shopItemNameMessages } from "../shopItemPresentation";
@@ -22,6 +23,7 @@ type ShopSceneOptions = {
   backIcon: string;
   coinIcon: string;
   furnitureArt: FurnitureArtCollection;
+  backgroundArt: BackgroundArtCollection;
 };
 type CategoryId = "furniture" | "wallpaper" | "floor" | "decor";
 type TabId = "recommended" | "new" | "popular";
@@ -69,6 +71,16 @@ const catalog: Record<CategoryId, Product[]> = {
     { kind: "wallpaper", itemId: "wallpaper.flower" },
     { kind: "wallpaper", itemId: "wallpaper.night" },
     { kind: "wallpaper", itemId: "wallpaper.cat" },
+    { kind: "wallpaper", itemId: "wallpaper.modernAlley" },
+    { kind: "wallpaper", itemId: "wallpaper.villageAlley" },
+    { kind: "wallpaper", itemId: "wallpaper.sunnyStudio" },
+    { kind: "wallpaper", itemId: "wallpaper.livingRoom" },
+    { kind: "wallpaper", itemId: "wallpaper.cityOffice" },
+    { kind: "wallpaper", itemId: "wallpaper.botanicalDesk" },
+    { kind: "wallpaper", itemId: "wallpaper.musicDesk" },
+    { kind: "wallpaper", itemId: "wallpaper.sandyCove" },
+    { kind: "wallpaper", itemId: "wallpaper.seasidePromenade" },
+    { kind: "wallpaper", itemId: "wallpaper.workingHarbor" },
   ],
   floor: [
     { kind: "floor", itemId: "floor.oak" },
@@ -93,9 +105,11 @@ export class ShopScene extends Container {
   private readonly backIcon: string;
   private readonly coinIcon: string;
   private readonly furnitureArt: FurnitureArtCollection;
+  private readonly backgroundArt: BackgroundArtCollection;
   private readonly headerLayer = new Container();
   private activeCategory: CategoryId = "furniture";
   private activeTab: TabId = "recommended";
+  private activePage = 0;
 
   constructor(options: ShopSceneOptions) {
     super();
@@ -106,6 +120,7 @@ export class ShopScene extends Container {
     this.backIcon = options.backIcon;
     this.coinIcon = options.coinIcon;
     this.furnitureArt = options.furnitureArt;
+    this.backgroundArt = options.backgroundArt;
     this.addChild(this.content);
     this.buildBackground();
     this.content.addChild(this.headerLayer, this.navigationLayer, this.productLayer, this.modalLayer);
@@ -212,12 +227,19 @@ export class ShopScene extends Container {
     const featured = new Text({ text: message("shop.badgePick"), style: textStyle(14, 0xffe9b2, "800") });
     featured.position.set(1138, 175);
     this.productLayer.addChild(headingPanel, title, description, heroFrame, hero, featured);
-    this.productsForView().forEach((product, index) => {
+    const products = this.productsForView();
+    products.forEach((product, index) => {
       this.buildProductCard(product, index);
     });
+    this.renderPageControls(this.orderedProductsForView().length);
   }
 
   private productsForView(): Product[] {
+    const start = this.activePage * PRODUCTS_PER_PAGE;
+    return this.orderedProductsForView().slice(start, start + PRODUCTS_PER_PAGE);
+  }
+
+  private orderedProductsForView(): Product[] {
     const source = catalog[this.activeCategory];
     if (this.activeTab === "new") {
       return [...source.slice(2), ...source.slice(0, 2)];
@@ -226,6 +248,47 @@ export class ShopScene extends Container {
       return [...source].reverse();
     }
     return source;
+  }
+
+  private renderPageControls(productCount: number): void {
+    const pageCount = Math.ceil(productCount / PRODUCTS_PER_PAGE);
+    if (pageCount <= 1) {
+      return;
+    }
+    const previous = new CanvasButton({
+      label: message("shop.previousPage"),
+      width: 92,
+      height: 38,
+      fontSize: 14,
+      color: this.activePage > 0 ? 0xd9ad7d : 0xcbbca9,
+      onPress: () => this.changePage(-1, pageCount),
+    });
+    previous.position.set(1110, 770);
+    const page = new Text({
+      text: message("shop.pageIndicator", { current: this.activePage + 1, total: pageCount }),
+      style: textStyle(15, 0x604637, "800"),
+    });
+    page.anchor.set(0.5);
+    page.position.set(1325, 789);
+    const next = new CanvasButton({
+      label: message("shop.nextPage"),
+      width: 92,
+      height: 38,
+      fontSize: 14,
+      color: this.activePage < pageCount - 1 ? 0xd9ad7d : 0xcbbca9,
+      onPress: () => this.changePage(1, pageCount),
+    });
+    next.position.set(1400, 770);
+    this.productLayer.addChild(previous, page, next);
+  }
+
+  private changePage(offset: number, pageCount: number): void {
+    const nextPage = Math.max(0, Math.min(pageCount - 1, this.activePage + offset));
+    if (nextPage === this.activePage) {
+      return;
+    }
+    this.activePage = nextPage;
+    this.renderProducts();
   }
 
   private buildProductCard(product: Product, index: number): void {
@@ -246,17 +309,7 @@ export class ShopScene extends Container {
     name.anchor.set(0.5);
     name.position.set(x + 275, y + 38);
     const definition = shopItemDefinitions[product.itemId];
-    const art =
-      definition.kind === "furniture"
-        ? createFurniturePreview(
-            resolveFurnitureArt(this.furnitureArt, definition.furnitureKind, product.itemId),
-            155,
-            122,
-          )
-        : drawProduct(product.kind, index);
-    if (definition.kind !== "furniture") {
-      art.scale.set(0.74);
-    }
+    const art = this.createProductArt(product, index);
     art.position.set(x + 105, y + 112);
     const price = createCoinAmount(this.coinIcon, definition.price, {
       color: 0x8b571e,
@@ -281,6 +334,23 @@ export class ShopScene extends Container {
     });
     buy.position.set(x + 205, y + 133);
     this.productLayer.addChild(card, badge, badgeText, name, art, price, owned, buy);
+  }
+
+  private createProductArt(product: Product, index: number): Container {
+    const definition = shopItemDefinitions[product.itemId];
+    if (definition.kind === "furniture") {
+      return createFurniturePreview(
+        resolveFurnitureArt(this.furnitureArt, definition.furnitureKind, product.itemId),
+        155,
+        122,
+      );
+    }
+    if (definition.kind === "wallpaper") {
+      return createBackgroundPreview(this.backgroundArt, product.itemId, 155, 94);
+    }
+    const art = drawProduct(product.kind, index);
+    art.scale.set(0.74);
+    return art;
   }
 
   private showPurchaseConfirmation(product: Product): void {
@@ -335,16 +405,35 @@ export class ShopScene extends Container {
       return;
     }
     this.activeCategory = category;
+    this.activePage = 0;
     this.renderNavigation();
     this.renderProducts();
+    if (category === "wallpaper") {
+      this.preloadBackgroundProducts();
+    }
   }
   private selectTab(tab: TabId): void {
     if (tab === this.activeTab) {
       return;
     }
     this.activeTab = tab;
+    this.activePage = 0;
     this.renderNavigation();
     this.renderProducts();
+  }
+
+  private preloadBackgroundProducts(): void {
+    const itemIds = catalog.wallpaper.map((product) => product.itemId);
+    void this.backgroundArt
+      .load(itemIds)
+      .then(() => {
+        if (!this.destroyed && this.activeCategory === "wallpaper") {
+          this.renderProducts();
+        }
+      })
+      .catch((error: unknown) => {
+        console.warn("Background shop previews could not be loaded", error);
+      });
   }
   private clearLayer(layer: Container): void {
     layer.removeChildren().forEach((child) => {
@@ -352,6 +441,8 @@ export class ShopScene extends Container {
     });
   }
 }
+
+const PRODUCTS_PER_PAGE = 6;
 
 function tabDescription(tab: TabId): MessageId {
   if (tab === "new") {

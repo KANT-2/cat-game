@@ -10,7 +10,7 @@ import { applySmoothTextureSampling } from "../components/smoothSprite";
 import { ToastLayer } from "../components/ToastLayer";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
 import type { CatAnimationLibrary } from "../entities/CatAnimations";
-import type { ForestArt, FurnitureArtCollection } from "../forest/ForestArt";
+import type { BackgroundArtCollection, ForestArt, FurnitureArtCollection } from "../forest/ForestArt";
 import { ForestClearingView } from "../forest/ForestClearingView";
 import { AttendanceModal } from "./AttendanceModal";
 import { DailyQuestScene } from "./DailyQuestScene";
@@ -39,6 +39,7 @@ export class HomeScene extends Container {
   private readonly iconSources: HomeIconSources;
   private readonly catAnimations: CatAnimationLibrary;
   private readonly furnitureArt: FurnitureArtCollection;
+  private readonly backgroundArt: BackgroundArtCollection;
   private readonly clearingViewport = new Container();
   private readonly clearing: ForestClearingView;
   private readonly uiLayer = new Container();
@@ -79,6 +80,7 @@ export class HomeScene extends Container {
     this.iconSources = iconSources;
     this.catAnimations = catAnimations;
     this.furnitureArt = forestArt.furniture;
+    this.backgroundArt = forestArt.backgrounds;
     this.onLogout = onLogout;
     this.state = gameClient.getSnapshot();
     this.clearing = new ForestClearingView({
@@ -318,6 +320,7 @@ export class HomeScene extends Container {
       backIcon: this.iconSources.back,
       coinIcon: this.iconSources.coin,
       furnitureArt: this.furnitureArt,
+      backgroundArt: this.backgroundArt,
     });
     this.pageLayer.addChild(this.shopScene);
     this.shopScene.layout(this.screenWidth, this.screenHeight);
@@ -405,7 +408,16 @@ export class HomeScene extends Container {
       },
       onSelectCat: async (variant) => (await this.gameClient.selectCat(variant)).ok,
       onSetCatHome: async (variant, visible) => (await this.gameClient.setCatHome(variant, visible)).ok,
-      onApplyTheme: async (itemId) => (await this.gameClient.applyRoomTheme(itemId)).ok,
+      onApplyTheme: async (itemId) => {
+        try {
+          await this.backgroundArt.load([itemId]);
+        } catch (error) {
+          console.warn("Selected background could not be loaded", error);
+          this.notify(message("owned.backgroundLoadFailed"));
+          return false;
+        }
+        return (await this.gameClient.applyRoomTheme(itemId)).ok;
+      },
       onEnterRoomEdit: () => {
         this.closeFeaturePage();
         this.notify(message("owned.editGuide"));
@@ -416,6 +428,7 @@ export class HomeScene extends Container {
       onOpenAttendance: () => this.openAttendance(true),
       catAnimations: this.catAnimations,
       furnitureArt: this.furnitureArt,
+      backgroundArt: this.backgroundArt,
       backIcon: this.iconSources.back,
       coinIcon: this.iconSources.coin,
       onNavigate: (nextKind) => this.openFeaturePage(nextKind),

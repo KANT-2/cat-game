@@ -18,7 +18,7 @@ import { CLEARING_GRID, textStyle } from "../config";
 import { CatActor, type CatDropTarget } from "../entities/CatActor";
 import type { CatAction, CatAnimationLibrary } from "../entities/CatAnimations";
 import { furniturePresentation } from "../presentation/furniturePresentation";
-import { type ForestArt, resolveFurnitureArt } from "./ForestArt";
+import { type ForestArt, resolveBackgroundArt, resolveFurnitureArt } from "./ForestArt";
 import { FurnitureView } from "./FurnitureView";
 
 type ForestClearingViewOptions = {
@@ -107,7 +107,6 @@ export class ForestClearingView extends Container {
       this.foregroundLayer,
     );
 
-    this.drawForest();
     this.syncTheme();
     this.buildGroundGrid();
     this.rebuildFurniture();
@@ -212,19 +211,20 @@ export class ForestClearingView extends Container {
     return gridToScreen(CLEARING_GRID, x, y);
   }
 
-  /** 선택한 벽지·바닥재의 색감을 야외 홈 배경과 공터에 즉시 반영한다. */
+  /** 선택한 배경 이미지와 바닥재 색감을 홈 장소에 즉시 반영한다. */
   syncTheme(): void {
+    this.backgroundLayer.removeChildren().forEach((child) => {
+      child.destroy({ children: true });
+    });
     this.themeLayer.removeChildren().forEach((child) => {
       child.destroy({ children: true });
     });
     const wallpaper = this.getActiveWallpaper();
     const floor = this.getActiveFloor();
-    if (wallpaper) {
-      const item = shopItemDefinitions[wallpaper];
-      if (item.kind === "wallpaper") {
-        this.themeLayer.addChild(new Graphics().rect(0, 0, 1600, 410).fill({ color: item.themeColor, alpha: 0.26 }));
-      }
-    }
+    const background = new Sprite(resolveBackgroundArt(this.art.backgrounds, wallpaper));
+    background.width = 1600;
+    background.height = 900;
+    this.backgroundLayer.addChild(background);
     if (floor) {
       const item = shopItemDefinitions[floor];
       if (item.kind === "floor") {
@@ -245,12 +245,6 @@ export class ForestClearingView extends Container {
         );
       }
     }
-  }
-  private drawForest(): void {
-    const background = new Sprite(this.art.background);
-    background.width = 1600;
-    background.height = 900;
-    this.backgroundLayer.addChild(background);
   }
 
   private buildGroundGrid(): void {

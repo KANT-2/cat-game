@@ -11,7 +11,8 @@ import { createCurrencyBar } from "../components/CurrencyBar";
 import { layoutToFillViewport } from "../components/fullscreenLayout";
 import { textStyle } from "../config";
 import type { CatAnimationLibrary } from "../entities/CatAnimations";
-import type { FurnitureArtCollection } from "../forest/ForestArt";
+import { createBackgroundPreview } from "../forest/BackgroundPreview";
+import type { BackgroundArtCollection, FurnitureArtCollection } from "../forest/ForestArt";
 import { resolveFurnitureArt } from "../forest/ForestArt";
 import { createFurniturePreview } from "../forest/FurniturePreview";
 import { shopItemNameMessages } from "../shopItemPresentation";
@@ -37,6 +38,7 @@ type Options = {
   backIcon: string;
   coinIcon: string;
   furnitureArt: FurnitureArtCollection;
+  backgroundArt: BackgroundArtCollection;
 };
 /** 설정·보유·친구 기능을 전체 Canvas 화면으로 표시한다. */
 export class FeaturePageModal extends Container {
@@ -47,6 +49,7 @@ export class FeaturePageModal extends Container {
   private readonly options: Options;
   private readonly requested = new Set<number>();
   private ownedCategory: "cats" | "furniture" | "wallpaper" | "floor" = "cats";
+  private ownedThemePage = 0;
 
   constructor(options: Options) {
     super();
@@ -286,7 +289,11 @@ export class FeaturePageModal extends Container {
         textColor: active ? 0xffffff : 0x493022,
         onPress: () => {
           this.ownedCategory = category;
+          this.ownedThemePage = 0;
           this.render();
+          if (category === "wallpaper") {
+            this.preloadOwnedBackgrounds();
+          }
         },
       });
       tab.position.set(180 + index * 230, 190);
@@ -306,7 +313,10 @@ export class FeaturePageModal extends Container {
       this.content.addChild(empty);
       return;
     }
-    entries.forEach((itemId, index) => {
+    const pageCount = Math.ceil(entries.length / OWNED_THEMES_PER_PAGE);
+    this.ownedThemePage = Math.min(this.ownedThemePage, Math.max(0, pageCount - 1));
+    const start = this.ownedThemePage * OWNED_THEMES_PER_PAGE;
+    entries.slice(start, start + OWNED_THEMES_PER_PAGE).forEach((itemId, index) => {
       const definition = shopItemDefinitions[itemId];
       if (definition.kind === "furniture") {
         return;
@@ -319,10 +329,17 @@ export class FeaturePageModal extends Container {
         border: active ? 0x79945f : 0xb77a4f,
         radius: 22,
       });
-      const preview = new Graphics()
-        .roundRect(x + 28, y + 28, 125, 125, 16)
-        .fill(definition.themeColor)
-        .stroke({ color: 0x68442f, width: 3 });
+      let preview: Container;
+      if (category === "wallpaper") {
+        preview = createBackgroundPreview(this.options.backgroundArt, itemId, 125, 76);
+        preview.position.set(x + 90, y + 93);
+      } else {
+        preview = new Graphics()
+          .roundRect(-62, -62, 125, 125, 16)
+          .fill(definition.themeColor)
+          .stroke({ color: 0x68442f, width: 3 });
+        preview.position.set(x + 90, y + 90);
+      }
       const name = new Text({ text: message(shopItemNameMessages[itemId]), style: textStyle(19, 0x493022, "800") });
       name.position.set(x + 175, y + 37);
       const count = new Text({
@@ -344,6 +361,64 @@ export class FeaturePageModal extends Container {
       apply.position.set(x + 175, y + 115);
       this.content.addChild(card, preview, name, count, apply);
     });
+    this.renderOwnedThemePageControls(pageCount);
+  }
+
+  private renderOwnedThemePageControls(pageCount: number): void {
+    if (pageCount <= 1) {
+      return;
+    }
+    const previous = new CanvasButton({
+      label: message("shop.previousPage"),
+      width: 105,
+      height: 42,
+      fontSize: 15,
+      color: this.ownedThemePage > 0 ? 0xd9ad7d : 0xcbbca9,
+      onPress: () => this.changeOwnedThemePage(-1, pageCount),
+    });
+    previous.position.set(625, 760);
+    const page = new Text({
+      text: message("shop.pageIndicator", { current: this.ownedThemePage + 1, total: pageCount }),
+      style: textStyle(16, 0x604637, "800"),
+    });
+    page.anchor.set(0.5);
+    page.position.set(800, 781);
+    const next = new CanvasButton({
+      label: message("shop.nextPage"),
+      width: 105,
+      height: 42,
+      fontSize: 15,
+      color: this.ownedThemePage < pageCount - 1 ? 0xd9ad7d : 0xcbbca9,
+      onPress: () => this.changeOwnedThemePage(1, pageCount),
+    });
+    next.position.set(870, 760);
+    this.content.addChild(previous, page, next);
+  }
+
+  private changeOwnedThemePage(offset: number, pageCount: number): void {
+    const nextPage = Math.max(0, Math.min(pageCount - 1, this.ownedThemePage + offset));
+    if (nextPage === this.ownedThemePage) {
+      return;
+    }
+    this.ownedThemePage = nextPage;
+    this.render();
+  }
+
+  private preloadOwnedBackgrounds(): void {
+    const state = this.options.getState();
+    const itemIds = (Object.keys(shopItemDefinitions) as ShopItemId[]).filter(
+      (itemId) => shopItemDefinitions[itemId].kind === "wallpaper" && (state.shopInventory[itemId] ?? 0) > 0,
+    );
+    void this.options.backgroundArt
+      .load(itemIds)
+      .then(() => {
+        if (!this.destroyed && this.ownedCategory === "wallpaper") {
+          this.render();
+        }
+      })
+      .catch((error: unknown) => {
+        console.warn("Owned background previews could not be loaded", error);
+      });
   }
 
   private addOwnedCatCard(variant: CatVariant, index: number, activeCat: CatVariant, visibleAtHome: boolean): void {
@@ -514,6 +589,8 @@ export class FeaturePageModal extends Container {
     this.status.text = message(id, variables);
   }
 }
+
+const OWNED_THEMES_PER_PAGE = 6;
 
 const friendNames: MessageId[] = [
   "friends.nameMango",
