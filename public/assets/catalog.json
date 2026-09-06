@@ -1060,6 +1060,34 @@
         "tags": ["bed", "paw", "cushion", "transparent", "outdoor"]
       },
       {
+        "id": "furniture.bench.forest-mushroom.01",
+        "kind": "furniture",
+        "src": "/assets/environment/furniture-forest-bench-01.png",
+        "anchor": { "x": 0.5, "y": 0.96 },
+        "tags": ["bench", "mushroom", "moss", "transparent", "forest"]
+      },
+      {
+        "id": "furniture.hideout.forest-log.01",
+        "kind": "furniture",
+        "src": "/assets/environment/furniture-forest-hideout-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "tags": ["hideout", "log", "moss", "transparent", "forest"]
+      },
+      {
+        "id": "furniture.cat-tree.leaf-scratcher.01",
+        "kind": "furniture",
+        "src": "/assets/environment/furniture-leaf-scratcher-01.png",
+        "anchor": { "x": 0.5, "y": 0.96 },
+        "tags": ["cat-tree", "scratcher", "leaf", "transparent", "forest"]
+      },
+      {
+        "id": "furniture.cat-tree.great-tree.01",
+        "kind": "furniture",
+        "src": "/assets/environment/furniture-great-tree-tower-01.png",
+        "anchor": { "x": 0.5, "y": 0.98 },
+        "tags": ["cat-tree", "tower", "great-tree", "transparent", "forest"]
+      },
+      {
         "id": "background.alley.day.01",
         "kind": "background",
         "src": "/assets/environment/alley-day-01.webp",
