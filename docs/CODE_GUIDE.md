@@ -28,9 +28,27 @@ src/main.ts
 `src/app/GameApp.ts`만 구체적인 게임 클라이언트와 저장소 구현을 조립한다. 장면 코드에서 `LocalGameClient` 또는 `localStorage`를 직접 import하지 않는다.
 
 백엔드 URL이 설정되면 `src/app/createGameClient.ts`가 FastAPI 연결과 추천 과제 초기화를 기다린 뒤 화면에
-클라이언트를 주입한다. 로컬 개발 사용자 UUID를 지정하지 않으면 백엔드의 개발 세션 엔드포인트를 사용한다.
+클라이언트를 주입한다. 운영 빌드는 HttpOnly 브라우저 세션을 확인하고, 없으면 Canvas 로그인·가입 화면을
+표시한다. Vite 개발 모드에서만 세션이 없을 때 백엔드 개발 세션 엔드포인트를 사용한다.
 서버 학습 과제는 공개 UUID를 ID로 사용하며 제목·설명·선택지·최초 완료 보상은 검증된 동적 JSON으로
 Canvas에 표시한다. 원격 모드의 재화·보유 자산·배치·설정·출석·데일리 진행도는 서버 스냅샷만 반영한다.
+
+## 브라우저 인증 흐름
+
+```text
+앱 시작
+  → GET /api/v1/session/me (기존 쿠키 확인)
+  → 세션 없음: AuthScene에서 로그인 또는 가입
+  → 서버가 opaque 세션 쿠키와 CSRF 쿠키 발급
+  → 추천 과제 + 게임 스냅샷 병렬 조회
+  → HomeScene에 GameClient 주입
+```
+
+세션 식별자는 JavaScript가 읽을 수 없는 HttpOnly 쿠키로 전달하고 모든 백엔드 요청은
+`credentials: include`를 사용한다. 상태를 바꾸는 요청에는 JavaScript가 읽은 `nyang_csrf` 쿠키 값을
+`X-CSRF-Token` 헤더로 함께 보내며, 서버가 세션에 저장한 해시와 일치하는지 확인한다. 운영에서는 HTTPS와
+`__Host-nyang_session`을 사용하고, 프런트와 API를 같은 호스트로 노출해 CSRF 쿠키를 읽을 수 있게 한다.
+세션이 없거나 서버 연결에 실패한 원격 실행은 로컬 상태로 조용히 전환하지 않는다.
 
 ## GameClient 데이터 흐름
 
