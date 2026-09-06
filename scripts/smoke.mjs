@@ -159,6 +159,11 @@ await page.mouse.click(595, 510);
 await page.waitForTimeout(100);
 await page.mouse.click(950, 590);
 await page.waitForTimeout(150);
+await page.screenshot({ path: screenshotPath("cat-game-shop-owned-background.png") });
+await page.mouse.click(595, 510);
+await page.waitForTimeout(100);
+await page.mouse.click(950, 590);
+await page.waitForTimeout(100);
 await page.mouse.click(180, 198);
 await page.waitForTimeout(150);
 await page.mouse.click(595, 510);
@@ -257,6 +262,9 @@ if (parsedState.shopInventory?.["furniture.desk"] !== 1) {
 }
 if (parsedState.activeWallpaper !== "wallpaper.cream") {
   throw new Error("purchased wallpaper was not applied from owned inventory");
+}
+if (parsedState.shopInventory?.["wallpaper.cream"] !== 1) {
+  throw new Error("owned wallpaper should not be purchased more than once");
 }
 if (!parsedState.ownedCats?.includes("ink") || parsedState.activeCat !== "ink") {
   throw new Error("gacha cat reward was not unlocked and selected on the home screen");

@@ -100,6 +100,9 @@ describe("backend learning integration", () => {
       }
       if (url.pathname === "/api/v1/game/shop/purchases" && init?.method === "POST") {
         const body = JSON.parse(String(init.body)) as { item_catalog_key: string };
+        if (body.item_catalog_key === "wallpaper.cream") {
+          return json({ detail: "already-owned" }, 409);
+        }
         if (body.item_catalog_key === "consumable.salmon-cubes") {
           return json({ snapshot: gameSnapshot(320, 1, { consumableQuantity: 1 }), result: {} });
         }
@@ -175,6 +178,7 @@ describe("backend learning integration", () => {
     expect(client.getDailyQuests()[0]).toMatchObject({ progress: 0, claimed: true });
     await expect(client.buyShopItem("furniture.sofa")).resolves.toMatchObject({ ok: true });
     expect(client.getSnapshot()).toMatchObject({ coins: 500, shopInventory: { "furniture.sofa": 1 } });
+    await expect(client.buyShopItem("wallpaper.cream")).resolves.toEqual({ ok: false, reason: "already-owned" });
     await expect(client.buyShopItem("consumable.salmon-cubes")).resolves.toMatchObject({
       ok: true,
       itemType: "consumable",

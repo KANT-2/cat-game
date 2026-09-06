@@ -72,6 +72,8 @@
   "shop.dealPrice": "120 → 84",
   "shop.buy": "구매",
   "shop.buyMore": "추가 구매",
+  "shop.owned": "보유중",
+  "shop.alreadyOwned": "이미 보유한 배경이에요.",
   "shop.confirmTitle": "‘{item}’ 상품을 구매하시겠습니까?",
   "shop.confirmDetail": "코인 {amount}개를 사용합니다. 구매한 상품은 즉시 보관함에 저장됩니다.",
   "shop.cancel": "취소",

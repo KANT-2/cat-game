@@ -168,6 +168,9 @@ export class LocalGameClient implements GameClient {
     if (!item) {
       return { ok: false, reason: "item-not-found" };
     }
+    if (item.kind === "wallpaper" && (this.state.shopInventory[itemId] ?? 0) > 0) {
+      return { ok: false, reason: "already-owned" };
+    }
     if (this.state.coins < item.price) {
       return { ok: false, reason: "insufficient-coins" };
     }

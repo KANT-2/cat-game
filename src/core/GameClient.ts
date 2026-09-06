@@ -36,7 +36,7 @@ export type PurchaseResult =
       itemType: "wallpaper" | "floor" | "consumable";
       remainingCoins: number;
     }
-  | { ok: false; reason: "item-not-found" | "insufficient-coins" | "server-unavailable" };
+  | { ok: false; reason: "item-not-found" | "insufficient-coins" | "already-owned" | "server-unavailable" };
 
 export type ApplyRoomThemeResult =
   | { ok: true; itemId: ShopItemId; itemType: "wallpaper" | "floor" }

@@ -178,7 +178,7 @@ UI는 `reason`을 메시지 키로 변환해 보여 줄 뿐 충돌을 다시 판
 
 ### 뽑기 보장과 방 테마
 
-학습 보상, 상점 구매, 고양이 뽑기는 모두 `coins` 단일 재화를 사용한다. 저장소는 `economyVersion: 2` 이하의 기존 `coins`와 `gems`를 합산해 `economyVersion: 3`의 `coins`로 마이그레이션한다. 배경과 바닥재는 `shopInventory`에 상품 ID별로 저장하고 `applyRoomTheme()`가 보유 여부를 확인한 뒤 호환 필드인 `activeWallpaper` 또는 `activeFloor`를 갱신한다. UI는 이 상태를 읽어 홈 배경을 다시 그릴 뿐 구매·보유 판정을 하지 않는다. `roomAppearanceVersion: 1`이 없는 기존 저장 데이터는 적용 중인 배경과 바닥만 한 번 해제하며, 보유 목록과 이후 다시 적용한 테마는 유지한다.
+학습 보상, 상점 구매, 고양이 뽑기는 모두 `coins` 단일 재화를 사용한다. 저장소는 `economyVersion: 2` 이하의 기존 `coins`와 `gems`를 합산해 `economyVersion: 3`의 `coins`로 마이그레이션한다. 배경과 바닥재는 `shopInventory`에 상품 ID별로 저장하고 `applyRoomTheme()`가 보유 여부를 확인한 뒤 호환 필드인 `activeWallpaper` 또는 `activeFloor`를 갱신한다. 배경은 상품별 수량이 1개 이상이면 영구 보유한 것으로 간주하고 `buyShopItem()`의 추가 구매를 `already-owned`로 거절한다. UI는 이 상태와 명령 결과를 읽어 홈 배경과 구매 가능 여부를 표현할 뿐 구매·보유 판정을 권위 있게 수행하지 않는다. `roomAppearanceVersion: 1`이 없는 기존 저장 데이터는 적용 중인 배경과 바닥만 한 번 해제하며, 보유 목록과 이후 다시 적용한 테마는 유지한다.
 
 원격 모드의 사운드와 화면 움직임 설정은 서버 스냅샷의 `settings`에 저장한다. 보유 고양이별 기억도
 고양이 스냅샷의 `memories`로 읽고 `DELETE /api/v1/game/cat-memories`로만 삭제한다.
