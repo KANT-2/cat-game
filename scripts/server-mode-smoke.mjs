@@ -58,6 +58,35 @@ try {
         requestJson("/api/v1/learning/recommendations?limit=50"),
         requestJson("/api/v1/learning/tasks?type=CODE&domain=PYTHON&limit=50"),
       ]);
+      const consumableKey = "consumable.salmon-cubes";
+      const initialGame = await requestJson("/api/v1/game/snapshot");
+      const initialQuantity = initialGame.items.find((item) => item.catalog_key === consumableKey)?.owned_quantity;
+      const activeCatKey = initialGame.active_cat_key;
+      if (typeof initialQuantity !== "number" || typeof activeCatKey !== "string") {
+        throw new Error("consumable or active cat is missing from the game snapshot");
+      }
+      const purchase = await requestJson("/api/v1/game/shop/purchases", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ request_id: crypto.randomUUID(), item_catalog_key: consumableKey, quantity: 1 }),
+      });
+      const usedRequest = {
+        request_id: crypto.randomUUID(),
+        item_catalog_key: consumableKey,
+        cat_catalog_key: activeCatKey,
+      };
+      const used = await requestJson("/api/v1/game/consumables/use", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(usedRequest),
+      });
+      const replayed = await requestJson("/api/v1/game/consumables/use", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(usedRequest),
+      });
+      const quantityOf = (mutation) =>
+        mutation.snapshot.items.find((item) => item.catalog_key === consumableKey)?.owned_quantity;
       const quiz = tasks.find((task) => task.type === "MULTIPLE_CHOICE");
       const code = pythonCodeTasks.find((task) => task.title.includes("두 수의 합"));
       if (!quiz || !code) {
@@ -85,6 +114,14 @@ try {
           task_public_id: code.public_id,
           submitted_code: "a, b = map(int, input().split())\nprint(a + b)\n",
         }),
+        care: {
+          initialQuantity,
+          purchasedQuantity: quantityOf(purchase),
+          usedQuantity: quantityOf(used),
+          replayedQuantity: quantityOf(replayed),
+          usedExecutionId: used.result.execution_public_id,
+          replayedExecutionId: replayed.result.execution_public_id,
+        },
       };
     },
     { backendUrl: apiUrl, publicId: userPublicId },
@@ -96,6 +133,14 @@ try {
   if (grading.code.status !== "COMPLETED" || grading.code.is_correct !== true) {
     throw new Error(`browser code grading failed: ${JSON.stringify(grading.code)}`);
   }
+  if (
+    grading.care.purchasedQuantity !== grading.care.initialQuantity + 1 ||
+    grading.care.usedQuantity !== grading.care.initialQuantity ||
+    grading.care.replayedQuantity !== grading.care.initialQuantity ||
+    grading.care.replayedExecutionId !== grading.care.usedExecutionId
+  ) {
+    throw new Error(`browser consumable flow was not idempotent: ${JSON.stringify(grading.care)}`);
+  }
   for (const requiredPath of [
     "/health",
     "/api/v1/session/development",
@@ -103,6 +148,8 @@ try {
     "/api/v1/learning/recommendations",
     "/api/v1/learning/tasks",
     "/api/v1/game/snapshot",
+    "/api/v1/game/shop/purchases",
+    "/api/v1/game/consumables/use",
     "/api/v1/attempts",
   ]) {
     if (!successfulApiPaths.has(requiredPath)) {
@@ -121,7 +168,7 @@ if (errors.length > 0) {
   throw new Error(errors.join("\n"));
 }
 
-console.log("Server-mode E2E passed: browser session, snapshot, recommendations, quiz and Docker grading");
+console.log("Server-mode E2E passed: browser session, consumable care, snapshot, quiz and Docker grading");
 console.log(`screenshot: ${screenshotPath}`);
 
 function readString(record, key) {
