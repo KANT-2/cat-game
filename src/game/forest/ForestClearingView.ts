@@ -11,7 +11,7 @@ import {
   ROOM_GRID_WIDTH,
   rotatedSize,
 } from "../../domain/room";
-import type { ShopItemId } from "../../domain/shop";
+import type { ConsumableEffect, ShopItemId } from "../../domain/shop";
 import { shopItemDefinitions } from "../../domain/shop";
 import { gridCellPolygon, gridToScreen, screenToGrid } from "../belt";
 import { CLEARING_GRID, textStyle } from "../config";
@@ -47,6 +47,12 @@ const PREFERRED_SPAWN_MIN_X = 1;
 const PREFERRED_SPAWN_MAX_X = ROOM_GRID_WIDTH - 2;
 const PREFERRED_SPAWN_MIN_Y = 2;
 const PREFERRED_SPAWN_MAX_Y = 5;
+const CONSUMABLE_ACTIONS: Record<ConsumableEffect, CatAction> = {
+  happy: "jump",
+  playful: "attack",
+  relaxed: "groom",
+  curious: "surprise",
+};
 
 export class ForestClearingView extends Container {
   private readonly backgroundLayer = new Container({ label: "forest-background" });
@@ -147,6 +153,13 @@ export class ForestClearingView extends Container {
   syncFurniture(): void {
     this.rebuildFurniture();
     this.updateSelection();
+  }
+
+  /** 현재 선택된 홈 고양이에게 소모품 효과에 맞는 긍정적 동작을 즉시 재생한다. */
+  playConsumableEffect(effect: ConsumableEffect): void {
+    const activeVariant = this.activeCatVariant ?? this.getActiveCat();
+    const cat = this.cats.get(activeVariant) ?? this.cats.values().next().value;
+    cat?.playAction(CONSUMABLE_ACTIONS[effect]);
   }
 
   /**

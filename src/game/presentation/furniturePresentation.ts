@@ -18,4 +18,8 @@ export const furniturePresentation: Record<FurnitureKind, FurniturePresentation>
   plant: { labelMessage: "furniture.plant", color: 0x4f8052, accent: 0xa85f3b },
   catTree: { labelMessage: "furniture.catTree", color: 0xb58b55, accent: 0xe1c18d },
   bed: { labelMessage: "furniture.bed", color: 0xe1cdaa, accent: 0xaabfbb },
+  rug: { labelMessage: "furniture.rug", color: 0xc9a36e, accent: 0xe8d3a7 },
+  hideout: { labelMessage: "furniture.hideout", color: 0x9d7048, accent: 0xd1a875 },
+  scratcher: { labelMessage: "furniture.scratcher", color: 0xb98a52, accent: 0xe0bd82 },
+  litterBox: { labelMessage: "furniture.litterBox", color: 0x82916e, accent: 0xc9c6a1 },
 };

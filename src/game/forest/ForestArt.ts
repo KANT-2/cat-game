@@ -10,6 +10,7 @@ export type AnchoredTexture = {
 export type ForestArt = {
   backgrounds: BackgroundArtCollection;
   furniture: FurnitureArtCollection;
+  consumables: Partial<Record<ShopItemId, Texture>>;
 };
 
 export type BackgroundArtCollection = {
