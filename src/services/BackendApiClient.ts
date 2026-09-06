@@ -92,6 +92,7 @@ export type BackendGameMutation = {
 };
 
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+type CsrfTokenProvider = () => string | null;
 
 export class BackendApiError extends Error {
   constructor(
@@ -106,19 +107,60 @@ export class BackendApiError extends Error {
 /** FastAPI의 공개 JSON 계약과 인증 헤더만 소유하는 HTTP 전송 어댑터다. */
 export class BackendApiClient {
   private userPublicId: string | null;
+  private browserSession = false;
 
   constructor(
     private readonly baseUrl: string,
     userPublicId: string | null,
     private readonly fetcher: FetchLike = defaultFetch,
     private readonly requestTimeoutMs = 5_000,
+    private readonly csrfTokenProvider: CsrfTokenProvider = readBrowserCsrfToken,
   ) {
     this.baseUrl = baseUrl.replace(/\/+$/, "");
     this.userPublicId = userPublicId;
   }
 
+  /** 기존 HttpOnly 브라우저 세션을 확인하고 사용자 프로필을 반환한다. */
+  async connectBrowserSession(): Promise<BackendUser> {
+    const health = asRecord(await this.request("/health", {}, false));
+    if (health.status !== "ok") {
+      throw new Error("Backend health response is invalid");
+    }
+    this.userPublicId = null;
+    this.browserSession = true;
+    try {
+      return parseUser(await this.request("/api/v1/session/me"));
+    } catch (error) {
+      this.browserSession = false;
+      throw error;
+    }
+  }
+
+  /** 이메일과 비밀번호로 서버가 관리하는 브라우저 세션을 시작한다. */
+  async login(email: string, password: string): Promise<BackendUser> {
+    const user = parseUser(await this.jsonCommand("/api/v1/session/login", { email, password }, false));
+    this.userPublicId = null;
+    this.browserSession = true;
+    return user;
+  }
+
+  /** 새 계정을 만들고 서버가 관리하는 브라우저 세션을 시작한다. */
+  async register(email: string, username: string, password: string): Promise<BackendUser> {
+    const user = parseUser(await this.jsonCommand("/api/v1/session/register", { email, username, password }, false));
+    this.userPublicId = null;
+    this.browserSession = true;
+    return user;
+  }
+
+  /** 현재 브라우저 세션을 서버에서 폐기한다. */
+  async logout(): Promise<void> {
+    await this.request("/api/v1/session/logout", { method: "POST" });
+    this.browserSession = false;
+  }
+
   /** 서버 상태를 확인하고 필요하면 로컬 개발 세션을 발급한 뒤 사용자 프로필을 검증한다. */
   async connect(): Promise<BackendUser> {
+    this.browserSession = false;
     const health = asRecord(await this.request("/health", {}, false));
     if (health.status !== "ok") {
       throw new Error("Backend health response is invalid");
@@ -286,15 +328,33 @@ export class BackendApiClient {
     const headers = new Headers(init.headers);
     headers.set("Accept", "application/json");
     if (authenticated) {
-      if (!this.userPublicId) {
+      if (this.userPublicId) {
+        headers.set("X-User-Public-ID", this.userPublicId);
+      } else if (this.browserSession) {
+        const method = init.method ?? "GET";
+        if (!isSafeMethod(method)) {
+          const csrfToken = this.csrfTokenProvider();
+          if (!csrfToken) {
+            throw new Error("Browser session CSRF token is unavailable");
+          }
+          headers.set("X-CSRF-Token", csrfToken);
+        }
+      } else {
         throw new Error("Backend user session is not connected");
       }
-      headers.set("X-User-Public-ID", this.userPublicId);
     }
     try {
-      const response = await this.fetcher(`${this.baseUrl}${path}`, { ...init, headers, signal: controller.signal });
+      const response = await this.fetcher(`${this.baseUrl}${path}`, {
+        ...init,
+        headers,
+        signal: controller.signal,
+        credentials: "include",
+      });
       if (!response.ok) {
         throw new BackendApiError(response.status, await readErrorMessage(response));
+      }
+      if (response.status === 204) {
+        return null;
       }
       return await response.json();
     } finally {
@@ -313,6 +373,18 @@ export class BackendApiClient {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       }),
+    );
+  }
+
+  private async jsonCommand(path: string, payload: Record<string, unknown>, authenticated: boolean): Promise<unknown> {
+    return this.request(
+      path,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+      authenticated,
     );
   }
 }
@@ -566,4 +638,22 @@ async function delay(milliseconds: number): Promise<void> {
 
 function defaultFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   return globalThis.fetch(input, init);
+}
+
+function isSafeMethod(method: string): boolean {
+  const normalizedMethod = method.toUpperCase();
+  return normalizedMethod === "GET" || normalizedMethod === "HEAD" || normalizedMethod === "OPTIONS";
+}
+
+function readBrowserCsrfToken(): string | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+  for (const part of document.cookie.split(";")) {
+    const [name, ...value] = part.trim().split("=");
+    if (name === "nyang_csrf") {
+      return decodeURIComponent(value.join("="));
+    }
+  }
+  return null;
 }

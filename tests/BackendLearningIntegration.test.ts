@@ -179,6 +179,40 @@ describe("backend learning integration", () => {
     await api.connect();
     await expect(api.getLearningRecommendations()).rejects.toThrow("Backend field");
   });
+
+  it("uses browser cookies and CSRF protection without exposing the development user header", async () => {
+    const requests: Array<{ init: RequestInit | undefined; pathname: string }> = [];
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const pathname = new URL(String(input)).pathname;
+      requests.push({ init, pathname });
+      if (pathname === "/health") {
+        return json({ status: "ok" });
+      }
+      if (pathname === "/api/v1/session/me") {
+        return json(userPayload());
+      }
+      if (pathname === "/api/v1/session/logout") {
+        return new Response(null, { status: 204 });
+      }
+      if (pathname === "/api/v1/game/settings") {
+        return json({ snapshot: gameSnapshot(1_000, 0), result: {} });
+      }
+      return json({ detail: "not found" }, 404);
+    });
+    const api = new BackendApiClient("http://localhost:8000", null, fetcher, 5_000, () => "csrf-token");
+
+    await expect(api.connectBrowserSession()).resolves.toMatchObject({ publicId: userId });
+    await api.updateGameSettings({ reducedMotion: true });
+    await expect(api.logout()).resolves.toBeUndefined();
+
+    expect(requests).toHaveLength(4);
+    for (const request of requests) {
+      expect(request.init?.credentials).toBe("include");
+      expect(new Headers(request.init?.headers).has("X-User-Public-ID")).toBe(false);
+    }
+    expect(new Headers(requests[2].init?.headers).get("X-CSRF-Token")).toBe("csrf-token");
+    expect(new Headers(requests[3].init?.headers).get("X-CSRF-Token")).toBe("csrf-token");
+  });
 });
 
 function userPayload() {
