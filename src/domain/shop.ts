@@ -1,43 +1,15 @@
 import type { FurnitureKind } from "./room";
 
-export type ShopItemId =
-  | "furniture.sofa"
-  | "furniture.table"
-  | "furniture.catTower"
-  | "furniture.bed"
-  | "furniture.desk"
-  | "furniture.premiumTower"
-  | "decor.plant"
-  | "wallpaper.cream"
-  | "wallpaper.cloud"
-  | "wallpaper.forest"
-  | "wallpaper.flower"
-  | "wallpaper.night"
-  | "wallpaper.cat"
-  | "wallpaper.modernAlley"
-  | "wallpaper.villageAlley"
-  | "wallpaper.sunnyStudio"
-  | "wallpaper.livingRoom"
-  | "wallpaper.cityOffice"
-  | "wallpaper.botanicalDesk"
-  | "wallpaper.musicDesk"
-  | "wallpaper.sandyCove"
-  | "wallpaper.seasidePromenade"
-  | "wallpaper.workingHarbor"
-  | "floor.oak"
-  | "floor.check"
-  | "floor.stone"
-  | "floor.cream"
-  | "floor.star"
-  | "floor.walnut";
+export type ConsumableEffect = "happy" | "playful" | "relaxed" | "curious";
 
 type Price = { price: number };
 
 export type ShopItemDefinition =
   | (Price & { kind: "furniture"; furnitureKind: FurnitureKind })
-  | (Price & { kind: "wallpaper" | "floor"; themeColor: number });
+  | (Price & { kind: "wallpaper" | "floor"; themeColor: number })
+  | (Price & { kind: "consumable"; effect: ConsumableEffect });
 
-export const shopItemDefinitions: Record<ShopItemId, ShopItemDefinition> = {
+export const shopItemDefinitions = {
   "furniture.sofa": { kind: "furniture", furnitureKind: "sofa", price: 4_800 },
   "furniture.table": { kind: "furniture", furnitureKind: "desk", price: 3_200 },
   "furniture.catTower": { kind: "furniture", furnitureKind: "catTree", price: 4_200 },
@@ -45,6 +17,88 @@ export const shopItemDefinitions: Record<ShopItemId, ShopItemDefinition> = {
   "furniture.desk": { kind: "furniture", furnitureKind: "desk", price: 3_900 },
   "furniture.premiumTower": { kind: "furniture", furnitureKind: "catTree", price: 90 },
   "decor.plant": { kind: "furniture", furnitureKind: "plant", price: 1_700 },
+  "decor.reed-clump": { kind: "furniture", furnitureKind: "plant", price: 900 },
+  "decor.rock-angular": { kind: "furniture", furnitureKind: "plant", price: 1_100 },
+  "decor.rock-round": { kind: "furniture", furnitureKind: "plant", price: 1_200 },
+  "decor.fallen-log": { kind: "furniture", furnitureKind: "rug", price: 1_800 },
+  "decor.cardboard-box": { kind: "furniture", furnitureKind: "plant", price: 700 },
+  "decor.trash-bag": { kind: "furniture", furnitureKind: "plant", price: 600 },
+  "decor.sealed-box": { kind: "furniture", furnitureKind: "plant", price: 800 },
+  "decor.plastic-crate": { kind: "furniture", furnitureKind: "plant", price: 750 },
+  "decor.alley-food-bowl": { kind: "furniture", furnitureKind: "plant", price: 550 },
+  "decor.alley-water-bowl": { kind: "furniture", furnitureKind: "plant", price: 550 },
+  "decor.crushed-can": { kind: "furniture", furnitureKind: "plant", price: 180 },
+  "decor.old-brick": { kind: "furniture", furnitureKind: "plant", price: 220 },
+  "decor.paper-ball": { kind: "furniture", furnitureKind: "plant", price: 160 },
+  "decor.plastic-bottle": { kind: "furniture", furnitureKind: "plant", price: 180 },
+  "decor.newspaper-stack": { kind: "furniture", furnitureKind: "plant", price: 350 },
+  "decor.litter-scoop": { kind: "furniture", furnitureKind: "plant", price: 400 },
+  "decor.yarn-ball": { kind: "furniture", furnitureKind: "plant", price: 450 },
+  "decor.teaser-set": { kind: "furniture", furnitureKind: "plant", price: 650 },
+  "decor.fur-pile": { kind: "furniture", furnitureKind: "plant", price: 300 },
+  "decor.room-water-bowl": { kind: "furniture", furnitureKind: "plant", price: 600 },
+  "decor.room-food-bowl": { kind: "furniture", furnitureKind: "plant", price: 600 },
+  "furniture.forest.rug": { kind: "furniture", furnitureKind: "rug", price: 2_100 },
+  "furniture.forest.cat-tower": { kind: "furniture", furnitureKind: "catTree", price: 4_900 },
+  "furniture.forest.hideout": { kind: "furniture", furnitureKind: "hideout", price: 3_600 },
+  "furniture.forest.scratcher": { kind: "furniture", furnitureKind: "scratcher", price: 2_800 },
+  "furniture.forest.litter-box": { kind: "furniture", furnitureKind: "litterBox", price: 3_400 },
+  "furniture.forest.rug-2": { kind: "furniture", furnitureKind: "rug", price: 2_300 },
+  "furniture.forest.cat-tower-2": { kind: "furniture", furnitureKind: "catTree", price: 5_300 },
+  "furniture.forest.hideout-2": { kind: "furniture", furnitureKind: "hideout", price: 3_900 },
+  "furniture.forest.scratcher-2": { kind: "furniture", furnitureKind: "scratcher", price: 3_000 },
+  "furniture.forest.litter-box-2": { kind: "furniture", furnitureKind: "litterBox", price: 3_700 },
+  "furniture.forest.bench-2": { kind: "furniture", furnitureKind: "sofa", price: 5_000 },
+  "furniture.forest.cat-tower-3": { kind: "furniture", furnitureKind: "catTree", price: 4_800 },
+  "furniture.forest.hideout-3": { kind: "furniture", furnitureKind: "hideout", price: 4_100 },
+  "furniture.alley.rug": { kind: "furniture", furnitureKind: "rug", price: 1_900 },
+  "furniture.alley.cat-tower": { kind: "furniture", furnitureKind: "catTree", price: 4_600 },
+  "furniture.alley.hideout": { kind: "furniture", furnitureKind: "hideout", price: 3_200 },
+  "furniture.alley.scratcher": { kind: "furniture", furnitureKind: "scratcher", price: 2_500 },
+  "furniture.alley.litter-box": { kind: "furniture", furnitureKind: "litterBox", price: 3_000 },
+  "furniture.alley.rug-2": { kind: "furniture", furnitureKind: "rug", price: 1_700 },
+  "furniture.alley.cat-tower-2": { kind: "furniture", furnitureKind: "catTree", price: 4_200 },
+  "furniture.alley.hideout-2": { kind: "furniture", furnitureKind: "hideout", price: 2_900 },
+  "furniture.alley.scratcher-2": { kind: "furniture", furnitureKind: "scratcher", price: 2_200 },
+  "furniture.alley.scratcher-3": { kind: "furniture", furnitureKind: "scratcher", price: 2_600 },
+  "furniture.alley.litter-box-2": { kind: "furniture", furnitureKind: "litterBox", price: 2_800 },
+  "furniture.alley.litter-box-3": { kind: "furniture", furnitureKind: "litterBox", price: 3_200 },
+  "furniture.room.rug": { kind: "furniture", furnitureKind: "rug", price: 2_400 },
+  "furniture.room.cat-tower": { kind: "furniture", furnitureKind: "catTree", price: 5_200 },
+  "furniture.room.hideout": { kind: "furniture", furnitureKind: "hideout", price: 3_800 },
+  "furniture.room.scratcher": { kind: "furniture", furnitureKind: "scratcher", price: 2_900 },
+  "furniture.room.litter-box": { kind: "furniture", furnitureKind: "litterBox", price: 3_500 },
+  "furniture.room.rug-2": { kind: "furniture", furnitureKind: "rug", price: 2_600 },
+  "furniture.room.cat-tower-2": { kind: "furniture", furnitureKind: "catTree", price: 5_000 },
+  "furniture.room.cat-tower-3": { kind: "furniture", furnitureKind: "catTree", price: 5_600 },
+  "furniture.room.hideout-2": { kind: "furniture", furnitureKind: "hideout", price: 4_100 },
+  "furniture.room.scratcher-2": { kind: "furniture", furnitureKind: "scratcher", price: 3_100 },
+  "furniture.room.litter-box-2": { kind: "furniture", furnitureKind: "litterBox", price: 3_800 },
+  "furniture.desk-theme.rug": { kind: "furniture", furnitureKind: "rug", price: 2_300 },
+  "furniture.desk-theme.cat-tower": { kind: "furniture", furnitureKind: "catTree", price: 4_800 },
+  "furniture.desk-theme.hideout": { kind: "furniture", furnitureKind: "hideout", price: 3_700 },
+  "furniture.desk-theme.scratcher": { kind: "furniture", furnitureKind: "scratcher", price: 2_700 },
+  "furniture.desk-theme.litter-box": { kind: "furniture", furnitureKind: "litterBox", price: 3_300 },
+  "furniture.desk-theme.rug-2": { kind: "furniture", furnitureKind: "rug", price: 2_500 },
+  "furniture.desk-theme.cat-tower-2": { kind: "furniture", furnitureKind: "catTree", price: 5_100 },
+  "furniture.desk-theme.hideout-2": { kind: "furniture", furnitureKind: "hideout", price: 3_900 },
+  "furniture.desk-theme.scratcher-2": { kind: "furniture", furnitureKind: "scratcher", price: 2_900 },
+  "furniture.desk-theme.litter-box-2": { kind: "furniture", furnitureKind: "litterBox", price: 3_500 },
+  "furniture.ocean.rug": { kind: "furniture", furnitureKind: "rug", price: 2_500 },
+  "furniture.ocean.cat-tower": { kind: "furniture", furnitureKind: "catTree", price: 5_400 },
+  "furniture.ocean.hideout": { kind: "furniture", furnitureKind: "hideout", price: 4_000 },
+  "furniture.ocean.scratcher": { kind: "furniture", furnitureKind: "scratcher", price: 3_000 },
+  "furniture.ocean.litter-box": { kind: "furniture", furnitureKind: "litterBox", price: 3_700 },
+  "furniture.ocean.rug-2": { kind: "furniture", furnitureKind: "rug", price: 2_700 },
+  "furniture.ocean.cat-tower-2": { kind: "furniture", furnitureKind: "catTree", price: 5_200 },
+  "furniture.ocean.cat-tower-3": { kind: "furniture", furnitureKind: "catTree", price: 5_700 },
+  "furniture.ocean.hideout-2": { kind: "furniture", furnitureKind: "hideout", price: 4_200 },
+  "furniture.ocean.scratcher-2": { kind: "furniture", furnitureKind: "scratcher", price: 3_200 },
+  "furniture.ocean.litter-box-2": { kind: "furniture", furnitureKind: "litterBox", price: 3_900 },
+  "consumable.salmon-cubes": { kind: "consumable", effect: "happy", price: 180 },
+  "consumable.chicken-strips": { kind: "consumable", effect: "relaxed", price: 150 },
+  "consumable.catnip-biscuits": { kind: "consumable", effect: "playful", price: 220 },
+  "consumable.tuna-soup": { kind: "consumable", effect: "curious", price: 200 },
   "wallpaper.cream": { kind: "wallpaper", themeColor: 0xf7e7cb, price: 2_100 },
   "wallpaper.cloud": { kind: "wallpaper", themeColor: 0xdcecf1, price: 2_400 },
   "wallpaper.forest": { kind: "wallpaper", themeColor: 0xdde7cf, price: 2_800 },
@@ -67,4 +121,6 @@ export const shopItemDefinitions: Record<ShopItemId, ShopItemDefinition> = {
   "floor.cream": { kind: "floor", themeColor: 0xe8c99c, price: 2_100 },
   "floor.star": { kind: "floor", themeColor: 0x6f7390, price: 65 },
   "floor.walnut": { kind: "floor", themeColor: 0x815737, price: 3_100 },
-};
+} satisfies Record<string, ShopItemDefinition>;
+
+export type ShopItemId = keyof typeof shopItemDefinitions;

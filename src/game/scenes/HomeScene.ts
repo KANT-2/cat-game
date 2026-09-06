@@ -40,6 +40,7 @@ export class HomeScene extends Container {
   private readonly catAnimations: CatAnimationLibrary;
   private readonly furnitureArt: FurnitureArtCollection;
   private readonly backgroundArt: BackgroundArtCollection;
+  private readonly consumableArt: ForestArt["consumables"];
   private readonly clearingViewport = new Container();
   private readonly clearing: ForestClearingView;
   private readonly uiLayer = new Container();
@@ -81,6 +82,7 @@ export class HomeScene extends Container {
     this.catAnimations = catAnimations;
     this.furnitureArt = forestArt.furniture;
     this.backgroundArt = forestArt.backgrounds;
+    this.consumableArt = forestArt.consumables;
     this.onLogout = onLogout;
     this.state = gameClient.getSnapshot();
     this.clearing = new ForestClearingView({
@@ -321,6 +323,7 @@ export class HomeScene extends Container {
       coinIcon: this.iconSources.coin,
       furnitureArt: this.furnitureArt,
       backgroundArt: this.backgroundArt,
+      consumableArt: this.consumableArt,
     });
     this.pageLayer.addChild(this.shopScene);
     this.shopScene.layout(this.screenWidth, this.screenHeight);
@@ -418,6 +421,7 @@ export class HomeScene extends Container {
         }
         return (await this.gameClient.applyRoomTheme(itemId)).ok;
       },
+      onUseConsumable: (itemId) => this.useConsumable(itemId),
       onEnterRoomEdit: () => {
         this.closeFeaturePage();
         this.notify(message("owned.editGuide"));
@@ -428,6 +432,7 @@ export class HomeScene extends Container {
       onOpenAttendance: () => this.openAttendance(true),
       catAnimations: this.catAnimations,
       furnitureArt: this.furnitureArt,
+      consumableArt: this.consumableArt,
       backgroundArt: this.backgroundArt,
       backIcon: this.iconSources.back,
       coinIcon: this.iconSources.coin,
@@ -477,11 +482,27 @@ export class HomeScene extends Container {
       return;
     }
     this.shopScene?.refresh();
+    if (result.itemType === "consumable") {
+      this.notify(message("shop.consumableStored"));
+      return;
+    }
     if (result.itemType !== "furniture") {
       this.notify(message("shop.themeStored"));
       return;
     }
     this.showPurchaseChoice(result.itemId, result.furnitureKind);
+  }
+
+  private async useConsumable(itemId: ShopItemId): Promise<boolean> {
+    const result = await this.gameClient.useConsumable(itemId, this.state.activeCat);
+    if (!result.ok) {
+      this.notify(message(result.reason === "not-owned" ? "consumable.empty" : "shop.purchaseComingSoon"));
+      return false;
+    }
+    this.closeFeaturePage();
+    this.clearing.playConsumableEffect(result.effect);
+    this.notify(message(`consumable.used.${result.effect}`));
+    return true;
   }
 
   private showPurchaseChoice(itemId: ShopItemId, kind: FurnitureKind): void {

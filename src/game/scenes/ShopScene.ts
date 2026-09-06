@@ -10,7 +10,7 @@ import { layoutToFillViewport } from "../components/fullscreenLayout";
 import { applySmoothTextureSampling } from "../components/smoothSprite";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
 import { createBackgroundPreview } from "../forest/BackgroundPreview";
-import type { BackgroundArtCollection, FurnitureArtCollection } from "../forest/ForestArt";
+import type { BackgroundArtCollection, ForestArt, FurnitureArtCollection } from "../forest/ForestArt";
 import { resolveFurnitureArt } from "../forest/ForestArt";
 import { createFurniturePreview } from "../forest/FurniturePreview";
 import { shopItemNameMessages } from "../shopItemPresentation";
@@ -24,8 +24,9 @@ type ShopSceneOptions = {
   coinIcon: string;
   furnitureArt: FurnitureArtCollection;
   backgroundArt: BackgroundArtCollection;
+  consumableArt: ForestArt["consumables"];
 };
-type CategoryId = "furniture" | "wallpaper" | "floor" | "decor";
+type CategoryId = "furniture" | "consumable" | "wallpaper" | "floor" | "decor";
 type TabId = "recommended" | "new" | "popular";
 type ProductKind =
   | "sofa"
@@ -39,11 +40,13 @@ type ProductKind =
   | "lamp"
   | "decor"
   | "rug"
+  | "consumable"
   | "package";
 type Product = { kind: ProductKind; itemId: ShopItemId };
 
 const categories: Array<{ id: CategoryId; label: MessageId }> = [
   { id: "furniture", label: "shop.categoryFurnitureWithTower" },
+  { id: "consumable", label: "shop.categoryConsumable" },
   { id: "wallpaper", label: "shop.categoryWallpaper" },
   { id: "floor", label: "shop.categoryFloor" },
   { id: "decor", label: "shop.categoryDecor" },
@@ -63,6 +66,69 @@ const catalog: Record<CategoryId, Product[]> = {
     { kind: "bed", itemId: "furniture.bed" },
     { kind: "table", itemId: "furniture.desk" },
     { kind: "catTower", itemId: "furniture.premiumTower" },
+    { kind: "rug", itemId: "furniture.forest.rug" },
+    { kind: "catTower", itemId: "furniture.forest.cat-tower" },
+    { kind: "bed", itemId: "furniture.forest.hideout" },
+    { kind: "catTower", itemId: "furniture.forest.scratcher" },
+    { kind: "bed", itemId: "furniture.forest.litter-box" },
+    { kind: "rug", itemId: "furniture.forest.rug-2" },
+    { kind: "catTower", itemId: "furniture.forest.cat-tower-2" },
+    { kind: "bed", itemId: "furniture.forest.hideout-2" },
+    { kind: "catTower", itemId: "furniture.forest.scratcher-2" },
+    { kind: "bed", itemId: "furniture.forest.litter-box-2" },
+    { kind: "sofa", itemId: "furniture.forest.bench-2" },
+    { kind: "catTower", itemId: "furniture.forest.cat-tower-3" },
+    { kind: "bed", itemId: "furniture.forest.hideout-3" },
+    { kind: "rug", itemId: "furniture.alley.rug" },
+    { kind: "catTower", itemId: "furniture.alley.cat-tower" },
+    { kind: "bed", itemId: "furniture.alley.hideout" },
+    { kind: "catTower", itemId: "furniture.alley.scratcher" },
+    { kind: "bed", itemId: "furniture.alley.litter-box" },
+    { kind: "rug", itemId: "furniture.alley.rug-2" },
+    { kind: "catTower", itemId: "furniture.alley.cat-tower-2" },
+    { kind: "bed", itemId: "furniture.alley.hideout-2" },
+    { kind: "catTower", itemId: "furniture.alley.scratcher-2" },
+    { kind: "catTower", itemId: "furniture.alley.scratcher-3" },
+    { kind: "bed", itemId: "furniture.alley.litter-box-2" },
+    { kind: "bed", itemId: "furniture.alley.litter-box-3" },
+    { kind: "rug", itemId: "furniture.room.rug" },
+    { kind: "catTower", itemId: "furniture.room.cat-tower" },
+    { kind: "bed", itemId: "furniture.room.hideout" },
+    { kind: "catTower", itemId: "furniture.room.scratcher" },
+    { kind: "bed", itemId: "furniture.room.litter-box" },
+    { kind: "rug", itemId: "furniture.room.rug-2" },
+    { kind: "catTower", itemId: "furniture.room.cat-tower-2" },
+    { kind: "catTower", itemId: "furniture.room.cat-tower-3" },
+    { kind: "bed", itemId: "furniture.room.hideout-2" },
+    { kind: "catTower", itemId: "furniture.room.scratcher-2" },
+    { kind: "bed", itemId: "furniture.room.litter-box-2" },
+    { kind: "rug", itemId: "furniture.desk-theme.rug" },
+    { kind: "catTower", itemId: "furniture.desk-theme.cat-tower" },
+    { kind: "bed", itemId: "furniture.desk-theme.hideout" },
+    { kind: "catTower", itemId: "furniture.desk-theme.scratcher" },
+    { kind: "bed", itemId: "furniture.desk-theme.litter-box" },
+    { kind: "rug", itemId: "furniture.desk-theme.rug-2" },
+    { kind: "catTower", itemId: "furniture.desk-theme.cat-tower-2" },
+    { kind: "bed", itemId: "furniture.desk-theme.hideout-2" },
+    { kind: "catTower", itemId: "furniture.desk-theme.scratcher-2" },
+    { kind: "bed", itemId: "furniture.desk-theme.litter-box-2" },
+    { kind: "rug", itemId: "furniture.ocean.rug" },
+    { kind: "catTower", itemId: "furniture.ocean.cat-tower" },
+    { kind: "bed", itemId: "furniture.ocean.hideout" },
+    { kind: "catTower", itemId: "furniture.ocean.scratcher" },
+    { kind: "bed", itemId: "furniture.ocean.litter-box" },
+    { kind: "rug", itemId: "furniture.ocean.rug-2" },
+    { kind: "catTower", itemId: "furniture.ocean.cat-tower-2" },
+    { kind: "catTower", itemId: "furniture.ocean.cat-tower-3" },
+    { kind: "bed", itemId: "furniture.ocean.hideout-2" },
+    { kind: "catTower", itemId: "furniture.ocean.scratcher-2" },
+    { kind: "bed", itemId: "furniture.ocean.litter-box-2" },
+  ],
+  consumable: [
+    { kind: "consumable", itemId: "consumable.salmon-cubes" },
+    { kind: "consumable", itemId: "consumable.chicken-strips" },
+    { kind: "consumable", itemId: "consumable.catnip-biscuits" },
+    { kind: "consumable", itemId: "consumable.tuna-soup" },
   ],
   wallpaper: [
     { kind: "wallpaper", itemId: "wallpaper.cream" },
@@ -90,7 +156,30 @@ const catalog: Record<CategoryId, Product[]> = {
     { kind: "floor", itemId: "floor.star" },
     { kind: "floor", itemId: "floor.walnut" },
   ],
-  decor: [{ kind: "plant", itemId: "decor.plant" }],
+  decor: [
+    { kind: "plant", itemId: "decor.plant" },
+    { kind: "plant", itemId: "decor.reed-clump" },
+    { kind: "decor", itemId: "decor.rock-angular" },
+    { kind: "decor", itemId: "decor.rock-round" },
+    { kind: "decor", itemId: "decor.fallen-log" },
+    { kind: "package", itemId: "decor.cardboard-box" },
+    { kind: "package", itemId: "decor.trash-bag" },
+    { kind: "package", itemId: "decor.sealed-box" },
+    { kind: "package", itemId: "decor.plastic-crate" },
+    { kind: "plant", itemId: "decor.alley-food-bowl" },
+    { kind: "plant", itemId: "decor.alley-water-bowl" },
+    { kind: "decor", itemId: "decor.crushed-can" },
+    { kind: "decor", itemId: "decor.old-brick" },
+    { kind: "decor", itemId: "decor.paper-ball" },
+    { kind: "decor", itemId: "decor.plastic-bottle" },
+    { kind: "decor", itemId: "decor.newspaper-stack" },
+    { kind: "decor", itemId: "decor.litter-scoop" },
+    { kind: "decor", itemId: "decor.yarn-ball" },
+    { kind: "decor", itemId: "decor.teaser-set" },
+    { kind: "decor", itemId: "decor.fur-pile" },
+    { kind: "plant", itemId: "decor.room-water-bowl" },
+    { kind: "plant", itemId: "decor.room-food-bowl" },
+  ],
 };
 
 export class ShopScene extends Container {
@@ -106,6 +195,7 @@ export class ShopScene extends Container {
   private readonly coinIcon: string;
   private readonly furnitureArt: FurnitureArtCollection;
   private readonly backgroundArt: BackgroundArtCollection;
+  private readonly consumableArt: ForestArt["consumables"];
   private readonly headerLayer = new Container();
   private activeCategory: CategoryId = "furniture";
   private activeTab: TabId = "recommended";
@@ -121,6 +211,7 @@ export class ShopScene extends Container {
     this.coinIcon = options.coinIcon;
     this.furnitureArt = options.furnitureArt;
     this.backgroundArt = options.backgroundArt;
+    this.consumableArt = options.consumableArt;
     this.addChild(this.content);
     this.buildBackground();
     this.content.addChild(this.headerLayer, this.navigationLayer, this.productLayer, this.modalLayer);
@@ -347,6 +438,17 @@ export class ShopScene extends Container {
     }
     if (definition.kind === "wallpaper") {
       return createBackgroundPreview(this.backgroundArt, product.itemId, 155, 94);
+    }
+    if (definition.kind === "consumable") {
+      const texture = this.consumableArt[product.itemId];
+      if (texture) {
+        const sprite = new Sprite(texture);
+        applySmoothTextureSampling(sprite);
+        sprite.anchor.set(0.5);
+        const scale = Math.min(155 / texture.width, 112 / texture.height);
+        sprite.scale.set(scale);
+        return sprite;
+      }
     }
     const art = drawProduct(product.kind, index);
     art.scale.set(0.74);

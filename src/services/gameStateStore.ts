@@ -113,6 +113,10 @@ function readShopInventory(
     plant: "decor.plant",
     catTree: "furniture.catTower",
     bed: "furniture.bed",
+    rug: "furniture.forest.rug",
+    hideout: "furniture.forest.hideout",
+    scratcher: "furniture.forest.scratcher",
+    litterBox: "furniture.forest.litter-box",
   };
   for (const kind of Object.keys(canonicalProducts) as FurnitureKind[]) {
     const exactCount = (Object.keys(shopItemDefinitions) as ShopItemId[])
@@ -141,6 +145,10 @@ function readInventory(value: unknown, fallback: Record<FurnitureKind, number>):
     plant: readCount(saved.plant, fallback.plant),
     catTree: readCount(saved.catTree, fallback.catTree),
     bed: readCount(saved.bed, fallback.bed),
+    rug: readCount(saved.rug, fallback.rug),
+    hideout: readCount(saved.hideout, fallback.hideout),
+    scratcher: readCount(saved.scratcher, fallback.scratcher),
+    litterBox: readCount(saved.litterBox, fallback.litterBox),
   };
 }
 

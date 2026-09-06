@@ -3,7 +3,16 @@ import type { DailyQuestId } from "./dailyQuest";
 import type { ShopItemId } from "./shop";
 
 /** 현재 프로토타입에서 배치할 수 있는 가구 원형 ID다. */
-export type FurnitureKind = "sofa" | "desk" | "plant" | "catTree" | "bed";
+export type FurnitureKind =
+  | "sofa"
+  | "desk"
+  | "plant"
+  | "catTree"
+  | "bed"
+  | "rug"
+  | "hideout"
+  | "scratcher"
+  | "litterBox";
 
 export const ROOM_GRID_WIDTH = 10;
 
@@ -67,6 +76,10 @@ export const furnitureDefinitions: Record<FurnitureKind, FurnitureDefinition> = 
   plant: { width: 1, height: 1 },
   catTree: { width: 2, height: 1 },
   bed: { width: 3, height: 2 },
+  rug: { width: 3, height: 1 },
+  hideout: { width: 2, height: 1 },
+  scratcher: { width: 2, height: 1 },
+  litterBox: { width: 2, height: 1 },
 };
 
 export const defaultFurniture: PlacedFurniture[] = [
@@ -114,7 +127,17 @@ export function createDefaultState(): GameState {
       reducedMotion: false,
     },
     furniture: defaultFurniture.map((item) => ({ ...item })),
-    inventory: { sofa: 0, desk: 0, plant: 1, catTree: 0, bed: 0 },
+    inventory: {
+      sofa: 0,
+      desk: 0,
+      plant: 1,
+      catTree: 0,
+      bed: 0,
+      rug: 0,
+      hideout: 0,
+      scratcher: 0,
+      litterBox: 0,
+    },
     shopInventory: {},
     activeWallpaper: null,
     activeFloor: null,
