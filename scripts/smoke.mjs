@@ -91,31 +91,46 @@ await page.mouse.click(1200, 445);
 await page.waitForTimeout(100);
 await page.screenshot({ path: screenshotPath("cat-game-study-difficulty-select.png") });
 await page.mouse.click(1200, 535);
-await page.mouse.click(1395, 350);
-await page.waitForTimeout(200);
-await page.screenshot({ path: screenshotPath("cat-game-study-task.png") });
 await page.mouse.click(680, 665);
 await page.waitForTimeout(150);
-await page.mouse.click(800, 520);
+await page.screenshot({ path: screenshotPath("cat-game-study-task.png") });
+await page.mouse.click(800, 524);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-study-feedback.png") });
 await page.mouse.click(800, 510);
 await page.waitForTimeout(150);
 await page.mouse.click(65, 55);
 await page.waitForTimeout(100);
-await page.mouse.click(940, 813);
-await page.waitForTimeout(100);
-await page.mouse.click(1450, 720);
+await page.mouse.click(1194, 820);
+await page.waitForTimeout(150);
+await page.mouse.click(940, 773);
+await page.waitForTimeout(150);
+await page.mouse.click(1450, 665);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-study-code.png") });
+await page.mouse.click(850, 380);
+await page.keyboard.press("Control+A");
+await page.keyboard.type("    return 0");
+await page.mouse.click(1380, 780);
+await page.waitForTimeout(200);
+await page.screenshot({ path: screenshotPath("cat-game-study-code-failed.png") });
+await page.mouse.click(800, 635);
+await page.waitForTimeout(150);
+await page.screenshot({ path: screenshotPath("cat-game-study-code-restored.png") });
+await page.mouse.click(850, 380);
+await page.keyboard.press("Control+A");
+await page.keyboard.type("    return n * (n + 1) // 2");
 await page.mouse.click(294, 601);
 await page.waitForTimeout(100);
 await page.screenshot({ path: screenshotPath("cat-game-study-hint-2.png") });
 await page.mouse.click(154, 601);
 await page.waitForTimeout(100);
 await page.screenshot({ path: screenshotPath("cat-game-study-hint-1-again.png") });
-await page.mouse.click(65, 55);
-await page.waitForTimeout(100);
+await page.mouse.click(1380, 780);
+await page.waitForTimeout(200);
+await page.screenshot({ path: screenshotPath("cat-game-study-code-passed.png") });
+await page.mouse.click(800, 635);
+await page.waitForTimeout(150);
 await page.mouse.click(65, 55);
 
 await page.mouse.click(1302, 820);
@@ -228,7 +243,7 @@ if (!savedState) {
   throw new Error("game state was not persisted");
 }
 const parsedState = JSON.parse(savedState);
-if (parsedState.coins !== 1_093_165) {
+if (parsedState.coins !== 1_093_205) {
   throw new Error(`unexpected coins after attendance, study reward, purchases, and two draws: ${parsedState.coins}`);
 }
 if (parsedState.attendanceStreak !== 1 || parsedState.attendanceLastClaimDate.length !== 10) {

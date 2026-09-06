@@ -20,6 +20,7 @@ import { summarizeStudyText } from "../presentation/studyPresentation";
 
 type FilterValue<T extends string> = "all" | T;
 type FilterSelectId = "type" | "concept" | "difficulty";
+type FeedbackTest = { label: string; passed: boolean };
 
 type StudyModalOptions = {
   tasks: StudyTaskView[];
@@ -510,9 +511,14 @@ export class StudyModal extends Container {
     });
   }
 
-  private renderCode(challenge: CodeChallengeView): void {
+  private renderCode(
+    challenge: CodeChallengeView,
+    draftBody = challenge.starterBody,
+    initialHintsUsed = 0,
+    restored = false,
+  ): void {
     this.clearBody();
-    this.hintsUsed = 0;
+    this.hintsUsed = initialHintsUsed;
     this.drawBaseHeader(resolveGameText(challenge.title), resolveGameText(challenge.summary), () =>
       this.renderDashboard(),
     );
@@ -539,24 +545,23 @@ export class StudyModal extends Container {
     });
     hintNotice.position.set(92, 510);
     const hintText = new Text({
-      text: "",
+      text: this.formatRevealedHints(challenge, initialHintsUsed),
       style: { ...textStyle(16, 0x4f663d, "700"), wordWrap: true, wordWrapWidth: 420, lineHeight: 25 },
     });
     hintText.position.set(92, 650);
-    const revealedHints = new Set<number>();
-    const hintButtons = challenge.hints.map((hintTextValue, index) => {
+    const revealedHints = new Set<number>(Array.from({ length: initialHintsUsed }, (_, index) => index));
+    const hintButtons = challenge.hints.map((_, index) => {
       const hintButton = new CanvasButton({
         label: message("study.showHint", { step: index + 1, total: challenge.hints.length }),
         width: 125,
         height: 52,
         color: 0xa8bb84,
         onPress: () => {
-          revealedHints.add(index);
+          for (let hintIndex = 0; hintIndex <= index; hintIndex += 1) {
+            revealedHints.add(hintIndex);
+          }
           this.hintsUsed = revealedHints.size;
-          hintText.text = `${message("study.showHint", {
-            step: index + 1,
-            total: challenge.hints.length,
-          })}\n${resolveGameText(hintTextValue)}`;
+          hintText.text = this.formatRevealedHints(challenge, this.hintsUsed);
         },
       });
       hintButton.position.set(92 + index * 140, 575);
@@ -564,16 +569,50 @@ export class StudyModal extends Container {
     });
     const editorTitle = new Text({ text: message("study.editorTitle"), style: textStyle(24, 0x493022, "800") });
     editorTitle.position.set(625, 155);
-    const editorHelp = new Text({ text: message("study.editorHelp"), style: textStyle(15, 0x76533c, "600") });
+    const editorHelp = new Text({
+      text: message("study.editorHelp"),
+      style: { ...textStyle(15, 0x76533c, "600"), wordWrap: true, wordWrapWidth: 470 },
+    });
     editorHelp.position.set(625, 193);
-    this.codeEditor = new CanvasCodeEditor(challenge.signature, challenge.starterBody);
+    this.codeEditor = new CanvasCodeEditor(challenge.signature, draftBody);
     this.codeEditor.position.set(625, 235);
+    const editorStatus = new Text({
+      text: message(restored ? "study.draftRestored" : "study.editorIdle"),
+      style: textStyle(14, 0x76533c, "700"),
+    });
+    editorStatus.position.set(625, 708);
+    this.codeEditor.onFocusChange = (focused) => {
+      editorStatus.text = message(focused ? "study.editorFocused" : "study.editorIdle");
+    };
+    const reset = new CanvasButton({
+      label: message("study.resetCode"),
+      width: 112,
+      height: 42,
+      fontSize: 14,
+      color: 0xd9c5aa,
+      onPress: () => {
+        this.codeEditor?.reset();
+        editorStatus.text = message("study.codeReset");
+      },
+    });
+    reset.position.set(1115, 174);
+    const paste = new CanvasButton({
+      label: message("study.pasteCode"),
+      width: 112,
+      height: 42,
+      fontSize: 14,
+      color: 0xa8bb84,
+      onPress: () => {
+        void this.pasteIntoCodeEditor(editorStatus);
+      },
+    });
+    paste.position.set(1240, 174);
     const submit = new CanvasButton({
       label: message("study.runTests"),
       width: 210,
       height: 62,
       color: 0xe99b45,
-      onPress: () => this.submitCode(challenge),
+      onPress: () => this.submitCode(challenge, editorStatus),
     });
     submit.position.set(1275, 750);
     this.body.addChild(
@@ -589,7 +628,10 @@ export class StudyModal extends Container {
       hintText,
       editorTitle,
       editorHelp,
+      reset,
+      paste,
       this.codeEditor,
+      editorStatus,
       submit,
     );
     if (challenge.rewardCoins > 0) {
@@ -599,25 +641,46 @@ export class StudyModal extends Container {
     }
   }
 
-  private async submitCode(challenge: CodeChallengeView): Promise<void> {
+  private async pasteIntoCodeEditor(status: Text): Promise<void> {
+    try {
+      const value = await navigator.clipboard.readText();
+      if (!value) {
+        status.text = message("study.clipboardEmpty");
+        return;
+      }
+      this.codeEditor?.append(value);
+      status.text = message("study.pasteComplete");
+    } catch (error) {
+      console.warn("Study editor clipboard read failed", error);
+      status.text = message("study.clipboardUnavailable");
+    }
+  }
+
+  private async submitCode(challenge: CodeChallengeView, status: Text): Promise<void> {
     if (this.submissionPending) {
       return;
     }
     const body = this.codeEditor?.value ?? "";
     this.submissionPending = true;
+    status.text = message("study.gradingInProgress");
     let result: CodeSubmissionResult;
     try {
       result = await this.options.onSubmitCode(challenge.id, body, this.hintsUsed);
     } catch (error) {
       console.error("Code submission failed", error);
-      this.showFeedback(false, message("study.serverGradingUnavailable"), [], () => this.renderCode(challenge));
+      this.showFeedback(false, message("study.serverGradingUnavailable"), [], () =>
+        this.renderCode(challenge, body, this.hintsUsed, true),
+      );
       return;
     } finally {
       this.submissionPending = false;
+      if (!status.destroyed) {
+        status.text = message("study.editorIdle");
+      }
     }
     if (!result.ok) {
       const feedback = result.reason === "empty-code" ? "study.emptyCode" : "study.serverGradingUnavailable";
-      this.showFeedback(false, message(feedback), [], () => this.renderCode(challenge));
+      this.showFeedback(false, message(feedback), [], () => this.renderCode(challenge, body, this.hintsUsed, true));
       return;
     }
     let detail = message("study.gradingFailed");
@@ -626,13 +689,14 @@ export class StudyModal extends Container {
     } else if (result.passed) {
       detail = `${message("study.gradingPassed")}\n${result.firstCompletion ? message("study.gradingReward", { amount: result.coinsAwarded }) : message("study.taskCompleted")}`;
     }
-    const testRows = result.tests.map((test) =>
-      message("study.testCase", {
+    const testRows = result.tests.map((test) => ({
+      label: message("study.testCase", {
         input: test.input,
         expected: test.expected,
         actual: test.actual ?? message("study.noResult"),
       }),
-    );
+      passed: test.passed,
+    }));
     if (result.passed) {
       this.markTaskCompleted(challenge.id);
     }
@@ -641,11 +705,23 @@ export class StudyModal extends Container {
         this.renderDashboard();
         return;
       }
-      this.renderCode(challenge);
+      this.renderCode(challenge, body, this.hintsUsed, true);
     });
   }
 
-  private showFeedback(passed: boolean, detailValue: string, tests: string[], onContinue: () => void): void {
+  private formatRevealedHints(challenge: CodeChallengeView, count: number): string {
+    return challenge.hints
+      .slice(0, count)
+      .map((hint, index) =>
+        message("study.hintEntry", {
+          step: index + 1,
+          hint: resolveGameText(hint),
+        }),
+      )
+      .join("\n");
+  }
+
+  private showFeedback(passed: boolean, detailValue: string, tests: FeedbackTest[], onContinue: () => void): void {
     this.closeFeedback();
     const blocker = new Graphics().rect(0, 0, BASE_WIDTH, BASE_HEIGHT).fill({ color: 0x2f211b, alpha: 0.58 });
     blocker.eventMode = "static";
@@ -686,8 +762,13 @@ export class StudyModal extends Container {
     detail.position.set(800, modalTop + 222);
     this.feedbackLayer.addChild(blocker, panel, title, subtitle, statusBadge, status, detailPlate, detail);
     tests.forEach((test, index) => {
-      const row = new Graphics().roundRect(350, testRowY + index * 54, 900, 44, 14).fill(passed ? 0xe5efd9 : 0xf4dfd4);
-      const label = new Text({ text: `${passed ? "✓" : "×"}  ${test}`, style: textStyle(15, 0x584235, "700") });
+      const row = new Graphics()
+        .roundRect(350, testRowY + index * 54, 900, 44, 14)
+        .fill(test.passed ? 0xe5efd9 : 0xf4dfd4);
+      const label = new Text({
+        text: `${test.passed ? "✓" : "×"}  ${test.label}`,
+        style: textStyle(15, 0x584235, "700"),
+      });
       label.anchor.set(0.5);
       label.position.set(800, testRowY + 22 + index * 54);
       this.feedbackLayer.addChild(row, label);
@@ -755,14 +836,19 @@ function resolveGameText(value: GameText): string {
 
 class CanvasCodeEditor extends Container {
   private readonly codeText: Text;
+  private readonly lineNumberText: Text;
   private readonly focusRing: Graphics;
+  private readonly starterBody: string;
   private focused = false;
   private bodyValue: string;
   private selectAll = false;
   private readonly keyHandler = (event: KeyboardEvent): void => this.handleKey(event);
+  private readonly pasteHandler = (event: ClipboardEvent): void => this.handlePaste(event);
+  onFocusChange: ((focused: boolean) => void) | null = null;
 
   constructor(signature: string, starterBody: string) {
     super();
+    this.starterBody = starterBody;
     this.bodyValue = starterBody;
     const background = new Graphics()
       .roundRect(0, 0, 860, 455, 18)
@@ -772,33 +858,83 @@ class CanvasCodeEditor extends Container {
     background.cursor = "text";
     background.on("pointertap", () => this.setFocused(true));
     this.focusRing = new Graphics();
+    const gutter = new Graphics().roundRect(4, 4, 54, 447, 14).fill(0x1a2029);
+    const signatureLineNumber = new Text({
+      text: "1",
+      style: { ...textStyle(15, 0x75808d, "600"), fontFamily: "Consolas, monospace" },
+    });
+    signatureLineNumber.anchor.set(1, 0);
+    signatureLineNumber.position.set(43, 27);
     const signatureText = new Text({
       text: signature,
       style: { ...textStyle(20, 0x83c9e8, "700"), fontFamily: "Consolas, monospace" },
     });
-    signatureText.position.set(28, 25);
+    signatureText.position.set(76, 25);
+    this.lineNumberText = new Text({
+      text: "",
+      style: { ...textStyle(15, 0x75808d, "600"), fontFamily: "Consolas, monospace", lineHeight: 28 },
+    });
+    this.lineNumberText.anchor.set(1, 0);
+    this.lineNumberText.position.set(43, 70);
     this.codeText = new Text({
       text: "",
       style: { ...textStyle(18, 0xe7eccf, "500"), fontFamily: "Consolas, monospace", lineHeight: 28 },
     });
-    this.codeText.position.set(28, 68);
-    this.addChild(background, this.focusRing, signatureText, this.codeText);
+    this.codeText.position.set(76, 68);
+    this.addChild(
+      background,
+      gutter,
+      this.focusRing,
+      signatureLineNumber,
+      signatureText,
+      this.lineNumberText,
+      this.codeText,
+    );
     this.refresh();
     window.addEventListener("keydown", this.keyHandler);
+    window.addEventListener("paste", this.pasteHandler);
   }
 
   get value(): string {
     return this.bodyValue;
   }
 
+  append(value: string): void {
+    this.bodyValue = limitEditorValue(`${this.bodyValue}${value}`);
+    this.selectAll = false;
+    this.setFocused(true);
+    this.refresh();
+  }
+
+  reset(): void {
+    this.bodyValue = this.starterBody;
+    this.selectAll = false;
+    this.setFocused(true);
+    this.refresh();
+  }
+
   override destroy(options?: Parameters<Container["destroy"]>[0]): void {
     window.removeEventListener("keydown", this.keyHandler);
+    window.removeEventListener("paste", this.pasteHandler);
     super.destroy(options);
   }
 
   private setFocused(focused: boolean): void {
     this.focused = focused;
+    this.onFocusChange?.(focused);
     this.refresh();
+  }
+
+  private handlePaste(event: ClipboardEvent): void {
+    if (!this.focused) {
+      return;
+    }
+    const value = event.clipboardData?.getData("text") ?? "";
+    if (!value) {
+      return;
+    }
+    event.preventDefault();
+    this.append(value);
   }
 
   private handleKey(event: KeyboardEvent): void {
@@ -813,6 +949,9 @@ class CanvasCodeEditor extends Container {
       this.selectAll = true;
       event.preventDefault();
       this.refresh();
+      return;
+    }
+    if (event.ctrlKey || event.metaKey) {
       return;
     }
     if (this.selectAll && event.key !== "Shift" && event.key !== "Control" && event.key !== "Meta") {
@@ -837,10 +976,26 @@ class CanvasCodeEditor extends Container {
   }
 
   private refresh(): void {
-    this.codeText.text = `${this.bodyValue}${this.focused ? "▌" : ""}`;
+    const bodyLines = this.bodyValue.split("\n");
+    const hiddenLineCount = Math.max(0, bodyLines.length - MAX_EDITOR_VISIBLE_LINES);
+    const visibleLines = hiddenLineCount > 0 ? ["⋯", ...bodyLines.slice(-(MAX_EDITOR_VISIBLE_LINES - 1))] : bodyLines;
+    const firstVisibleLineNumber = hiddenLineCount + 2;
+    const lineNumbers = visibleLines.map((_, index) => String(firstVisibleLineNumber + index));
+    if (hiddenLineCount > 0) {
+      lineNumbers[0] = "";
+    }
+    this.codeText.text = `${visibleLines.join("\n")}${this.focused ? "▌" : ""}`;
+    this.lineNumberText.text = lineNumbers.join("\n");
     this.focusRing.clear();
     if (this.focused) {
       this.focusRing.roundRect(3, 3, 854, 449, 16).stroke({ color: 0xe7a854, width: 4 });
     }
   }
+}
+
+const MAX_EDITOR_VISIBLE_LINES = 13;
+const MAX_EDITOR_CHARACTERS = 900;
+
+function limitEditorValue(value: string): string {
+  return value.slice(0, MAX_EDITOR_CHARACTERS);
 }
