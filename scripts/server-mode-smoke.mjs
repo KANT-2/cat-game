@@ -5,6 +5,7 @@ import { chromium } from "playwright";
 const gameUrl = process.env.GAME_URL ?? "http://127.0.0.1:5173/";
 const apiUrl = (process.env.CAT_GAME_API_URL ?? "http://127.0.0.1:8000").replace(/\/+$/, "");
 const screenshotPath = join(tmpdir(), "cat-game-server-mode.png");
+const quizScreenshotPath = join(tmpdir(), "cat-game-server-quiz.png");
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
 const errors = [];
@@ -160,6 +161,13 @@ try {
   await page.mouse.click(1194, 820);
   await page.waitForTimeout(300);
   await page.screenshot({ path: screenshotPath });
+  await page.mouse.click(390, 445);
+  await page.waitForTimeout(100);
+  await page.mouse.click(390, 535);
+  await page.waitForTimeout(200);
+  await page.mouse.click(680, 655);
+  await page.waitForTimeout(200);
+  await page.screenshot({ path: quizScreenshotPath });
 } finally {
   await browser.close();
 }
@@ -169,7 +177,7 @@ if (errors.length > 0) {
 }
 
 console.log("Server-mode E2E passed: browser session, consumable care, snapshot, quiz and Docker grading");
-console.log(`screenshot: ${screenshotPath}`);
+console.log(`screenshots: ${screenshotPath}, ${quizScreenshotPath}`);
 
 function readString(record, key) {
   const value = record?.[key];

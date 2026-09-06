@@ -155,6 +155,9 @@ export class BackendLearningGameClient implements GameClient {
       }
       return { ok: true, itemId, itemType: item.kind, remainingCoins: mutation.snapshot.balance };
     } catch (error) {
+      if (isBackendReason(error, "already-owned")) {
+        return { ok: false, reason: "already-owned" };
+      }
       return {
         ok: false,
         reason: isBackendReason(error, "insufficient-coins") ? "insufficient-coins" : "server-unavailable",
@@ -297,6 +300,7 @@ export class BackendLearningGameClient implements GameClient {
     return {
       ...toStudyTaskView(task),
       type: "code",
+      language: task.domain === "SQL" ? "sql" : "python",
       prompt: { text: task.description },
       signature: "",
       starterBody: task.templateCode,

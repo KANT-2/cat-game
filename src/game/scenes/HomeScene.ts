@@ -477,7 +477,13 @@ export class HomeScene extends Container {
     }
     const result = await this.gameClient.buyShopItem(itemId);
     if (!result.ok) {
-      const messageId = result.reason === "insufficient-coins" ? "shop.insufficientCoins" : "shop.purchaseComingSoon";
+      let messageId: "shop.insufficientCoins" | "shop.alreadyOwned" | "shop.purchaseComingSoon" =
+        "shop.purchaseComingSoon";
+      if (result.reason === "insufficient-coins") {
+        messageId = "shop.insufficientCoins";
+      } else if (result.reason === "already-owned") {
+        messageId = "shop.alreadyOwned";
+      }
       this.notify(message(messageId));
       return;
     }

@@ -423,17 +423,19 @@ export class ShopScene extends Container {
     });
     price.position.set(x + 275 - price.width / 2, y + 82);
     const ownedCount = this.getState().shopInventory[product.itemId] ?? 0;
+    const isOwnedBackground = definition.kind === "wallpaper" && ownedCount > 0;
     const owned = new Text({
-      text: message("shop.ownedCount", { count: ownedCount }),
+      text: isOwnedBackground ? message("shop.owned") : message("shop.ownedCount", { count: ownedCount }),
       style: textStyle(14, 0x6f7652, "700"),
     });
     owned.anchor.set(0.5);
     owned.position.set(x + 275, y + 112);
     const buy = new CanvasButton({
-      label: message("shop.buy"),
+      label: message(isOwnedBackground ? "shop.owned" : "shop.buy"),
       width: 140,
       height: 46,
-      color: 0x91aa55,
+      color: isOwnedBackground ? 0xc8c0b2 : 0x91aa55,
+      disabled: isOwnedBackground,
       onPress: () => this.showPurchaseConfirmation(product),
     });
     buy.position.set(x + 205, y + 133);
@@ -469,6 +471,10 @@ export class ShopScene extends Container {
   }
 
   private showPurchaseConfirmation(product: Product): void {
+    const definition = shopItemDefinitions[product.itemId];
+    if (definition.kind === "wallpaper" && (this.getState().shopInventory[product.itemId] ?? 0) > 0) {
+      return;
+    }
     this.closePurchaseConfirmation();
     const blocker = new Graphics().rect(0, 0, BASE_WIDTH, BASE_HEIGHT).fill({ color: 0x2f211b, alpha: 0.58 });
     blocker.eventMode = "static";

@@ -391,6 +391,10 @@ describe("LocalGameClient", () => {
     const before = client.getSnapshot().inventory;
 
     expect(client.buyShopItem("wallpaper.cream")).toMatchObject({ ok: true, itemType: "wallpaper" });
+    const coinsAfterPurchase = client.getSnapshot().coins;
+    expect(client.buyShopItem("wallpaper.cream")).toEqual({ ok: false, reason: "already-owned" });
+    expect(client.getSnapshot().coins).toBe(coinsAfterPurchase);
+    expect(client.getSnapshot().shopInventory["wallpaper.cream"]).toBe(1);
     expect(client.getSnapshot().inventory).toEqual(before);
     expect(client.applyRoomTheme("wallpaper.cream")).toEqual({
       ok: true,
