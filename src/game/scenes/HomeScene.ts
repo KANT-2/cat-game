@@ -64,17 +64,20 @@ export class HomeScene extends Container {
   private movingInstanceId: string | null = null;
   private screenWidth = BASE_WIDTH;
   private screenHeight = BASE_HEIGHT;
+  private readonly onLogout: (() => Promise<boolean>) | null;
 
   constructor(
     gameClient: GameClient,
     iconSources: HomeIconSources,
     catAnimations: CatAnimationLibrary,
     forestArt: ForestArt,
+    onLogout: (() => Promise<boolean>) | null = null,
   ) {
     super();
     this.gameClient = gameClient;
     this.iconSources = iconSources;
     this.catAnimations = catAnimations;
+    this.onLogout = onLogout;
     this.state = gameClient.getSnapshot();
     this.clearing = new ForestClearingView({
       getFurniture: () => this.state.furniture,
@@ -404,6 +407,7 @@ export class HomeScene extends Container {
       },
       onUpdateSettings: (patch) => this.gameClient.updateSettings(patch),
       onResetLearning: () => this.gameClient.resetLearningProgress(),
+      onLogout: this.onLogout,
       onOpenAttendance: () => this.openAttendance(true),
       catAnimations: this.catAnimations,
       backIcon: this.iconSources.back,

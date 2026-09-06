@@ -1,7 +1,7 @@
 import { Application, Assets } from "pixi.js";
 import { assetPath, loadAssetCatalog } from "../assets/AssetCatalog";
 import { findAssetEntry, loadTexture } from "../assets/SpriteSheetLoader";
-import type { MessageId } from "../content/messages";
+import { type MessageId, message } from "../content/messages";
 import type { GameClient } from "../core/GameClient";
 import { type CatVariant, catVariants } from "../domain/cats";
 import type { CatAnimationLibrary, CatAnimationSet } from "../game/entities/CatAnimations";
@@ -10,7 +10,7 @@ import { type AuthMode, AuthScene, type AuthSubmitResult } from "../game/scenes/
 import { HomeScene } from "../game/scenes/HomeScene";
 import { LoadingScene } from "../game/scenes/LoadingScene";
 import { BackendApiError } from "../services/BackendApiClient";
-import { createGameClient } from "./createGameClient";
+import { createGameClient, type GameSession, type ReadyGameClient } from "./createGameClient";
 import { loadCatAnimations } from "./loadCatAnimations";
 import { loadForestArt } from "./loadForestArt";
 
@@ -52,6 +52,7 @@ export class GameApp {
     let catAnimations: CatAnimationLibrary;
     let forestArt: ForestArt;
     let gameClient: GameClient;
+    let gameSession: GameSession | null;
     let assetCatalog: Awaited<ReturnType<typeof loadAssetCatalog>>;
     try {
       assetCatalog = await loadAssetCatalog();
@@ -66,16 +67,17 @@ export class GameApp {
       const clientStart = await createGameClient();
       if (clientStart.kind === "ready") {
         gameClient = clientStart.client;
+        gameSession = clientStart.session;
       } else {
         const authenticate = clientStart.authenticate;
-        const authenticatedClient = createDeferred<GameClient>();
+        const authenticatedClient = createDeferred<ReadyGameClient>();
         const authScene = new AuthScene({
           background: loadingBackground,
           logo: loadingLogo,
           onSubmit: async (mode, email, password) => {
             try {
-              const client = await authenticate(mode, email, password);
-              authenticatedClient.resolve(client);
+              const ready = await authenticate(mode, email, password);
+              authenticatedClient.resolve(ready);
               return { ok: true };
             } catch (error) {
               return authenticationFailure(mode, error);
@@ -87,7 +89,9 @@ export class GameApp {
         renderer.stage.addChild(authScene);
         await delay(Math.max(0, 900 - (performance.now() - loadingStartedAt)));
         loading.visible = false;
-        gameClient = await authenticatedClient.promise;
+        const ready = await authenticatedClient.promise;
+        gameClient = ready.client;
+        gameSession = ready.session;
         loading.visible = true;
         renderer.stage.removeChild(authScene);
         authScene.destroy({ children: true });
@@ -143,7 +147,24 @@ export class GameApp {
       gachaMachine: assetPath(assetCatalog, "ui.scene.gacha-machine-cutout.01"),
     };
     await Assets.load(Object.values(iconSources));
-    const home = new HomeScene(gameClient, iconSources, catAnimations, forestArt);
+    const home = new HomeScene(
+      gameClient,
+      iconSources,
+      catAnimations,
+      forestArt,
+      gameSession
+        ? async () => {
+            try {
+              await gameSession.logout();
+              window.location.reload();
+              return true;
+            } catch (error) {
+              console.warn("Browser session logout failed", error);
+              return false;
+            }
+          }
+        : null,
+    );
     renderer.stage.addChildAt(home, 0);
     const game = new GameApp(renderer, home);
     game.layout();
@@ -159,6 +180,27 @@ export class GameApp {
     loading.destroy({ children: true });
 
     window.addEventListener("resize", () => game.layout());
+    if (gameSession) {
+      gameSession.onExpired(() => window.location.reload());
+      let refreshing = false;
+      window.addEventListener("offline", () => home.notify(message("connection.offline")));
+      window.addEventListener("online", async () => {
+        if (refreshing) {
+          return;
+        }
+        refreshing = true;
+        home.notify(message("connection.syncing"));
+        try {
+          await gameSession.refresh();
+          home.notify(message("connection.synced"));
+        } catch (error) {
+          console.warn("Backend state refresh after reconnect failed", error);
+          home.notify(message("connection.syncFailed"));
+        } finally {
+          refreshing = false;
+        }
+      });
+    }
     renderer.ticker.add((ticker) => home.update(ticker.deltaMS / 1000));
     return game;
   }

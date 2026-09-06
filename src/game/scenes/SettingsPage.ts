@@ -8,7 +8,7 @@ import { textStyle } from "../config";
 
 type SettingsSection = "account" | "sound" | "alerts" | "learning";
 type SettingsPageMode = "settings" | "account";
-type ConfirmAction = "dataReset" | "accountDelete" | "learningReset";
+type ConfirmAction = "logout" | "dataReset" | "accountDelete" | "learningReset";
 
 type SettingsPageOptions = {
   mode: SettingsPageMode;
@@ -17,6 +17,7 @@ type SettingsPageOptions = {
   getState: () => GameState;
   onUpdateSettings: (patch: Partial<GameSettings>) => Awaitable<GameSettings>;
   onResetLearning: () => Awaitable<LearningResetResult>;
+  onLogout: (() => Awaitable<boolean>) | null;
 };
 
 const settingsSections: readonly SettingsSection[] = ["sound", "alerts", "learning"];
@@ -147,7 +148,20 @@ export class SettingsPage extends Container {
     const detail = new Text({ text: message("settings.dangerDescription"), style: textStyle(15, 0x7e5148, "600") });
     detail.position.set(100, 667);
     this.addChild(danger, title, detail);
-    this.addActionButton("settings.logout", 400, 715, 250, () => this.notify("settings.logoutReady"), 0xe7b080);
+    this.addActionButton(
+      "settings.logout",
+      400,
+      715,
+      250,
+      () => {
+        if (!this.options.onLogout) {
+          this.notify("settings.logoutUnavailable");
+          return;
+        }
+        this.askConfirmation("logout");
+      },
+      0xe7b080,
+    );
     this.addActionButton("settings.dataReset", 675, 715, 250, () => this.askConfirmation("dataReset"), 0xe58c72);
     this.addActionButton(
       "settings.accountDelete",
@@ -455,6 +469,14 @@ export class SettingsPage extends Container {
       color: 0xd96c5b,
       onPress: async () => {
         this.confirmAction = null;
+        if (action === "logout") {
+          const loggedOut = await this.options.onLogout?.();
+          if (!loggedOut) {
+            this.notify("settings.logoutFailed");
+            this.render();
+            return;
+          }
+        }
         if (action === "learningReset") {
           const result = await this.options.onResetLearning();
           if (!result.ok) {
@@ -484,6 +506,11 @@ const sectionMessages: Record<SettingsSection, { tab: MessageId; title: MessageI
 };
 
 const confirmMessages: Record<ConfirmAction, { title: MessageId; description: MessageId; status: MessageId }> = {
+  logout: {
+    title: "settings.confirmLogoutTitle",
+    description: "settings.confirmLogoutDescription",
+    status: "settings.logoutComplete",
+  },
   dataReset: {
     title: "settings.confirmDataResetTitle",
     description: "settings.confirmDataResetDescription",

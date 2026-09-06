@@ -92,6 +92,8 @@ const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
 const errors = [];
 const backendResponses = [];
+let tolerateOfflineErrors = false;
+let tolerateAuth401 = false;
 page.on("pageerror", (error) => errors.push(`page: ${error.message}`));
 page.on("response", (response) => {
   if (response.url().startsWith(apiUrl)) {
@@ -109,7 +111,14 @@ try {
   await page.waitForTimeout(400);
   page.on("console", (message) => {
     if (message.type() === "error") {
-      errors.push(`console: ${message.text()}`);
+      const text = message.text();
+      if (tolerateOfflineErrors && (text.includes("ERR_INTERNET_DISCONNECTED") || text.includes("service worker"))) {
+        return;
+      }
+      if (tolerateAuth401 && text.includes("401")) {
+        return;
+      }
+      errors.push(`console: ${text}`);
     }
   });
   const registrationResponse = page.waitForResponse(
@@ -137,7 +146,33 @@ try {
   await page.reload({ waitUntil: "domcontentloaded" });
   await resumedSessionResponse;
   await page.waitForTimeout(4_000);
-  await page.mouse.click(1194, 820);
+  await page.mouse.click(1220, 733);
+
+  tolerateOfflineErrors = true;
+  await page.context().setOffline(true);
+  await page.waitForTimeout(150);
+  const reconnectSnapshot = page.waitForResponse(
+    (response) => response.url().includes("/api/v1/game/snapshot") && response.status() === 200,
+  );
+  await page.context().setOffline(false);
+  await reconnectSnapshot;
+  await page.waitForTimeout(500);
+  tolerateOfflineErrors = false;
+
+  await page.mouse.click(90, 90);
+  await page.waitForTimeout(200);
+  await page.mouse.click(520, 738);
+  await page.waitForTimeout(150);
+  const logoutResponse = page.waitForResponse(
+    (response) => response.url().includes("/api/v1/session/logout") && response.status() === 204,
+  );
+  const anonymousAfterLogout = page.waitForResponse(
+    (response) => response.url().includes("/api/v1/session/me") && response.status() === 401,
+  );
+  tolerateAuth401 = true;
+  await page.mouse.click(950, 585);
+  await logoutResponse;
+  await anonymousAfterLogout;
   await page.waitForTimeout(500);
   await page.screenshot({ path: screenshotPath });
 } finally {
@@ -148,6 +183,7 @@ for (const path of [
   "/health",
   "/api/v1/session/register",
   "/api/v1/session/me",
+  "/api/v1/session/logout",
   "/learning/recommendations",
   "/api/v1/game/snapshot",
   "/api/v1/game/attendance/claims",
@@ -164,7 +200,7 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `Integration smoke passed: browser registration/session/CSRF, API quiz and sandbox grading, ${backendResponses.length} browser API responses, screenshot ${screenshotPath}`,
+  `Integration smoke passed: browser registration/session/reconnect/logout, CSRF, API quiz and sandbox grading, ${backendResponses.length} browser API responses, screenshot ${screenshotPath}`,
 );
 
 async function findTask(headers, predicate, description) {

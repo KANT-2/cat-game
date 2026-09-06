@@ -60,6 +60,8 @@ export type BackendGamePlacement = {
 type BackendDailyQuestId = "solve-one" | "solve-three" | "finish-code";
 
 export type BackendGameSnapshot = {
+  catalogVersion: number;
+  stateVersion: number;
   balance: number;
   mileage: number;
   activeCatKey: string;
@@ -93,6 +95,7 @@ export type BackendGameMutation = {
 
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 type CsrfTokenProvider = () => string | null;
+type AuthenticationExpiredListener = () => void;
 
 export class BackendApiError extends Error {
   constructor(
@@ -109,6 +112,7 @@ export class BackendApiError extends Error {
 export class BackendApiClient {
   private userPublicId: string | null;
   private browserSession = false;
+  private authenticationExpiredListener: AuthenticationExpiredListener | null = null;
 
   constructor(
     private readonly baseUrl: string,
@@ -157,6 +161,11 @@ export class BackendApiClient {
   async logout(): Promise<void> {
     await this.request("/api/v1/session/logout", { method: "POST" });
     this.browserSession = false;
+  }
+
+  /** 브라우저 세션이 서버에서 만료됐을 때 앱 셸이 인증 화면으로 복귀하도록 알림을 연결한다. */
+  setAuthenticationExpiredListener(listener: AuthenticationExpiredListener | null): void {
+    this.authenticationExpiredListener = listener;
   }
 
   /** 서버 상태를 확인하고 필요하면 로컬 개발 세션을 발급한 뒤 사용자 프로필을 검증한다. */
@@ -360,6 +369,10 @@ export class BackendApiClient {
           continue;
         }
         if (!response.ok) {
+          if (authenticated && this.browserSession && response.status === 401) {
+            this.browserSession = false;
+            this.authenticationExpiredListener?.();
+          }
           throw new BackendApiError(
             response.status,
             await readErrorMessage(response),
@@ -505,6 +518,8 @@ function parseGameSnapshot(value: unknown): BackendGameSnapshot {
     };
   });
   return {
+    catalogVersion: readNumber(record, "catalog_version"),
+    stateVersion: readNumber(record, "state_version"),
     balance: readNumber(record, "balance"),
     mileage: readNumber(record, "mileage"),
     activeCatKey: readString(record, "active_cat_key"),

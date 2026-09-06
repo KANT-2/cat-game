@@ -28,6 +28,7 @@ type Options = {
   onOpenAttendance: () => void;
   onUpdateSettings: (patch: Partial<GameSettings>) => Awaitable<GameSettings>;
   onResetLearning: () => Awaitable<LearningResetResult>;
+  onLogout: (() => Awaitable<boolean>) | null;
   catAnimations: CatAnimationLibrary;
   backIcon: string;
   coinIcon: string;
@@ -138,6 +139,7 @@ export class FeaturePageModal extends Container {
         getState: this.options.getState,
         onUpdateSettings: (patch) => this.options.onUpdateSettings(patch),
         onResetLearning: this.options.onResetLearning,
+        onLogout: this.options.onLogout,
       }),
     );
   }

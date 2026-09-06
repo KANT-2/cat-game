@@ -48,6 +48,8 @@ export class BackendLearningGameClient implements GameClient {
   private readonly listeners = new Set<GameStateListener>();
   private state: GameState;
   private dailyHasCodeCompletion: boolean;
+  private stateVersion: number;
+  private snapshotGeneration = 0;
 
   private constructor(
     local: GameClient,
@@ -60,6 +62,7 @@ export class BackendLearningGameClient implements GameClient {
     }
     this.state = mergeTaskProgress(mergeServerSnapshot(local.getSnapshot(), snapshot), this.tasks.values());
     this.dailyHasCodeCompletion = snapshot.dailyHasCodeCompletion;
+    this.stateVersion = snapshot.stateVersion;
   }
 
   /** 서버 연결과 추천 과제 초기화를 마친 원격 학습 클라이언트를 만든다. */
@@ -81,6 +84,25 @@ export class BackendLearningGameClient implements GameClient {
   subscribe(listener: GameStateListener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  /** 네트워크 복구 뒤 추천 과제와 게임 스냅샷을 다시 읽어 현재 구독자에게 전달한다.
+   *
+   * @returns 새 스냅샷을 적용했으면 `true`, 동시에 끝난 명령의 최신 결과를 보호해 건너뛰었으면 `false`.
+   * @remarks 재동기화보다 늦게 시작한 명령이 먼저 끝난 경우 오래된 읽기 결과로 덮어쓰지 않는다.
+   */
+  async refreshFromServer(): Promise<boolean> {
+    const generation = this.snapshotGeneration;
+    const [tasks, snapshot] = await Promise.all([this.api.getLearningRecommendations(10), this.api.getGameSnapshot()]);
+    if (generation !== this.snapshotGeneration || snapshot.stateVersion < this.stateVersion) {
+      return false;
+    }
+    this.tasks.clear();
+    for (const task of tasks) {
+      this.tasks.set(task.publicId, task);
+    }
+    this.applyServerSnapshot(snapshot);
+    return true;
   }
 
   async placeFurniture(command: PlacementCommand): Promise<PlacementResult> {
@@ -432,8 +454,13 @@ export class BackendLearningGameClient implements GameClient {
   }
 
   private applyServerSnapshot(snapshot: BackendGameSnapshot): void {
+    if (snapshot.stateVersion < this.stateVersion) {
+      return;
+    }
     this.state = mergeTaskProgress(mergeServerSnapshot(this.state, snapshot), this.tasks.values());
     this.dailyHasCodeCompletion = snapshot.dailyHasCodeCompletion;
+    this.stateVersion = snapshot.stateVersion;
+    this.snapshotGeneration += 1;
     this.emit();
   }
 

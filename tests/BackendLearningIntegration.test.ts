@@ -161,6 +161,11 @@ describe("backend learning integration", () => {
     expect(client.getDailyQuests()[0]).toMatchObject({ progress: 0, claimed: true });
     await expect(client.buyShopItem("furniture.sofa")).resolves.toMatchObject({ ok: true });
     expect(client.getSnapshot()).toMatchObject({ coins: 500, shopInventory: { "furniture.sofa": 1 } });
+    const refreshed = vi.fn();
+    client.subscribe(refreshed);
+    await expect(client.refreshFromServer()).resolves.toBe(true);
+    expect(refreshed).toHaveBeenCalledOnce();
+    expect(client.getSnapshot().coins).toBe(1_030);
   });
 
   it("rejects malformed server task data instead of leaking it into the UI", async () => {
@@ -241,6 +246,28 @@ describe("backend learning integration", () => {
         body: { email: "cat@example.com", password: "correct-horse-2026" },
       },
     ]);
+  });
+
+  it("reports an expired browser session once when an authenticated request returns 401", async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const pathname = new URL(String(input)).pathname;
+      if (pathname === "/health") {
+        return json({ status: "ok" });
+      }
+      if (pathname === "/api/v1/session/me") {
+        return json(userPayload());
+      }
+      return json({ detail: "authentication-required" }, 401);
+    });
+    const expired = vi.fn();
+    const api = new BackendApiClient("http://localhost:8000", null, fetcher);
+
+    await api.connectBrowserSession();
+    api.setAuthenticationExpiredListener(expired);
+    await expect(api.getGameSnapshot()).rejects.toMatchObject({ status: 401 });
+    await expect(api.getGameSnapshot()).rejects.toThrow("Backend user session is not connected");
+
+    expect(expired).toHaveBeenCalledOnce();
   });
 
   it("retries a temporary failure only for a safe request and keeps one trace id", async () => {
