@@ -153,6 +153,7 @@ try {
   await page.waitForFunction(() => document.documentElement.dataset.gameReady === "ready", undefined, {
     timeout: 120_000,
   });
+  await page.evaluate(() => navigator.serviceWorker.ready);
   const attendanceResponse = page.waitForResponse(
     (response) => response.url().includes("/api/v1/game/attendance/claims") && response.status() === 200,
   );
@@ -163,6 +164,10 @@ try {
   );
   await page.reload({ waitUntil: "domcontentloaded" });
   await resumedSessionResponse;
+  const controlledByServiceWorker = await page.evaluate(() => navigator.serviceWorker.controller !== null);
+  if (!controlledByServiceWorker) {
+    throw new Error("service worker does not control the reloaded app");
+  }
   await page.waitForTimeout(4_000);
   await page.mouse.click(1220, 733);
 
@@ -194,6 +199,12 @@ try {
   await logoutResponse;
   await anonymousAfterLogout;
   await page.waitForTimeout(500);
+
+  tolerateOfflineErrors = true;
+  await page.context().setOffline(true);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.locator("canvas").waitFor({ state: "visible" });
+  await page.waitForFunction(() => document.documentElement.dataset.gameReady === "error");
   await page.screenshot({ path: screenshotPath });
 } finally {
   await browser.close();
@@ -220,7 +231,7 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `Integration smoke passed: production shell headers, browser registration/session/reconnect/logout, CSRF, API quiz and sandbox grading, ${backendResponses.length} browser API responses, screenshot ${screenshotPath}`,
+  `Integration smoke passed: production shell headers and offline PWA reload, browser registration/session/reconnect/logout, CSRF, API quiz and sandbox grading, ${backendResponses.length} browser API responses, screenshot ${screenshotPath}`,
 );
 
 async function verifyProductionShellHeaders(url) {

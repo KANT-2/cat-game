@@ -34,7 +34,8 @@ curl -fsS https://nyang.example.com/ready
 PWA와 `/api`, `/health`, `/ready`는 같은 공개 호스트를 사용한다. 따라서 운영의 `__Host-nyang_session`
 쿠키와 CSRF 쿠키를 다른 서브도메인으로 넓힐 필요가 없다. nginx는 API 본문 크기와 proxy timeout을 제한하고,
 정적 해시 자산만 장기 캐시한다. 앱 셸과 service worker는 `no-store`로 갱신하며, CSP를 포함한 보안 헤더는
-캐시 정책과 관계없이 모든 응답에 유지한다.
+캐시 정책과 관계없이 모든 응답에 유지한다. 이미 설치된 PWA를 오프라인에서 다시 열면 캐시된 Canvas 셸이
+연결 오류 화면을 유지하며, 온라인 복귀 후 새로고침하면 서버 세션과 상태를 다시 읽는다.
 
 ## 백업과 복구
 

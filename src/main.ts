@@ -11,10 +11,14 @@ if (!mount) {
 
 document.documentElement.dataset.displayMode = "game";
 document.documentElement.dataset.gameReady = "loading";
-const game = await GameApp.create(mount);
-document.documentElement.dataset.gameReady = "ready";
-
-registerPwa({
-  onInstallAvailable: (install) => game.setInstallHandler(install),
-  onMessage: (messageId) => game.notify(message(messageId)),
-});
+try {
+  const game = await GameApp.create(mount);
+  document.documentElement.dataset.gameReady = "ready";
+  registerPwa({
+    onInstallAvailable: (install) => game.setInstallHandler(install),
+    onMessage: (messageId) => game.notify(message(messageId)),
+  });
+} catch (error) {
+  document.documentElement.dataset.gameReady = "error";
+  console.warn("Game startup is waiting for a recoverable reload", error);
+}
