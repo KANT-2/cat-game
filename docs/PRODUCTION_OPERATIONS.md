@@ -26,6 +26,8 @@ curl -fsS https://nyang.example.com/ready
 `backend`, `grading-worker`, `frontend`, `db`가 모두 실행 중이어야 한다. 워커가 재시작되더라도 제한 시간을
 넘긴 `RUNNING` 임대를 다시 가져오므로 제출을 수동으로 재생성하지 않는다. 기본 임대 시간은 60초이며 실제
 샌드박스 제한보다 충분히 길게 `CAT_GAME_GRADING_LEASE_SECONDS`로 조정한다.
+메모리·CPU·PID·출력 제한은 `production.env.example`의 `CAT_GAME_GRADING_*` 값을 기준으로 조정한다.
+특히 출력 상한은 학생 프로세스와 Docker CLI 양쪽에 적용되므로 워커가 무한 출력을 메모리에 쌓지 않는다.
 
 PWA와 `/api`, `/health`, `/ready`는 같은 공개 호스트를 사용한다. 따라서 운영의 `__Host-nyang_session`
 쿠키와 CSRF 쿠키를 다른 서브도메인으로 넓힐 필요가 없다. nginx는 API 본문 크기와 proxy timeout을 제한하고,
