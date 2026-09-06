@@ -242,6 +242,31 @@ describe("backend learning integration", () => {
       },
     ]);
   });
+
+  it("retries a temporary failure only for a safe request and keeps one trace id", async () => {
+    let healthAttempts = 0;
+    const requestIds: string[] = [];
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      requestIds.push(new Headers(init?.headers).get("X-Request-ID") ?? "");
+      const pathname = new URL(String(input)).pathname;
+      if (pathname === "/health") {
+        healthAttempts += 1;
+        if (healthAttempts === 1) {
+          return json({ detail: "temporarily-unavailable" }, 503);
+        }
+        return json({ status: "ok" });
+      }
+      return json(userPayload());
+    });
+    const api = new BackendApiClient("http://localhost:8000", userId, fetcher);
+
+    await api.connect();
+
+    expect(healthAttempts).toBe(2);
+    expect(requestIds).toHaveLength(3);
+    expect(requestIds[0]).toBe(requestIds[1]);
+    expect(requestIds[2]).not.toBe(requestIds[1]);
+  });
 });
 
 function userPayload() {

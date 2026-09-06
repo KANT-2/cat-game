@@ -98,6 +98,7 @@ export class BackendApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly requestId: string | null = null,
   ) {
     super(message);
     this.name = "BackendApiError";
@@ -323,15 +324,15 @@ export class BackendApiClient {
   }
 
   private async request(path: string, init: RequestInit = {}, authenticated = true): Promise<unknown> {
-    const controller = new AbortController();
-    const timeout = globalThis.setTimeout(() => controller.abort(), this.requestTimeoutMs);
     const headers = new Headers(init.headers);
     headers.set("Accept", "application/json");
+    const method = (init.method ?? "GET").toUpperCase();
+    const requestId = createTransportRequestId();
+    headers.set("X-Request-ID", requestId);
     if (authenticated) {
       if (this.userPublicId) {
         headers.set("X-User-Public-ID", this.userPublicId);
       } else if (this.browserSession) {
-        const method = init.method ?? "GET";
         if (!isSafeMethod(method)) {
           const csrfToken = this.csrfTokenProvider();
           if (!csrfToken) {
@@ -343,23 +344,43 @@ export class BackendApiClient {
         throw new Error("Backend user session is not connected");
       }
     }
-    try {
-      const response = await this.fetcher(`${this.baseUrl}${path}`, {
-        ...init,
-        headers,
-        signal: controller.signal,
-        credentials: "include",
-      });
-      if (!response.ok) {
-        throw new BackendApiError(response.status, await readErrorMessage(response));
+    const attemptLimit = isSafeMethod(method) ? 2 : 1;
+    for (let attempt = 0; attempt < attemptLimit; attempt += 1) {
+      const controller = new AbortController();
+      const timeout = globalThis.setTimeout(() => controller.abort(), this.requestTimeoutMs);
+      try {
+        const response = await this.fetcher(`${this.baseUrl}${path}`, {
+          ...init,
+          headers,
+          signal: controller.signal,
+          credentials: "include",
+        });
+        if (isRetryableStatus(response.status) && attempt + 1 < attemptLimit) {
+          await delay(180 * (attempt + 1));
+          continue;
+        }
+        if (!response.ok) {
+          throw new BackendApiError(
+            response.status,
+            await readErrorMessage(response),
+            response.headers.get("X-Request-ID") ?? requestId,
+          );
+        }
+        if (response.status === 204) {
+          return null;
+        }
+        return await response.json();
+      } catch (error) {
+        if (attempt + 1 < attemptLimit && !(error instanceof BackendApiError)) {
+          await delay(180 * (attempt + 1));
+          continue;
+        }
+        throw error;
+      } finally {
+        globalThis.clearTimeout(timeout);
       }
-      if (response.status === 204) {
-        return null;
-      }
-      return await response.json();
-    } finally {
-      globalThis.clearTimeout(timeout);
     }
+    throw new Error("Backend request retry state is invalid");
   }
 
   private async gameMutation(
@@ -643,6 +664,14 @@ function defaultFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Res
 function isSafeMethod(method: string): boolean {
   const normalizedMethod = method.toUpperCase();
   return normalizedMethod === "GET" || normalizedMethod === "HEAD" || normalizedMethod === "OPTIONS";
+}
+
+function isRetryableStatus(status: number): boolean {
+  return status === 502 || status === 503 || status === 504;
+}
+
+function createTransportRequestId(): string {
+  return globalThis.crypto.randomUUID();
 }
 
 function readBrowserCsrfToken(): string | null {
