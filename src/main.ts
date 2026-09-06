@@ -1,3 +1,4 @@
+import "pixi.js/unsafe-eval";
 import { GameApp } from "./app/GameApp";
 import { message } from "./content/messages";
 import { registerPwa } from "./pwa/registerPwa";
@@ -9,7 +10,9 @@ if (!mount) {
 }
 
 document.documentElement.dataset.displayMode = "game";
+document.documentElement.dataset.gameReady = "loading";
 const game = await GameApp.create(mount);
+document.documentElement.dataset.gameReady = "ready";
 
 registerPwa({
   onInstallAvailable: (install) => game.setInstallHandler(install),

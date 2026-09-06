@@ -80,7 +80,7 @@ services:
     build:
       context: .
       args:
-        VITE_CAT_GAME_API_BASE_URL: ${CAT_GAME_API_PUBLIC_URL:-http://127.0.0.1:8000}
+        VITE_CAT_GAME_API_BASE_URL: /
     depends_on:
       backend:
         condition: service_healthy

@@ -6,6 +6,8 @@ const apiUrl = (process.env.CAT_GAME_API_URL ?? "http://127.0.0.1:8000").replace
 const gameUrl = process.env.GAME_URL ?? "http://127.0.0.1:4173/";
 const screenshotPath = process.env.CAT_GAME_INTEGRATION_SCREENSHOT ?? join(tmpdir(), "cat-game-integration.png");
 
+await verifyProductionShellHeaders(gameUrl);
+
 const session = await requestJson(`${apiUrl}/api/v1/session/development`, { method: "POST" });
 const userPublicId = readString(session, "public_id");
 const authHeaders = { "X-User-Public-ID": userPublicId };
@@ -105,7 +107,12 @@ let tolerateOfflineErrors = false;
 let tolerateAuth401 = false;
 page.on("pageerror", (error) => errors.push(`page: ${error.message}`));
 page.on("response", (response) => {
-  if (response.url().startsWith(apiUrl)) {
+  const responseUrl = new URL(response.url());
+  const browserOrigin = new URL(gameUrl).origin;
+  if (
+    responseUrl.origin === browserOrigin &&
+    (responseUrl.pathname === "/health" || responseUrl.pathname.startsWith("/api/"))
+  ) {
     backendResponses.push({ url: response.url(), status: response.status() });
   }
 });
@@ -143,7 +150,9 @@ try {
   await page.keyboard.type("integration-pass-2026");
   await page.keyboard.press("Enter");
   await Promise.all([registrationResponse, firstSnapshotResponse]);
-  await page.waitForTimeout(4_000);
+  await page.waitForFunction(() => document.documentElement.dataset.gameReady === "ready", undefined, {
+    timeout: 120_000,
+  });
   const attendanceResponse = page.waitForResponse(
     (response) => response.url().includes("/api/v1/game/attendance/claims") && response.status() === 200,
   );
@@ -211,8 +220,31 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `Integration smoke passed: browser registration/session/reconnect/logout, CSRF, API quiz and sandbox grading, ${backendResponses.length} browser API responses, screenshot ${screenshotPath}`,
+  `Integration smoke passed: production shell headers, browser registration/session/reconnect/logout, CSRF, API quiz and sandbox grading, ${backendResponses.length} browser API responses, screenshot ${screenshotPath}`,
 );
+
+async function verifyProductionShellHeaders(url) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`frontend shell returned ${response.status}`);
+  }
+  const requiredHeaders = {
+    "cache-control": "no-store",
+    "content-security-policy": "default-src 'self'",
+    "cross-origin-opener-policy": "same-origin",
+    "cross-origin-resource-policy": "same-origin",
+    "permissions-policy": "camera=()",
+    "referrer-policy": "no-referrer",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+  };
+  for (const [name, expected] of Object.entries(requiredHeaders)) {
+    const value = response.headers.get(name);
+    if (!value?.includes(expected)) {
+      throw new Error(`frontend shell header ${name} is missing ${expected}`);
+    }
+  }
+}
 
 async function findTask(headers, predicate, description) {
   for (let attempt = 0; attempt < 20; attempt += 1) {
