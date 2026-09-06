@@ -1,5 +1,6 @@
 import { Container, type FederatedPointerEvent, Graphics, type Point, Sprite } from "pixi.js";
 import { furnitureDefinitions, type PlacedFurniture, rotatedSize } from "../../domain/room";
+import type { ShopItemId } from "../../domain/shop";
 import { CLEARING_GRID } from "../config";
 import type { AnchoredTexture } from "./ForestArt";
 
@@ -18,6 +19,16 @@ const FURNITURE_DISPLAY_SIZE = {
   bed: { width: 260, height: 76 },
 } as const;
 
+const SHOP_FURNITURE_DISPLAY_SIZE: Partial<Record<ShopItemId, { width: number; height: number }>> = {
+  "furniture.sofa": { width: 320, height: 212 },
+  "furniture.table": { width: 235, height: 75 },
+  "furniture.catTower": { width: 160, height: 240 },
+  "furniture.bed": { width: 260, height: 76 },
+  "furniture.desk": { width: 270, height: 156 },
+  "furniture.premiumTower": { width: 215, height: 323 },
+  "decor.plant": { width: 180, height: 113 },
+};
+
 export class FurnitureView extends Container {
   constructor({ item, art, project, onTap }: FurnitureViewOptions) {
     super({ label: `furniture:${item.id}` });
@@ -29,7 +40,8 @@ export class FurnitureView extends Container {
     this.eventMode = "static";
     this.cursor = "pointer";
 
-    const displaySize = FURNITURE_DISPLAY_SIZE[item.kind];
+    const displaySize =
+      (item.shopItemId ? SHOP_FURNITURE_DISPLAY_SIZE[item.shopItemId] : undefined) ?? FURNITURE_DISPLAY_SIZE[item.kind];
     const depth = Math.max(
       0,
       Math.min(1, (groundPoint.y - CLEARING_GRID.farY) / (CLEARING_GRID.nearY - CLEARING_GRID.farY)),

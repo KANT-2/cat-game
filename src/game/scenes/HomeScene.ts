@@ -10,7 +10,7 @@ import { applySmoothTextureSampling } from "../components/smoothSprite";
 import { ToastLayer } from "../components/ToastLayer";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
 import type { CatAnimationLibrary } from "../entities/CatAnimations";
-import type { ForestArt } from "../forest/ForestArt";
+import type { ForestArt, FurnitureArtCollection } from "../forest/ForestArt";
 import { ForestClearingView } from "../forest/ForestClearingView";
 import { AttendanceModal } from "./AttendanceModal";
 import { DailyQuestScene } from "./DailyQuestScene";
@@ -38,6 +38,7 @@ export class HomeScene extends Container {
   private readonly gameClient: GameClient;
   private readonly iconSources: HomeIconSources;
   private readonly catAnimations: CatAnimationLibrary;
+  private readonly furnitureArt: FurnitureArtCollection;
   private readonly clearingViewport = new Container();
   private readonly clearing: ForestClearingView;
   private readonly uiLayer = new Container();
@@ -77,6 +78,7 @@ export class HomeScene extends Container {
     this.gameClient = gameClient;
     this.iconSources = iconSources;
     this.catAnimations = catAnimations;
+    this.furnitureArt = forestArt.furniture;
     this.onLogout = onLogout;
     this.state = gameClient.getSnapshot();
     this.clearing = new ForestClearingView({
@@ -315,6 +317,7 @@ export class HomeScene extends Container {
       heroArt: this.iconSources.shopShowcase,
       backIcon: this.iconSources.back,
       coinIcon: this.iconSources.coin,
+      furnitureArt: this.furnitureArt,
     });
     this.pageLayer.addChild(this.shopScene);
     this.shopScene.layout(this.screenWidth, this.screenHeight);
@@ -375,6 +378,8 @@ export class HomeScene extends Container {
       machineArt: this.iconSources.gachaMachine,
       backIcon: this.iconSources.back,
       coinIcon: this.iconSources.coin,
+      catAnimations: this.catAnimations,
+      furnitureArt: this.furnitureArt,
     });
     this.pageLayer.addChild(this.gachaScene);
     this.gachaScene.layout(this.screenWidth, this.screenHeight);
@@ -410,6 +415,7 @@ export class HomeScene extends Container {
       onLogout: this.onLogout,
       onOpenAttendance: () => this.openAttendance(true),
       catAnimations: this.catAnimations,
+      furnitureArt: this.furnitureArt,
       backIcon: this.iconSources.back,
       coinIcon: this.iconSources.coin,
       onNavigate: (nextKind) => this.openFeaturePage(nextKind),

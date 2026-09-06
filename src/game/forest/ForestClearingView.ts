@@ -18,7 +18,7 @@ import { CLEARING_GRID, textStyle } from "../config";
 import { CatActor, type CatDropTarget } from "../entities/CatActor";
 import type { CatAction, CatAnimationLibrary } from "../entities/CatAnimations";
 import { furniturePresentation } from "../presentation/furniturePresentation";
-import type { ForestArt } from "./ForestArt";
+import { type ForestArt, resolveFurnitureArt } from "./ForestArt";
 import { FurnitureView } from "./FurnitureView";
 
 type ForestClearingViewOptions = {
@@ -299,7 +299,7 @@ export class ForestClearingView extends Container {
       this.entityLayer.addChild(
         new FurnitureView({
           item,
-          art: this.art.furniture[item.kind],
+          art: resolveFurnitureArt(this.art.furniture, item.kind, item.shopItemId),
           project: (x, y) => this.project(x, y),
           onTap: (placed) => this.handleFurnitureTap(placed),
         }),

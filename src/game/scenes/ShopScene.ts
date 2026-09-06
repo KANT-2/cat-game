@@ -1,7 +1,7 @@
 import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
 import type { GameState } from "../../domain/room";
-import type { ShopItemId } from "../../domain/shop";
+import { type ShopItemId, shopItemDefinitions } from "../../domain/shop";
 import { BackButton } from "../components/BackButton";
 import { CanvasButton } from "../components/CanvasButton";
 import { createCozyPageBackground, createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
@@ -9,14 +9,19 @@ import { createCoinAmount, createCoinIcon, createCurrencyBar } from "../componen
 import { layoutToFillViewport } from "../components/fullscreenLayout";
 import { applySmoothTextureSampling } from "../components/smoothSprite";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
+import type { FurnitureArtCollection } from "../forest/ForestArt";
+import { resolveFurnitureArt } from "../forest/ForestArt";
+import { createFurniturePreview } from "../forest/FurniturePreview";
+import { shopItemNameMessages } from "../shopItemPresentation";
 
 type ShopSceneOptions = {
   getState: () => GameState;
   onBack: () => void;
-  onBuy: (itemId: ShopItemId | null) => void;
+  onBuy: (itemId: ShopItemId) => void;
   heroArt: string;
   backIcon: string;
   coinIcon: string;
+  furnitureArt: FurnitureArtCollection;
 };
 type CategoryId = "furniture" | "wallpaper" | "floor" | "decor";
 type TabId = "recommended" | "new" | "popular";
@@ -33,7 +38,7 @@ type ProductKind =
   | "decor"
   | "rug"
   | "package";
-type Product = { name: MessageId; price: string; kind: ProductKind; itemId?: ShopItemId };
+type Product = { kind: ProductKind; itemId: ShopItemId };
 
 const categories: Array<{ id: CategoryId; label: MessageId }> = [
   { id: "furniture", label: "shop.categoryFurnitureWithTower" },
@@ -50,30 +55,30 @@ const tabs: Array<{ id: TabId; label: MessageId }> = [
 
 const catalog: Record<CategoryId, Product[]> = {
   furniture: [
-    { name: "shop.productSofa", price: "4,800", kind: "sofa", itemId: "furniture.sofa" },
-    { name: "shop.productTable", price: "3,200", kind: "table", itemId: "furniture.table" },
-    { name: "shop.productCatTower", price: "4,200", kind: "catTower", itemId: "furniture.catTower" },
-    { name: "shop.productBed", price: "5,600", kind: "bed", itemId: "furniture.bed" },
-    { name: "shop.productDesk", price: "3,900", kind: "table", itemId: "furniture.desk" },
-    { name: "shop.productPremiumTower", price: "90", kind: "catTower", itemId: "furniture.premiumTower" },
+    { kind: "sofa", itemId: "furniture.sofa" },
+    { kind: "table", itemId: "furniture.table" },
+    { kind: "catTower", itemId: "furniture.catTower" },
+    { kind: "bed", itemId: "furniture.bed" },
+    { kind: "table", itemId: "furniture.desk" },
+    { kind: "catTower", itemId: "furniture.premiumTower" },
   ],
   wallpaper: [
-    { name: "shop.productCreamWall", price: "2,100", kind: "wallpaper", itemId: "wallpaper.cream" },
-    { name: "shop.productCloudWall", price: "2,400", kind: "wallpaper", itemId: "wallpaper.cloud" },
-    { name: "shop.productForestWall", price: "2,800", kind: "wallpaper", itemId: "wallpaper.forest" },
-    { name: "shop.productFlowerWall", price: "2,600", kind: "wallpaper", itemId: "wallpaper.flower" },
-    { name: "shop.productNightWall", price: "70", kind: "wallpaper", itemId: "wallpaper.night" },
-    { name: "shop.productCatWall", price: "3,000", kind: "wallpaper", itemId: "wallpaper.cat" },
+    { kind: "wallpaper", itemId: "wallpaper.cream" },
+    { kind: "wallpaper", itemId: "wallpaper.cloud" },
+    { kind: "wallpaper", itemId: "wallpaper.forest" },
+    { kind: "wallpaper", itemId: "wallpaper.flower" },
+    { kind: "wallpaper", itemId: "wallpaper.night" },
+    { kind: "wallpaper", itemId: "wallpaper.cat" },
   ],
   floor: [
-    { name: "shop.productOakFloor", price: "2,300", kind: "floor", itemId: "floor.oak" },
-    { name: "shop.productCheckFloor", price: "2,600", kind: "floor", itemId: "floor.check" },
-    { name: "shop.productStoneFloor", price: "2,800", kind: "floor", itemId: "floor.stone" },
-    { name: "shop.productCreamFloor", price: "2,100", kind: "floor", itemId: "floor.cream" },
-    { name: "shop.productStarFloor", price: "65", kind: "floor", itemId: "floor.star" },
-    { name: "shop.productWalnutFloor", price: "3,100", kind: "floor", itemId: "floor.walnut" },
+    { kind: "floor", itemId: "floor.oak" },
+    { kind: "floor", itemId: "floor.check" },
+    { kind: "floor", itemId: "floor.stone" },
+    { kind: "floor", itemId: "floor.cream" },
+    { kind: "floor", itemId: "floor.star" },
+    { kind: "floor", itemId: "floor.walnut" },
   ],
-  decor: [{ name: "shop.productPlant", price: "1,700", kind: "plant", itemId: "decor.plant" }],
+  decor: [{ kind: "plant", itemId: "decor.plant" }],
 };
 
 export class ShopScene extends Container {
@@ -81,12 +86,13 @@ export class ShopScene extends Container {
   private readonly navigationLayer = new Container();
   private readonly productLayer = new Container();
   private readonly modalLayer = new Container();
-  private readonly onBuy: (itemId: ShopItemId | null) => void;
+  private readonly onBuy: (itemId: ShopItemId) => void;
   private readonly getState: () => GameState;
   private readonly onBack: () => void;
   private readonly heroArt: string;
   private readonly backIcon: string;
   private readonly coinIcon: string;
+  private readonly furnitureArt: FurnitureArtCollection;
   private readonly headerLayer = new Container();
   private activeCategory: CategoryId = "furniture";
   private activeTab: TabId = "recommended";
@@ -99,6 +105,7 @@ export class ShopScene extends Container {
     this.heroArt = options.heroArt;
     this.backIcon = options.backIcon;
     this.coinIcon = options.coinIcon;
+    this.furnitureArt = options.furnitureArt;
     this.addChild(this.content);
     this.buildBackground();
     this.content.addChild(this.headerLayer, this.navigationLayer, this.productLayer, this.modalLayer);
@@ -232,20 +239,33 @@ export class ShopScene extends Container {
     const badgeText = new Text({ text: message(badgeId), style: textStyle(13, 0xffffff, "800") });
     badgeText.anchor.set(0.5);
     badgeText.position.set(x + 52, y + 29);
-    const name = new Text({ text: message(product.name), style: textStyle(17, 0x3d2b22, "800") });
+    const name = new Text({
+      text: message(shopItemNameMessages[product.itemId]),
+      style: textStyle(17, 0x3d2b22, "800"),
+    });
     name.anchor.set(0.5);
     name.position.set(x + 275, y + 38);
-    const art = drawProduct(product.kind, index);
-    art.scale.set(0.74);
+    const definition = shopItemDefinitions[product.itemId];
+    const art =
+      definition.kind === "furniture"
+        ? createFurniturePreview(
+            resolveFurnitureArt(this.furnitureArt, definition.furnitureKind, product.itemId),
+            155,
+            122,
+          )
+        : drawProduct(product.kind, index);
+    if (definition.kind !== "furniture") {
+      art.scale.set(0.74);
+    }
     art.position.set(x + 105, y + 112);
-    const price = createCoinAmount(this.coinIcon, product.price, {
+    const price = createCoinAmount(this.coinIcon, definition.price, {
       color: 0x8b571e,
       fontSize: 18,
       iconSize: 24,
       gap: 10,
     });
     price.position.set(x + 275 - price.width / 2, y + 82);
-    const ownedCount = product.itemId ? (this.getState().shopInventory[product.itemId] ?? 0) : 0;
+    const ownedCount = this.getState().shopInventory[product.itemId] ?? 0;
     const owned = new Text({
       text: message("shop.ownedCount", { count: ownedCount }),
       style: textStyle(14, 0x6f7652, "700"),
@@ -271,13 +291,13 @@ export class ShopScene extends Container {
     const coin = createCoinIcon(this.coinIcon, 72);
     coin.position.set(764, 250);
     const title = new Text({
-      text: message("shop.confirmTitle", { item: message(product.name) }),
+      text: message("shop.confirmTitle", { item: message(shopItemNameMessages[product.itemId]) }),
       style: { ...textStyle(30, 0x4b3021, "800"), align: "center", wordWrap: true, wordWrapWidth: 650 },
     });
     title.anchor.set(0.5, 0);
     title.position.set(800, 355);
     const detail = new Text({
-      text: message("shop.confirmDetail", { amount: product.price }),
+      text: message("shop.confirmDetail", { amount: shopItemDefinitions[product.itemId].price.toLocaleString() }),
       style: { ...textStyle(18, 0x6b4935, "600"), align: "center", wordWrap: true, wordWrapWidth: 620, lineHeight: 29 },
     });
     detail.anchor.set(0.5, 0);
@@ -299,7 +319,7 @@ export class ShopScene extends Container {
       color: 0xf2aa4d,
       onPress: () => {
         this.closePurchaseConfirmation();
-        this.onBuy(product.itemId ?? null);
+        this.onBuy(product.itemId);
       },
     });
     confirm.position.set(855, 560);

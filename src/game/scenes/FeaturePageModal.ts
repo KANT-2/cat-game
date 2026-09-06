@@ -11,6 +11,10 @@ import { createCurrencyBar } from "../components/CurrencyBar";
 import { layoutToFillViewport } from "../components/fullscreenLayout";
 import { textStyle } from "../config";
 import type { CatAnimationLibrary } from "../entities/CatAnimations";
+import type { FurnitureArtCollection } from "../forest/ForestArt";
+import { resolveFurnitureArt } from "../forest/ForestArt";
+import { createFurniturePreview } from "../forest/FurniturePreview";
+import { shopItemNameMessages } from "../shopItemPresentation";
 import { SettingsPage } from "./SettingsPage";
 
 export type FeaturePageKind = "profile" | "settings" | "owned" | "addFriend" | "visitGarden";
@@ -32,6 +36,7 @@ type Options = {
   catAnimations: CatAnimationLibrary;
   backIcon: string;
   coinIcon: string;
+  furnitureArt: FurnitureArtCollection;
 };
 /** 설정·보유·친구 기능을 전체 Canvas 화면으로 표시한다. */
 export class FeaturePageModal extends Container {
@@ -195,7 +200,7 @@ export class FeaturePageModal extends Container {
       const storedCount = state.shopInventory[itemId] ?? 0;
       const placed = state.furniture.filter((item) => item.shopItemId === itemId).length;
       if (storedCount > 0 || placed > 0) {
-        entries.push({ key: itemId, itemId, kind, name: productNameMessages[itemId], stored: storedCount, placed });
+        entries.push({ key: itemId, itemId, kind, name: shopItemNameMessages[itemId], stored: storedCount, placed });
       }
     }
     for (const kind of Object.keys(state.inventory) as FurnitureKind[]) {
@@ -239,7 +244,7 @@ export class FeaturePageModal extends Container {
       const storedCount = entry.stored;
       const ownedCount = storedCount + entry.placed;
       const card = createCozyPanel(x, y, 380, 205, { fill: 0xfff5df, border: 0xb77a4f, radius: 22 });
-      const art = furnitureBadge(kind);
+      const art = createFurniturePreview(resolveFurnitureArt(this.options.furnitureArt, kind, entry.itemId), 125, 125);
       art.position.set(x + 90, y + 102);
       const name = new Text({ text: message(entry.name), style: textStyle(20, 0x493022, "800") });
       name.position.set(x + 170, y + 40);
@@ -318,7 +323,7 @@ export class FeaturePageModal extends Container {
         .roundRect(x + 28, y + 28, 125, 125, 16)
         .fill(definition.themeColor)
         .stroke({ color: 0x68442f, width: 3 });
-      const name = new Text({ text: message(productNameMessages[itemId]), style: textStyle(19, 0x493022, "800") });
+      const name = new Text({ text: message(shopItemNameMessages[itemId]), style: textStyle(19, 0x493022, "800") });
       name.position.set(x + 175, y + 37);
       const count = new Text({
         text: message("owned.count", { count: state.shopInventory[itemId] ?? 0 }),
@@ -518,27 +523,6 @@ const friendNames: MessageId[] = [
   "friends.nameCodeMeow",
   "friends.nameStudyCat",
 ];
-const productNameMessages: Record<ShopItemId, MessageId> = {
-  "furniture.sofa": "shop.productSofa",
-  "furniture.table": "shop.productTable",
-  "furniture.catTower": "shop.productCatTower",
-  "furniture.bed": "shop.productBed",
-  "furniture.desk": "shop.productDesk",
-  "furniture.premiumTower": "shop.productPremiumTower",
-  "decor.plant": "shop.productPlant",
-  "wallpaper.cream": "shop.productCreamWall",
-  "wallpaper.cloud": "shop.productCloudWall",
-  "wallpaper.forest": "shop.productForestWall",
-  "wallpaper.flower": "shop.productFlowerWall",
-  "wallpaper.night": "shop.productNightWall",
-  "wallpaper.cat": "shop.productCatWall",
-  "floor.oak": "shop.productOakFloor",
-  "floor.check": "shop.productCheckFloor",
-  "floor.stone": "shop.productStoneFloor",
-  "floor.cream": "shop.productCreamFloor",
-  "floor.star": "shop.productStarFloor",
-  "floor.walnut": "shop.productWalnutFloor",
-};
 const genericProductNameMessages: Record<FurnitureKind, MessageId> = {
   sofa: "shop.productSofa",
   desk: "shop.productDesk",
@@ -576,21 +560,4 @@ function catPortrait(variant: number): Graphics {
     .fill(0x3d2b22)
     .circle(0, 17, 5)
     .fill(0xb96e61);
-}
-
-function furnitureBadge(kind: FurnitureKind): Graphics {
-  const colors: Record<FurnitureKind, number> = {
-    sofa: 0xc97e62,
-    desk: 0xa46d45,
-    plant: 0x7b9b67,
-    catTree: 0xc49a62,
-    bed: 0xd59b7a,
-  };
-  return new Graphics()
-    .circle(0, 0, 62)
-    .fill(0xffe7bd)
-    .stroke({ color: 0x69432c, width: 4 })
-    .roundRect(-38, -25, 76, 52, 12)
-    .fill(colors[kind])
-    .stroke({ color: 0x69432c, width: 3 });
 }

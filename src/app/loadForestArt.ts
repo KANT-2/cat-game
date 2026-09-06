@@ -1,6 +1,7 @@
 import type { AssetCatalogData } from "../assets/AssetCatalog";
 import { findAssetEntry, loadTexture } from "../assets/SpriteSheetLoader";
 import type { FurnitureKind } from "../domain/room";
+import type { ShopItemId } from "../domain/shop";
 import type { AnchoredTexture, ForestArt } from "../game/forest/ForestArt";
 
 const FURNITURE_ASSET_IDS: Record<FurnitureKind, string> = {
@@ -9,6 +10,16 @@ const FURNITURE_ASSET_IDS: Record<FurnitureKind, string> = {
   plant: "furniture.plant.flower-bush.01",
   catTree: "furniture.cat-tree.scratch-post.01",
   bed: "furniture.bed.paw-cushion.01",
+};
+
+const SHOP_FURNITURE_ASSET_IDS: Partial<Record<ShopItemId, string>> = {
+  "furniture.sofa": "furniture.bench.forest-mushroom.01",
+  "furniture.table": "furniture.desk.low-table.01",
+  "furniture.catTower": "furniture.cat-tree.leaf-scratcher.01",
+  "furniture.bed": "furniture.bed.paw-cushion.01",
+  "furniture.desk": "furniture.hideout.forest-log.01",
+  "furniture.premiumTower": "furniture.cat-tree.great-tree.01",
+  "decor.plant": "furniture.plant.flower-bush.01",
 };
 
 /**
@@ -22,17 +33,31 @@ const FURNITURE_ASSET_IDS: Record<FurnitureKind, string> = {
  */
 export async function loadForestArt(catalog: AssetCatalogData): Promise<ForestArt> {
   const background = await loadTexture(findAssetEntry(catalog, "background.forest.clearing-day.01"));
-  const [sofa, desk, plant, catTree, bed] = await Promise.all([
+  const [sofa, desk, plant, catTree, bed, shopFurniture] = await Promise.all([
     loadAnchoredTexture(catalog, FURNITURE_ASSET_IDS.sofa),
     loadAnchoredTexture(catalog, FURNITURE_ASSET_IDS.desk),
     loadAnchoredTexture(catalog, FURNITURE_ASSET_IDS.plant),
     loadAnchoredTexture(catalog, FURNITURE_ASSET_IDS.catTree),
     loadAnchoredTexture(catalog, FURNITURE_ASSET_IDS.bed),
+    loadShopFurniture(catalog),
   ]);
   return {
     background,
-    furniture: { sofa, desk, plant, catTree, bed },
+    furniture: {
+      byKind: { sofa, desk, plant, catTree, bed },
+      byShopItem: shopFurniture,
+    },
   };
+}
+
+async function loadShopFurniture(catalog: AssetCatalogData): Promise<Partial<Record<ShopItemId, AnchoredTexture>>> {
+  const entries = await Promise.all(
+    Object.entries(SHOP_FURNITURE_ASSET_IDS).map(async ([itemId, assetId]) => [
+      itemId,
+      await loadAnchoredTexture(catalog, assetId),
+    ]),
+  );
+  return Object.fromEntries(entries);
 }
 
 async function loadAnchoredTexture(catalog: AssetCatalogData, assetId: string): Promise<AnchoredTexture> {
