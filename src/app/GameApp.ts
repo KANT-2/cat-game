@@ -185,6 +185,8 @@ function authenticationFailure(mode: AuthMode, error: unknown): AuthSubmitResult
       messageId = "auth.accountExists";
     } else if (error.status === 422) {
       messageId = "auth.requestInvalid";
+    } else if (error.status === 429) {
+      messageId = "auth.tooManyAttempts";
     }
   }
   return { ok: false, messageId };

@@ -32,6 +32,7 @@
   "auth.invalidCredentials": "이메일 또는 비밀번호가 맞지 않아요.",
   "auth.accountExists": "이미 가입된 이메일이에요. 로그인해 주세요.",
   "auth.requestInvalid": "입력한 내용을 다시 확인해 주세요.",
+  "auth.tooManyAttempts": "요청이 너무 많아요. 잠시 쉬었다가 다시 시도해 주세요.",
   "auth.serverUnavailable": "서버와 연결하지 못했어요. 잠시 후 다시 시도해 주세요.",
   "auth.clipboardUnavailable": "클립보드를 읽지 못했어요. 직접 입력해 주세요.",
   "auth.loggingIn": "고양이가 집사님을 확인하는 중…",

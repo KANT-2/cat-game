@@ -35,6 +35,7 @@ services:
         exec uvicorn app.main:app --host 0.0.0.0 --port 8000
     environment:
       APP_ENV: local
+      AUTH_REGISTRATION_ATTEMPT_LIMIT: 1000
       DATABASE_URL: postgresql+psycopg://cat_game:cat_game@db:5432/cat_game
       CORS_ORIGINS: ${CAT_GAME_WEB_ORIGIN:-http://127.0.0.1:4173},http://localhost:4173
       GRADING_IMAGE: cat-game-python-grader:3.12
