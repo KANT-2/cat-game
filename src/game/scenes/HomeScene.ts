@@ -832,9 +832,9 @@ export class HomeScene extends Container {
     if (activeCatChanged) {
       this.applyActiveCat(snapshot.activeCat);
     }
+    this.clearing.syncTheme();
     this.clearing.syncCats();
     this.clearing.syncFurniture();
-    this.clearing.syncTheme();
     if (this.roomEditPanel) {
       this.refreshRoomEditPanel();
     }

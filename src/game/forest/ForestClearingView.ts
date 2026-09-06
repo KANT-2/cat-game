@@ -13,11 +13,12 @@ import {
 } from "../../domain/room";
 import type { ConsumableEffect, ShopItemId } from "../../domain/shop";
 import { shopItemDefinitions } from "../../domain/shop";
-import { gridCellPolygon, gridToScreen, screenToGrid } from "../belt";
+import { type BeltGrid, gridCellPolygon, gridToScreen, screenToGrid } from "../belt";
 import { CLEARING_GRID, textStyle } from "../config";
 import { CatActor, type CatDropTarget } from "../entities/CatActor";
 import type { CatAction, CatAnimationLibrary } from "../entities/CatAnimations";
 import { shopItemNameMessages } from "../shopItemPresentation";
+import { resolveBackgroundGrid } from "./BackgroundGrid";
 import { type ForestArt, resolveBackgroundArt, resolveFurnitureArt } from "./ForestArt";
 import { FurnitureView } from "./FurnitureView";
 
@@ -87,6 +88,7 @@ export class ForestClearingView extends Container {
   private catBubbleTarget: CatActor | null = null;
   private catBubbleTimer = 0;
   private placementPending = false;
+  private activeGrid: BeltGrid = CLEARING_GRID;
 
   constructor(options: ForestClearingViewOptions) {
     super({ label: "forest-clearing" });
@@ -191,7 +193,7 @@ export class ForestClearingView extends Container {
       const spawn = this.findCatSpawn(index);
       const cat = new CatActor({
         project: (x, y) => this.project(x, y),
-        unproject: (x, y) => screenToGrid(CLEARING_GRID, x, y),
+        unproject: (x, y) => screenToGrid(this.activeGrid, x, y),
         canWalk: (x, y) => this.canCatWalk(variant, x, y),
         onFocusRequest: () => {
           this.activeCatVariant = variant;
@@ -221,7 +223,7 @@ export class ForestClearingView extends Container {
   }
 
   private project(x: number, y: number) {
-    return gridToScreen(CLEARING_GRID, x, y);
+    return gridToScreen(this.activeGrid, x, y);
   }
 
   /** 선택한 배경 이미지와 바닥재 색감을 홈 장소에 즉시 반영한다. */
@@ -234,6 +236,9 @@ export class ForestClearingView extends Container {
     });
     const wallpaper = this.getActiveWallpaper();
     const floor = this.getActiveFloor();
+    const nextGrid = resolveBackgroundGrid(wallpaper);
+    const gridChanged = nextGrid !== this.activeGrid;
+    this.activeGrid = nextGrid;
     const background = new Sprite(resolveBackgroundArt(this.art.backgrounds, wallpaper));
     background.width = 1600;
     background.height = 900;
@@ -244,27 +249,41 @@ export class ForestClearingView extends Container {
         this.themeLayer.addChild(
           new Graphics()
             .poly([
-              CLEARING_GRID.centerX - CLEARING_GRID.farWidth / 2,
-              CLEARING_GRID.farY,
-              CLEARING_GRID.centerX + CLEARING_GRID.farWidth / 2,
-              CLEARING_GRID.farY,
-              CLEARING_GRID.centerX + CLEARING_GRID.nearWidth / 2,
-              CLEARING_GRID.nearY,
-              CLEARING_GRID.centerX - CLEARING_GRID.nearWidth / 2,
-              CLEARING_GRID.nearY,
+              this.activeGrid.centerX - this.activeGrid.farWidth / 2,
+              this.activeGrid.farY,
+              this.activeGrid.centerX + this.activeGrid.farWidth / 2,
+              this.activeGrid.farY,
+              this.activeGrid.centerX + this.activeGrid.nearWidth / 2,
+              this.activeGrid.nearY,
+              this.activeGrid.centerX - this.activeGrid.nearWidth / 2,
+              this.activeGrid.nearY,
             ])
             .fill({ color: item.themeColor, alpha: 0.38 })
             .stroke({ color: item.themeColor, alpha: 0.7, width: 5 }),
         );
       }
     }
+    if (gridChanged && this.groundHitLayer.children.length > 0) {
+      this.buildGroundGrid();
+      for (const cat of this.cats.values()) {
+        cat.refreshProjection();
+      }
+      this.updateCatDropTarget(null);
+      this.updateSelection();
+    }
   }
 
   private buildGroundGrid(): void {
-    this.gridLayer.visible = false;
+    this.groundHitLayer.removeChildren().forEach((child) => {
+      child.destroy({ children: true });
+    });
+    this.gridLayer.removeChildren().forEach((child) => {
+      child.destroy({ children: true });
+    });
+    this.gridLayer.visible = this.editMode;
     for (let x = 0; x < ROOM_GRID_WIDTH; x += 1) {
       for (let y = 0; y < ROOM_GRID_HEIGHT; y += 1) {
-        const polygon = gridCellPolygon(CLEARING_GRID, x, y);
+        const polygon = gridCellPolygon(this.activeGrid, x, y);
         const hitCell = new Graphics().poly(polygon).fill({ color: 0xffffff, alpha: 0.001 });
         hitCell.eventMode = "static";
         hitCell.cursor = "pointer";
@@ -307,6 +326,7 @@ export class ForestClearingView extends Container {
         new FurnitureView({
           item,
           art: resolveFurnitureArt(this.art.furniture, item.kind, item.shopItemId),
+          grid: this.activeGrid,
           project: (x, y) => this.project(x, y),
           onTap: (placed) => this.handleFurnitureTap(placed),
         }),
@@ -430,7 +450,7 @@ export class ForestClearingView extends Container {
     }
     this.catDropLayer.addChild(
       new Graphics()
-        .poly(gridCellPolygon(CLEARING_GRID, target.x, target.y))
+        .poly(gridCellPolygon(this.activeGrid, target.x, target.y))
         .fill({ color: target.valid ? 0x78c96f : 0xd96e62, alpha: 0.5 })
         .stroke({ color: target.valid ? 0x315f3a : 0x8b322c, width: 3 }),
     );
@@ -456,7 +476,7 @@ export class ForestClearingView extends Container {
         }
         this.selectionLayer.addChild(
           new Graphics()
-            .poly(gridCellPolygon(CLEARING_GRID, x, y))
+            .poly(gridCellPolygon(this.activeGrid, x, y))
             .fill({ color: valid ? 0x78c96f : 0xd96e62, alpha: 0.5 })
             .stroke({ color: valid ? 0x315f3a : 0x8b322c, width: 3 }),
         );
