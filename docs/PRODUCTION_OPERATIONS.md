@@ -3,6 +3,8 @@
 `compose.production.yml`은 개발용 `compose.integration.yml`과 분리된 단일 호스트 운영 기준이다. PostgreSQL과
 FastAPI는 호스트 포트를 열지 않고, nginx만 `127.0.0.1:8080`에 노출한다. 외부 리버스 프록시 또는 로드
 밸런서가 이 포트 앞에서 TLS를 종료하고 `CAT_GAME_PUBLIC_ORIGIN`의 HTTPS 호스트로 서비스해야 한다.
+답안 채점은 API가 아니라 전용 `grading-worker`가 PostgreSQL 큐에서 가져간다. Docker TLS 인증서와 채점
+엔드포인트는 이 워커에만 제공되며 API 컨테이너에는 Docker 연결 권한이 없다.
 
 ## 필수 준비
 
@@ -20,6 +22,10 @@ docker compose --env-file production.env -f compose.production.yml up --build -d
 docker compose --env-file production.env -f compose.production.yml ps
 curl -fsS https://nyang.example.com/ready
 ```
+
+`backend`, `grading-worker`, `frontend`, `db`가 모두 실행 중이어야 한다. 워커가 재시작되더라도 제한 시간을
+넘긴 `RUNNING` 임대를 다시 가져오므로 제출을 수동으로 재생성하지 않는다. 기본 임대 시간은 60초이며 실제
+샌드박스 제한보다 충분히 길게 `CAT_GAME_GRADING_LEASE_SECONDS`로 조정한다.
 
 PWA와 `/api`, `/health`, `/ready`는 같은 공개 호스트를 사용한다. 따라서 운영의 `__Host-nyang_session`
 쿠키와 CSRF 쿠키를 다른 서브도메인으로 넓힐 필요가 없다. nginx는 API 본문 크기와 proxy timeout을 제한하고,

@@ -38,12 +38,9 @@ services:
       AUTH_REGISTRATION_ATTEMPT_LIMIT: 1000
       DATABASE_URL: postgresql+psycopg://cat_game:cat_game@db:5432/cat_game
       CORS_ORIGINS: ${CAT_GAME_WEB_ORIGIN:-http://127.0.0.1:4173},http://localhost:4173
-      GRADING_IMAGE: cat-game-python-grader:3.12
     depends_on:
       db:
         condition: service_healthy
-      grader-image:
-        condition: service_completed_successfully
     healthcheck:
       test:
         - CMD
@@ -55,6 +52,21 @@ services:
       retries: 30
     ports:
       - "127.0.0.1:${CAT_GAME_API_PORT:-8000}:8000"
+
+  grading-worker:
+    build:
+      context: ${CAT_GAME_BACKEND_PATH:-../cat-game-backend}
+      target: worker
+    command: ["python", "-m", "app.modules.grading.worker"]
+    environment:
+      APP_ENV: local
+      DATABASE_URL: postgresql+psycopg://cat_game:cat_game@db:5432/cat_game
+      GRADING_IMAGE: cat-game-python-grader:3.12
+    depends_on:
+      backend:
+        condition: service_healthy
+      grader-image:
+        condition: service_completed_successfully
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 

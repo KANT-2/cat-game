@@ -37,10 +37,6 @@ services:
       CORS_ORIGINS: ${CAT_GAME_PUBLIC_ORIGIN:?set CAT_GAME_PUBLIC_ORIGIN}
       AUTH_RATE_LIMIT_SECRET: ${CAT_GAME_AUTH_RATE_LIMIT_SECRET:?set CAT_GAME_AUTH_RATE_LIMIT_SECRET}
       SESSION_DAYS: ${CAT_GAME_SESSION_DAYS:-30}
-      GRADING_IMAGE: ${CAT_GAME_GRADING_IMAGE:-cat-game-python-grader:3.12}
-      DOCKER_HOST: ${CAT_GAME_GRADING_DOCKER_HOST:?set CAT_GAME_GRADING_DOCKER_HOST}
-      DOCKER_TLS_VERIFY: ${CAT_GAME_GRADING_DOCKER_TLS_VERIFY:-1}
-      DOCKER_CERT_PATH: /run/secrets/grading-docker
     depends_on:
       db:
         condition: service_healthy
@@ -56,10 +52,34 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=64m,mode=1777
+    networks:
+      - web
+      - data
+
+  grading-worker:
+    build:
+      context: ${CAT_GAME_BACKEND_PATH:-../cat-game-backend}
+      target: worker
+    restart: unless-stopped
+    command: ["python", "-m", "app.modules.grading.worker"]
+    environment:
+      APP_ENV: production
+      DATABASE_URL: ${CAT_GAME_DATABASE_URL:?set CAT_GAME_DATABASE_URL}
+      AUTH_RATE_LIMIT_SECRET: ${CAT_GAME_AUTH_RATE_LIMIT_SECRET:?set CAT_GAME_AUTH_RATE_LIMIT_SECRET}
+      GRADING_IMAGE: ${CAT_GAME_GRADING_IMAGE:-cat-game-python-grader:3.12}
+      GRADING_LEASE_SECONDS: ${CAT_GAME_GRADING_LEASE_SECONDS:-60}
+      DOCKER_HOST: ${CAT_GAME_GRADING_DOCKER_HOST:?set CAT_GAME_GRADING_DOCKER_HOST}
+      DOCKER_TLS_VERIFY: ${CAT_GAME_GRADING_DOCKER_TLS_VERIFY:-1}
+      DOCKER_CERT_PATH: /run/secrets/grading-docker
+    depends_on:
+      backend:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
     volumes:
       - ${CAT_GAME_GRADING_CERT_PATH:?set CAT_GAME_GRADING_CERT_PATH}:/run/secrets/grading-docker:ro
     networks:
-      - web
       - data
 
   frontend:
