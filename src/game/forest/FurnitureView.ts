@@ -1,12 +1,13 @@
 import { Container, type FederatedPointerEvent, Graphics, type Point, Sprite } from "pixi.js";
 import { type FurnitureKind, furnitureDefinitions, type PlacedFurniture, rotatedSize } from "../../domain/room";
 import type { ShopItemId } from "../../domain/shop";
-import { CLEARING_GRID } from "../config";
+import type { BeltGrid } from "../belt";
 import type { AnchoredTexture } from "./ForestArt";
 
 type FurnitureViewOptions = {
   item: PlacedFurniture;
   art: AnchoredTexture;
+  grid: BeltGrid;
   project: (x: number, y: number) => Point;
   onTap: (item: PlacedFurniture) => void;
 };
@@ -56,7 +57,7 @@ const SHOP_FURNITURE_DISPLAY_SIZE: Partial<Record<ShopItemId, { width: number; h
 };
 
 export class FurnitureView extends Container {
-  constructor({ item, art, project, onTap }: FurnitureViewOptions) {
+  constructor({ item, art, grid, project, onTap }: FurnitureViewOptions) {
     super({ label: `furniture:${item.id}` });
     const definition = furnitureDefinitions[item.kind];
     const size = rotatedSize(definition, item.rotation);
@@ -68,10 +69,7 @@ export class FurnitureView extends Container {
 
     const explicitDisplaySize = item.shopItemId ? SHOP_FURNITURE_DISPLAY_SIZE[item.shopItemId] : undefined;
     const displaySize = explicitDisplaySize ?? FURNITURE_DISPLAY_SIZE[item.kind];
-    const depth = Math.max(
-      0,
-      Math.min(1, (groundPoint.y - CLEARING_GRID.farY) / (CLEARING_GRID.nearY - CLEARING_GRID.farY)),
-    );
+    const depth = Math.max(0, Math.min(1, (groundPoint.y - grid.farY) / (grid.nearY - grid.farY)));
     const perspectiveScale = 0.78 + depth * 0.22;
     const fitScale = explicitDisplaySize
       ? 1

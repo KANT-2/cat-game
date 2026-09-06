@@ -246,14 +246,19 @@ await page.mouse.click(63, 60);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-home-three-cats.png") });
 
-await page.mouse.click(1530, 811);
-await page.waitForTimeout(150);
-await page.mouse.click(1518, 740);
-await page.waitForTimeout(150);
-await page.mouse.click(1400, 138);
+await page.mouse.click(210, 830);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-home-placement-mode.png") });
-await page.mouse.click(1020, 808);
+await page.mouse.click(200, 820);
+await page.waitForTimeout(150);
+await page.mouse.click(800, 650);
+await page.waitForTimeout(250);
+await page.mouse.click(200, 820);
+await page.waitForTimeout(150);
+await page.screenshot({ path: screenshotPath("cat-game-home-continuous-placement.png") });
+await page.mouse.click(1_355, 820);
+await page.waitForTimeout(100);
+await page.mouse.click(1_450, 800);
 await page.waitForTimeout(150);
 
 const savedState = await page.evaluate(() => localStorage.getItem("cozy-code-cat-room-v1"));

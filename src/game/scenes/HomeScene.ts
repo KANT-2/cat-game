@@ -6,6 +6,7 @@ import type { FurnitureKind, GameState, PlacedFurniture } from "../../domain/roo
 import type { ShopItemId } from "../../domain/shop";
 import { CanvasButton } from "../components/CanvasButton";
 import { HomeMenuButton } from "../components/HomeMenuButton";
+import { PLACEMENT_TRAY_HEIGHT, PLACEMENT_TRAY_WIDTH, PlacementTray } from "../components/PlacementTray";
 import { applySmoothTextureSampling } from "../components/smoothSprite";
 import { ToastLayer } from "../components/ToastLayer";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
@@ -13,6 +14,7 @@ import type { CatAnimationLibrary } from "../entities/CatAnimations";
 import type { BackgroundArtCollection, ForestArt, FurnitureArtCollection } from "../forest/ForestArt";
 import { ForestClearingView } from "../forest/ForestClearingView";
 import type { CodeEditorOverlayFactory } from "../ports/CodeEditorOverlay";
+import { getOwnedFurnitureEntries } from "../presentation/ownedFurniture";
 import { AttendanceModal } from "./AttendanceModal";
 import { DailyQuestScene } from "./DailyQuestScene";
 import { type FeaturePageKind, FeaturePageModal } from "./FeaturePageModal";
@@ -61,10 +63,11 @@ export class HomeScene extends Container {
   private gachaScene: GachaScene | null = null;
   private featurePageModal: FeaturePageModal | null = null;
   private placementPanel: Container | null = null;
-  private roomEditPanel: Container | null = null;
+  private roomEditPanel: PlacementTray | null = null;
   private purchaseChoicePanel: Container | null = null;
   private furnitureEditPanel: Container | null = null;
   private roomEditMode = false;
+  private roomEditPage = 0;
   private selectedFurniture: FurnitureKind | null = null;
   private placementRotation: 0 | 1 = 0;
   private selectedShopItemId: ShopItemId | undefined;
@@ -162,7 +165,7 @@ export class HomeScene extends Container {
     this.featurePageModal?.layout(width, height);
     this.attendanceModal?.layout(width, height);
     this.placementPanel?.position.set(width / 2, height - 92);
-    this.roomEditPanel?.position.set(width / 2, height - 92);
+    this.layoutRoomEditPanel();
     this.purchaseChoicePanel?.position.set(width / 2, height / 2);
     this.furnitureEditPanel?.position.set(width / 2, height - 92);
     this.toastLayer.layout(width);
@@ -213,6 +216,14 @@ export class HomeScene extends Container {
     const settings = this.createIconButton(this.iconSources.settings, message("home.settings"), true, () =>
       this.openFeaturePage("settings"),
     );
+    const placement = new CanvasButton({
+      label: message("placement.shortcut"),
+      width: 148,
+      height: 50,
+      color: 0xe9a14b,
+      onPress: () => this.enterRoomEditMode(),
+    });
+    placement.position.set(112, 40);
     dailyQuest.x = 108;
     gacha.x = 216;
     home.x = 324;
@@ -235,7 +246,7 @@ export class HomeScene extends Container {
     this.shopOptions.addChild(shop, owned);
 
     this.sideMenu.addChild(study, dailyQuest, gacha, home, this.shopOptions);
-    this.settingsMenu.addChild(settings);
+    this.settingsMenu.addChild(settings, placement);
   }
 
   private createIconButton(iconSrc: string, label: string, medallion: boolean, onPress: () => void): HomeMenuButton {
@@ -419,6 +430,7 @@ export class HomeScene extends Container {
       getState: () => this.state,
       onPlaceOwned: (itemId, furnitureKind) => {
         this.closeFeaturePage();
+        this.enterRoomEditMode();
         this.startPlacement(furnitureKind, 0, itemId);
       },
       onSelectCat: async (variant) => (await this.gameClient.selectCat(variant)).ok,
@@ -549,6 +561,7 @@ export class HomeScene extends Container {
       onPress: () => {
         this.closePurchaseChoice();
         this.closeShop();
+        this.enterRoomEditMode();
         this.startPlacement(kind, 0, itemId);
       },
     });
@@ -589,12 +602,16 @@ export class HomeScene extends Container {
   ): void {
     this.clearPlacementPanel();
     this.closeFurnitureEditor(false);
-    this.hideRoomEditPanel();
     this.selectedFurniture = kind;
     this.placementRotation = rotation;
     this.selectedShopItemId = shopItemId;
     this.movingInstanceId = movingInstanceId;
     this.clearing.setPlacementMode(true, kind, rotation, movingInstanceId, shopItemId);
+    if (this.roomEditMode) {
+      this.refreshRoomEditPanel();
+      return;
+    }
+    this.hideRoomEditPanel();
     const panel = new Container();
     panel.addChild(
       new Graphics().roundRect(-300, -42, 600, 84, 24).fill(0xfff3dc).stroke({ color: 0x68442f, width: 4 }),
@@ -631,7 +648,7 @@ export class HomeScene extends Container {
     this.clearPlacementPanel();
     if (this.roomEditMode) {
       this.clearing.setPlacementMode(true, null, 0);
-      this.showRoomEditPanel();
+      this.refreshRoomEditPanel();
     } else {
       this.clearing.setPlacementMode(false, null, 0);
     }
@@ -647,7 +664,13 @@ export class HomeScene extends Container {
   }
 
   private enterRoomEditMode(): void {
+    if (!this.roomEditMode) {
+      this.roomEditPage = 0;
+    }
     this.roomEditMode = true;
+    this.hideMenuOptions();
+    this.sideMenu.visible = false;
+    this.settingsMenu.visible = false;
     this.closeFurnitureEditor(false);
     this.stopPlacement();
     this.notify(message("owned.editGuide"));
@@ -661,31 +684,34 @@ export class HomeScene extends Container {
     this.closeFurnitureEditor(false);
     this.hideRoomEditPanel();
     this.stopPlacement();
+    this.sideMenu.visible = true;
+    this.settingsMenu.visible = true;
   }
 
-  private showRoomEditPanel(): void {
-    if (this.roomEditPanel) {
+  private refreshRoomEditPanel(): void {
+    if (!this.roomEditMode) {
       return;
     }
-    const panel = new Container();
-    panel.addChild(
-      new Graphics().roundRect(-300, -42, 600, 84, 24).fill(0xfff3dc).stroke({ color: 0x68442f, width: 4 }),
-    );
-    const label = new Text({ text: message("furniture.editModeGuide"), style: textStyle(17, 0x4b3021, "700") });
-    label.anchor.set(0.5);
-    label.position.set(-72, 0);
-    const finish = new CanvasButton({
-      label: message("furniture.finishEditMode"),
-      width: 128,
-      height: 48,
-      color: 0xe9a14b,
-      onPress: () => this.exitRoomEditMode(),
+    this.hideRoomEditPanel();
+    const panel = new PlacementTray({
+      entries: getOwnedFurnitureEntries(this.state),
+      page: this.roomEditPage,
+      selectedKind: this.selectedFurniture,
+      selectedItemId: this.selectedShopItemId,
+      moving: this.movingInstanceId !== null,
+      furnitureArt: this.furnitureArt,
+      onSelect: (entry) => this.startPlacement(entry.kind, 0, entry.itemId),
+      onPageChange: (page) => {
+        this.roomEditPage = page;
+        this.refreshRoomEditPanel();
+      },
+      onRotate: () => this.rotatePlacement(),
+      onCancelPlacement: () => this.stopPlacement(),
+      onFinish: () => this.exitRoomEditMode(),
     });
-    finish.position.set(156, -24);
-    panel.addChild(label, finish);
-    panel.position.set(this.screenWidth / 2, this.screenHeight - 92);
     this.roomEditPanel = panel;
     this.uiLayer.addChild(panel);
+    this.layoutRoomEditPanel();
   }
 
   private hideRoomEditPanel(): void {
@@ -695,6 +721,18 @@ export class HomeScene extends Container {
     this.uiLayer.removeChild(this.roomEditPanel);
     this.roomEditPanel.destroy({ children: true });
     this.roomEditPanel = null;
+  }
+
+  private layoutRoomEditPanel(): void {
+    if (!this.roomEditPanel) {
+      return;
+    }
+    const scale = Math.min(1, (this.screenWidth - 24) / PLACEMENT_TRAY_WIDTH);
+    this.roomEditPanel.scale.set(scale);
+    this.roomEditPanel.position.set(
+      (this.screenWidth - PLACEMENT_TRAY_WIDTH * scale) / 2,
+      this.screenHeight - PLACEMENT_TRAY_HEIGHT * scale - 14,
+    );
   }
 
   private rotatePlacement(): void {
@@ -709,6 +747,9 @@ export class HomeScene extends Container {
       this.movingInstanceId,
       this.selectedShopItemId,
     );
+    if (this.roomEditMode) {
+      this.refreshRoomEditPanel();
+    }
     this.notify(message("furniture.rotated"));
   }
 
@@ -773,7 +814,7 @@ export class HomeScene extends Container {
   private closeFurnitureEditor(restoreRoomEditPanel = true): void {
     if (!this.furnitureEditPanel) {
       if (restoreRoomEditPanel && this.roomEditMode && !this.selectedFurniture) {
-        this.showRoomEditPanel();
+        this.refreshRoomEditPanel();
       }
       return;
     }
@@ -781,7 +822,7 @@ export class HomeScene extends Container {
     this.furnitureEditPanel.destroy({ children: true });
     this.furnitureEditPanel = null;
     if (restoreRoomEditPanel && this.roomEditMode && !this.selectedFurniture) {
-      this.showRoomEditPanel();
+      this.refreshRoomEditPanel();
     }
   }
 
@@ -791,9 +832,12 @@ export class HomeScene extends Container {
     if (activeCatChanged) {
       this.applyActiveCat(snapshot.activeCat);
     }
+    this.clearing.syncTheme();
     this.clearing.syncCats();
     this.clearing.syncFurniture();
-    this.clearing.syncTheme();
+    if (this.roomEditPanel) {
+      this.refreshRoomEditPanel();
+    }
     if (this.selectedFurniture && snapshot.inventory[this.selectedFurniture] <= 0) {
       this.stopPlacement();
     }

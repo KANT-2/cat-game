@@ -178,6 +178,15 @@ export class CatActor extends Container {
     return occupiesCurrentCell || occupiesTargetCell;
   }
 
+  /**
+   * 현재 논리 위치를 활성 배경의 화면 투영으로 다시 표시한다.
+   *
+   * @remarks 배경 전환 뒤 호출하며 이동 목표와 행동 상태는 변경하지 않는다.
+   */
+  refreshProjection(): void {
+    this.syncPosition();
+  }
+
   private beginPointerInteraction(event: FederatedPointerEvent): void {
     if (this.paused || this.activePointerId !== null || event.button !== 0) {
       return;
