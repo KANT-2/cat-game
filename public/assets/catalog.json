@@ -1060,6 +1060,34 @@
         "tags": ["bed", "paw", "cushion", "transparent", "outdoor"]
       },
       {
+        "id": "furniture.bench.forest-mushroom.01",
+        "kind": "furniture",
+        "src": "/assets/environment/furniture-forest-bench-01.png",
+        "anchor": { "x": 0.5, "y": 0.96 },
+        "tags": ["bench", "mushroom", "moss", "transparent", "forest"]
+      },
+      {
+        "id": "furniture.hideout.forest-log.01",
+        "kind": "furniture",
+        "src": "/assets/environment/furniture-forest-hideout-01.png",
+        "anchor": { "x": 0.5, "y": 0.95 },
+        "tags": ["hideout", "log", "moss", "transparent", "forest"]
+      },
+      {
+        "id": "furniture.cat-tree.leaf-scratcher.01",
+        "kind": "furniture",
+        "src": "/assets/environment/furniture-leaf-scratcher-01.png",
+        "anchor": { "x": 0.5, "y": 0.96 },
+        "tags": ["cat-tree", "scratcher", "leaf", "transparent", "forest"]
+      },
+      {
+        "id": "furniture.cat-tree.great-tree.01",
+        "kind": "furniture",
+        "src": "/assets/environment/furniture-great-tree-tower-01.png",
+        "anchor": { "x": 0.5, "y": 0.98 },
+        "tags": ["cat-tree", "tower", "great-tree", "transparent", "forest"]
+      },
+      {
         "id": "background.alley.day.01",
         "kind": "background",
         "src": "/assets/environment/alley-day-01.webp",
@@ -1073,10 +1101,10 @@
       },
       {
         "id": "environment.alley.cardboard-box.01",
-        "kind": "environment",
+        "kind": "furniture",
         "src": "/assets/environment/alley-cardboard-box-01.webp",
         "anchor": { "x": 0.5, "y": 0.97 },
-        "tags": ["alley", "cardboard", "box", "transparent", "alternate-theme"]
+        "tags": ["alley", "cardboard", "box", "decor", "placeable", "transparent", "alternate-theme"]
       }
     ],
     "forest": [
@@ -1086,7 +1114,199 @@
         "src": "/assets/backgrounds/forest/forest-clearing-day-01.png",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["forest", "clearing", "day", "one-point-perspective", "cat-style"]
+      },
+      {
+        "id": "background.forest.clearing-sunny.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/forest/forest-clearing-sunny-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["forest", "clearing", "sunny", "belt-view", "cat-style"]
+      },
+      {
+        "id": "background.forest.waterfall-day.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/forest/forest-waterfall-day-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["forest", "waterfall", "day", "belt-view", "cat-style"]
+      },
+      {
+        "id": "background.alley.stone-courtyard.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/alley/stone-courtyard-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["alley", "stone", "courtyard", "day", "belt-view"]
+      },
+      {
+        "id": "background.alley.modern-courtyard.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/alley/modern-courtyard-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["alley", "modern", "courtyard", "day", "belt-view"]
+      },
+      {
+        "id": "background.alley.village-yard.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/alley/village-yard-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["alley", "village", "yard", "day", "belt-view"]
+      },
+      {
+        "id": "background.room.cottage.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/room/cottage-room-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["room", "cottage", "wood", "day", "belt-view"]
+      },
+      {
+        "id": "background.room.sunny-studio.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/room/sunny-studio-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["room", "studio", "sunny", "day", "belt-view"]
+      },
+      {
+        "id": "background.room.living-room.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/room/living-room-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["room", "living-room", "sunny", "day", "belt-view"]
+      },
+      {
+        "id": "background.room.city-office.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/room/city-office-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["room", "office", "city", "day", "belt-view"]
+      },
+      {
+        "id": "background.desk.botanical.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/desk/botanical-desk-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["desk", "botanical", "sunny", "day", "belt-view"]
+      },
+      {
+        "id": "background.desk.music.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/desk/music-desk-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["desk", "music", "sunny", "day", "belt-view"]
+      },
+      {
+        "id": "background.desk.executive.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/desk/executive-desk-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["desk", "executive", "city", "evening", "belt-view"]
+      },
+      {
+        "id": "background.ocean.sandy-cove.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/ocean/sandy-cove-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["ocean", "beach", "sand", "day", "belt-view"]
+      },
+      {
+        "id": "background.ocean.seaside-promenade.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/ocean/seaside-promenade-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["ocean", "promenade", "city", "day", "belt-view"]
+      },
+      {
+        "id": "background.ocean.working-harbor.01",
+        "kind": "background",
+        "src": "/assets/backgrounds/ocean/working-harbor-01.png",
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "tags": ["ocean", "harbor", "boats", "day", "belt-view"]
       }
+    ],
+    "themed-furniture": [
+      { "id": "furniture.forest.rug.01", "kind": "furniture", "src": "/assets/furniture/forest/forest-rug-01.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["forest", "rug", "transparent", "belt-view"] },
+      { "id": "furniture.forest.cat-tower.01", "kind": "furniture", "src": "/assets/furniture/forest/forest-cat-tower-01.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["forest", "cat-tree", "transparent", "belt-view"] },
+      { "id": "furniture.forest.hideout.01", "kind": "furniture", "src": "/assets/furniture/forest/forest-hideout-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["forest", "hideout", "transparent", "belt-view"] },
+      { "id": "furniture.forest.scratcher.01", "kind": "furniture", "src": "/assets/furniture/forest/forest-scratcher-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["forest", "scratcher", "transparent", "belt-view"] },
+      { "id": "furniture.forest.litter-box.01", "kind": "furniture", "src": "/assets/furniture/forest/forest-litter-box-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["forest", "litter-box", "transparent", "belt-view"] },
+      { "id": "furniture.alley.rug.01", "kind": "furniture", "src": "/assets/furniture/alley/alley-rug-01.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["alley", "rug", "transparent", "belt-view"] },
+      { "id": "furniture.alley.cat-tower.01", "kind": "furniture", "src": "/assets/furniture/alley/alley-cat-tower-01.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["alley", "cat-tree", "transparent", "belt-view"] },
+      { "id": "furniture.alley.hideout.01", "kind": "furniture", "src": "/assets/furniture/alley/alley-hideout-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["alley", "hideout", "transparent", "belt-view"] },
+      { "id": "furniture.alley.scratcher.01", "kind": "furniture", "src": "/assets/furniture/alley/alley-scratcher-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["alley", "scratcher", "transparent", "belt-view"] },
+      { "id": "furniture.alley.litter-box.01", "kind": "furniture", "src": "/assets/furniture/alley/alley-litter-box-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["alley", "litter-box", "transparent", "belt-view"] },
+      { "id": "furniture.room.rug.01", "kind": "furniture", "src": "/assets/furniture/room/room-rug-01.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["room", "rug", "transparent", "belt-view"] },
+      { "id": "furniture.room.cat-tower.01", "kind": "furniture", "src": "/assets/furniture/room/room-cat-tower-01.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["room", "cat-tree", "transparent", "belt-view"] },
+      { "id": "furniture.room.hideout.01", "kind": "furniture", "src": "/assets/furniture/room/room-hideout-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["room", "hideout", "transparent", "belt-view"] },
+      { "id": "furniture.room.scratcher.01", "kind": "furniture", "src": "/assets/furniture/room/room-scratcher-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["room", "scratcher", "transparent", "belt-view"] },
+      { "id": "furniture.room.litter-box.01", "kind": "furniture", "src": "/assets/furniture/room/room-litter-box-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["room", "litter-box", "transparent", "belt-view"] },
+      { "id": "furniture.desk.rug.01", "kind": "furniture", "src": "/assets/furniture/desk/desk-rug-01.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["desk", "rug", "transparent", "belt-view"] },
+      { "id": "furniture.desk.cat-tower.01", "kind": "furniture", "src": "/assets/furniture/desk/desk-cat-tower-01.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["desk", "cat-tree", "transparent", "belt-view"] },
+      { "id": "furniture.desk.hideout.01", "kind": "furniture", "src": "/assets/furniture/desk/desk-hideout-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["desk", "hideout", "transparent", "belt-view"] },
+      { "id": "furniture.desk.scratcher.01", "kind": "furniture", "src": "/assets/furniture/desk/desk-scratcher-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["desk", "scratcher", "transparent", "belt-view"] },
+      { "id": "furniture.desk.litter-box.01", "kind": "furniture", "src": "/assets/furniture/desk/desk-litter-box-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["desk", "litter-box", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.rug.01", "kind": "furniture", "src": "/assets/furniture/ocean/ocean-rug-01.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["ocean", "rug", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.cat-tower.01", "kind": "furniture", "src": "/assets/furniture/ocean/ocean-cat-tower-01.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["ocean", "cat-tree", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.hideout.01", "kind": "furniture", "src": "/assets/furniture/ocean/ocean-hideout-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["ocean", "hideout", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.scratcher.01", "kind": "furniture", "src": "/assets/furniture/ocean/ocean-scratcher-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["ocean", "scratcher", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.litter-box.01", "kind": "furniture", "src": "/assets/furniture/ocean/ocean-litter-box-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["ocean", "litter-box", "transparent", "belt-view"] },
+      { "id": "furniture.forest.rug.02", "kind": "furniture", "src": "/assets/furniture/forest/forest-rug-02.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["forest", "rug", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.forest.cat-tower.02", "kind": "furniture", "src": "/assets/furniture/forest/forest-cat-tower-02.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["forest", "cat-tree", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.forest.hideout.02", "kind": "furniture", "src": "/assets/furniture/forest/forest-hideout-02.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["forest", "hideout", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.forest.scratcher.02", "kind": "furniture", "src": "/assets/furniture/forest/forest-scratcher-02.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["forest", "scratcher", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.forest.litter-box.02", "kind": "furniture", "src": "/assets/furniture/forest/forest-litter-box-02.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["forest", "litter-box", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.forest.bench.02", "kind": "furniture", "src": "/assets/furniture/forest/forest-bench-02.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["forest", "bench", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.forest.cat-tower.03", "kind": "furniture", "src": "/assets/furniture/forest/forest-cat-tower-03.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["forest", "cat-tree", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.forest.hideout.03", "kind": "furniture", "src": "/assets/furniture/forest/forest-hideout-03.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["forest", "hideout", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.alley.rug.02", "kind": "furniture", "src": "/assets/furniture/alley/alley-rug-02.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["alley", "rug", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.alley.cat-tower.02", "kind": "furniture", "src": "/assets/furniture/alley/alley-cat-tower-02.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["alley", "cat-tree", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.alley.hideout.02", "kind": "furniture", "src": "/assets/furniture/alley/alley-hideout-02.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["alley", "hideout", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.alley.scratcher.02", "kind": "furniture", "src": "/assets/furniture/alley/alley-scratcher-02.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["alley", "scratcher", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.alley.scratcher.03", "kind": "furniture", "src": "/assets/furniture/alley/alley-scratcher-03.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["alley", "scratcher", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.alley.litter-box.02", "kind": "furniture", "src": "/assets/furniture/alley/alley-litter-box-02.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["alley", "litter-box", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.alley.litter-box.03", "kind": "furniture", "src": "/assets/furniture/alley/alley-litter-box-03.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["alley", "litter-box", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.room.rug.02", "kind": "furniture", "src": "/assets/furniture/room/room-rug-02.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["room", "rug", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.room.cat-tower.02", "kind": "furniture", "src": "/assets/furniture/room/room-cat-tower-02.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["room", "cat-tree", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.room.cat-tower.03", "kind": "furniture", "src": "/assets/furniture/room/room-cat-tower-03.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["room", "cat-tree", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.room.hideout.02", "kind": "furniture", "src": "/assets/furniture/room/room-hideout-02.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["room", "hideout", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.room.scratcher.02", "kind": "furniture", "src": "/assets/furniture/room/room-scratcher-02.webp", "anchor": { "x": 0.5, "y": 0.97 }, "tags": ["room", "scratcher", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.room.litter-box.02", "kind": "furniture", "src": "/assets/furniture/room/room-litter-box-02.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["room", "litter-box", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.desk.rug.02", "kind": "furniture", "src": "/assets/furniture/desk/desk-rug-02.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["desk", "rug", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.desk.cat-tower.02", "kind": "furniture", "src": "/assets/furniture/desk/desk-cat-tower-02.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["desk", "cat-tree", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.desk.hideout.02", "kind": "furniture", "src": "/assets/furniture/desk/desk-hideout-02.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["desk", "hideout", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.desk.scratcher.02", "kind": "furniture", "src": "/assets/furniture/desk/desk-scratcher-02.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["desk", "scratcher", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.desk.litter-box.02", "kind": "furniture", "src": "/assets/furniture/desk/desk-litter-box-02.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["desk", "litter-box", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.rug.02", "kind": "furniture", "src": "/assets/furniture/ocean/ocean-rug-02.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["ocean", "rug", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.cat-tower.02", "kind": "furniture", "src": "/assets/furniture/ocean/ocean-cat-tower-02.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["ocean", "cat-tree", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.cat-tower.03", "kind": "furniture", "src": "/assets/furniture/ocean/ocean-cat-tower-03.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["ocean", "cat-tree", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.hideout.02", "kind": "furniture", "src": "/assets/furniture/ocean/ocean-hideout-02.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["ocean", "hideout", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.scratcher.02", "kind": "furniture", "src": "/assets/furniture/ocean/ocean-scratcher-02.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["ocean", "scratcher", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.litter-box.02", "kind": "furniture", "src": "/assets/furniture/ocean/ocean-litter-box-02.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["ocean", "litter-box", "variant", "transparent", "belt-view"] }
+    ],
+    "decorations": [
+      { "id": "furniture.decor.reed-clump.01", "kind": "furniture", "src": "/assets/decor/forest-reed-clump-01.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["forest", "reed", "grass", "decor", "transparent", "belt-view"] },
+      { "id": "furniture.decor.rock-angular.01", "kind": "furniture", "src": "/assets/decor/forest-rock-angular-01.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["forest", "rock", "angular", "moss", "decor", "transparent", "belt-view"] },
+      { "id": "furniture.decor.rock-round.01", "kind": "furniture", "src": "/assets/decor/forest-rock-round-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["forest", "rock", "round", "moss", "decor", "transparent", "belt-view"] },
+      { "id": "furniture.decor.fallen-log.01", "kind": "furniture", "src": "/assets/decor/forest-fallen-log-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["forest", "log", "moss", "decor", "transparent", "belt-view"] },
+      { "id": "furniture.decor.alley-trash-bag.01", "kind": "furniture", "src": "/assets/decor/alley-trash-bag-01.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["alley", "trash-bag", "decor", "transparent", "belt-view"] },
+      { "id": "furniture.decor.alley-sealed-box.01", "kind": "furniture", "src": "/assets/decor/alley-sealed-box-01.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["alley", "box", "decor", "transparent", "belt-view"] },
+      { "id": "furniture.decor.alley-plastic-crate.01", "kind": "furniture", "src": "/assets/decor/alley-plastic-crate-01.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["alley", "crate", "decor", "transparent", "belt-view"] },
+      { "id": "furniture.decor.alley-food-bowl.01", "kind": "furniture", "src": "/assets/decor/alley-food-bowl-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["alley", "bowl", "decor", "transparent", "belt-view"] },
+      { "id": "furniture.decor.alley-water-bowl.01", "kind": "furniture", "src": "/assets/decor/alley-water-bowl-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["alley", "bowl", "decor", "transparent", "belt-view"] },
+      { "id": "furniture.decor.alley-crushed-can.01", "kind": "furniture", "src": "/assets/decor/alley-crushed-can-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["alley", "can", "decor", "transparent", "belt-view"] },
+      { "id": "furniture.decor.alley-old-brick.01", "kind": "furniture", "src": "/assets/decor/alley-old-brick-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["alley", "brick", "decor", "transparent", "belt-view"] },
+      { "id": "furniture.decor.alley-paper-ball.01", "kind": "furniture", "src": "/assets/decor/alley-paper-ball-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["alley", "paper", "decor", "transparent", "belt-view"] },
+      { "id": "furniture.decor.alley-plastic-bottle.01", "kind": "furniture", "src": "/assets/decor/alley-plastic-bottle-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["alley", "bottle", "decor", "transparent", "belt-view"] },
+      { "id": "furniture.decor.alley-newspaper-stack.01", "kind": "furniture", "src": "/assets/decor/alley-newspaper-stack-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["alley", "newspaper", "decor", "transparent", "belt-view"] },
+      { "id": "furniture.decor.room-litter-scoop.01", "kind": "furniture", "src": "/assets/decor/room-litter-scoop-01.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["room", "scoop", "decor", "transparent", "belt-view"] },
+      { "id": "furniture.decor.room-yarn-ball.01", "kind": "furniture", "src": "/assets/decor/room-yarn-ball-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["room", "yarn", "toy", "decor", "transparent", "belt-view"] },
+      { "id": "furniture.decor.room-teaser-set.01", "kind": "furniture", "src": "/assets/decor/room-teaser-set-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["room", "teaser", "toy", "decor", "transparent", "belt-view"] },
+      { "id": "furniture.decor.room-fur-pile.01", "kind": "furniture", "src": "/assets/decor/room-fur-pile-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["room", "fur", "decor", "transparent", "belt-view"] },
+      { "id": "furniture.decor.room-water-bowl.01", "kind": "furniture", "src": "/assets/decor/room-water-bowl-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["room", "bowl", "decor", "transparent", "belt-view"] },
+      { "id": "furniture.decor.room-food-bowl.01", "kind": "furniture", "src": "/assets/decor/room-food-bowl-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["room", "bowl", "decor", "transparent", "belt-view"] }
+    ],
+    "consumables": [
+      { "id": "consumable.salmon-cubes.01", "kind": "consumable", "src": "/assets/consumables/salmon-cubes-01.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["salmon", "treat", "transparent"] },
+      { "id": "consumable.chicken-strips.01", "kind": "consumable", "src": "/assets/consumables/chicken-strips-01.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["chicken", "treat", "transparent"] },
+      { "id": "consumable.catnip-biscuits.01", "kind": "consumable", "src": "/assets/consumables/catnip-biscuits-01.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["catnip", "treat", "transparent"] },
+      { "id": "consumable.tuna-soup.01", "kind": "consumable", "src": "/assets/consumables/tuna-soup-01.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["tuna", "treat", "transparent"] }
     ],
     "study": [],
     "common-ui": [

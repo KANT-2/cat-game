@@ -57,7 +57,7 @@ export type BackendGameCat = {
 
 export type BackendGameItem = {
   catalogKey: string;
-  category: "FURNITURE" | "WALLPAPER" | "FLOOR";
+  category: "FURNITURE" | "WALLPAPER" | "FLOOR" | "CONSUMABLE";
   furnitureKind: string | null;
   ownedQuantity: number;
   availableQuantity: number;
@@ -217,6 +217,19 @@ export class BackendApiClient {
       request_id: requestId,
       item_catalog_key: itemCatalogKey,
       quantity: 1,
+    });
+  }
+
+  /** 보유 간식 한 개를 선택한 고양이에게 멱등하게 사용한다. */
+  async useGameConsumable(
+    requestId: string,
+    itemCatalogKey: string,
+    catCatalogKey: string,
+  ): Promise<BackendGameMutation> {
+    return this.gameMutation("/api/v1/game/consumables/use", "POST", {
+      request_id: requestId,
+      item_catalog_key: itemCatalogKey,
+      cat_catalog_key: catCatalogKey,
     });
   }
 
@@ -536,7 +549,7 @@ function parseGameSnapshot(value: unknown): BackendGameSnapshot {
     const item = asRecord(entry);
     return {
       catalogKey: readString(item, "catalog_key"),
-      category: readEnum(item, "category", ["FURNITURE", "WALLPAPER", "FLOOR"] as const),
+      category: readEnum(item, "category", ["FURNITURE", "WALLPAPER", "FLOOR", "CONSUMABLE"] as const),
       furnitureKind: readNullableString(item, "furniture_kind"),
       ownedQuantity: readNumber(item, "owned_quantity"),
       availableQuantity: readNumber(item, "available_quantity"),

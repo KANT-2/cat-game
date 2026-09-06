@@ -9,8 +9,14 @@ import { CanvasButton } from "../components/CanvasButton";
 import { createCozyPanel } from "../components/CozyGameUi";
 import { createCurrencyBar } from "../components/CurrencyBar";
 import { layoutToFillViewport } from "../components/fullscreenLayout";
+import { applySmoothTextureSampling } from "../components/smoothSprite";
 import { textStyle } from "../config";
 import type { CatAnimationLibrary } from "../entities/CatAnimations";
+import { createBackgroundPreview } from "../forest/BackgroundPreview";
+import type { BackgroundArtCollection, ForestArt, FurnitureArtCollection } from "../forest/ForestArt";
+import { resolveFurnitureArt } from "../forest/ForestArt";
+import { createFurniturePreview } from "../forest/FurniturePreview";
+import { shopItemNameMessages } from "../shopItemPresentation";
 import { SettingsPage } from "./SettingsPage";
 
 export type FeaturePageKind = "profile" | "settings" | "owned" | "addFriend" | "visitGarden";
@@ -24,6 +30,7 @@ type Options = {
   onSelectCat: (variant: CatVariant) => Awaitable<boolean>;
   onSetCatHome: (variant: CatVariant, visible: boolean) => Awaitable<boolean>;
   onApplyTheme: (itemId: ShopItemId) => Awaitable<boolean>;
+  onUseConsumable: (itemId: ShopItemId) => Awaitable<boolean>;
   onEnterRoomEdit: () => void;
   onOpenAttendance: () => void;
   onUpdateSettings: (patch: Partial<GameSettings>) => Awaitable<GameSettings>;
@@ -32,6 +39,9 @@ type Options = {
   catAnimations: CatAnimationLibrary;
   backIcon: string;
   coinIcon: string;
+  furnitureArt: FurnitureArtCollection;
+  consumableArt: ForestArt["consumables"];
+  backgroundArt: BackgroundArtCollection;
 };
 /** 설정·보유·친구 기능을 전체 Canvas 화면으로 표시한다. */
 export class FeaturePageModal extends Container {
@@ -41,7 +51,8 @@ export class FeaturePageModal extends Container {
   private readonly status = new Text({ text: "", style: textStyle(17, 0x537145, "700") });
   private readonly options: Options;
   private readonly requested = new Set<number>();
-  private ownedCategory: "cats" | "furniture" | "wallpaper" | "floor" = "cats";
+  private ownedCategory: "cats" | "furniture" | "consumable" | "wallpaper" | "floor" = "cats";
+  private ownedThemePage = 0;
 
   constructor(options: Options) {
     super();
@@ -178,6 +189,10 @@ export class FeaturePageModal extends Container {
       this.renderOwnedThemes(this.ownedCategory, state);
       return;
     }
+    if (this.ownedCategory === "consumable") {
+      this.renderOwnedConsumables(state);
+      return;
+    }
     const entries: Array<{
       key: string;
       itemId?: ShopItemId;
@@ -195,7 +210,7 @@ export class FeaturePageModal extends Container {
       const storedCount = state.shopInventory[itemId] ?? 0;
       const placed = state.furniture.filter((item) => item.shopItemId === itemId).length;
       if (storedCount > 0 || placed > 0) {
-        entries.push({ key: itemId, itemId, kind, name: productNameMessages[itemId], stored: storedCount, placed });
+        entries.push({ key: itemId, itemId, kind, name: shopItemNameMessages[itemId], stored: storedCount, placed });
       }
     }
     for (const kind of Object.keys(state.inventory) as FurnitureKind[]) {
@@ -232,14 +247,17 @@ export class FeaturePageModal extends Container {
       this.content.addChild(empty);
       return;
     }
-    entries.forEach((entry, index) => {
+    const pageCount = Math.ceil(entries.length / OWNED_ITEMS_PER_PAGE);
+    this.ownedThemePage = Math.min(this.ownedThemePage, Math.max(0, pageCount - 1));
+    const start = this.ownedThemePage * OWNED_ITEMS_PER_PAGE;
+    entries.slice(start, start + OWNED_ITEMS_PER_PAGE).forEach((entry, index) => {
       const { kind } = entry;
       const x = 180 + (index % 3) * 420;
       const y = 285 + Math.floor(index / 3) * 220;
       const storedCount = entry.stored;
       const ownedCount = storedCount + entry.placed;
       const card = createCozyPanel(x, y, 380, 205, { fill: 0xfff5df, border: 0xb77a4f, radius: 22 });
-      const art = furnitureBadge(kind);
+      const art = createFurniturePreview(resolveFurnitureArt(this.options.furnitureArt, kind, entry.itemId), 125, 125);
       art.position.set(x + 90, y + 102);
       const name = new Text({ text: message(entry.name), style: textStyle(20, 0x493022, "800") });
       name.position.set(x + 170, y + 40);
@@ -262,12 +280,14 @@ export class FeaturePageModal extends Container {
       place.position.set(x + 170, y + 135);
       this.content.addChild(card, art, name, count, place);
     });
+    this.renderOwnedThemePageControls(pageCount);
   }
 
   private buildOwnedTabs(): void {
     const tabs = [
       ["cats", "owned.cats"],
       ["furniture", "owned.furniture"],
+      ["consumable", "owned.consumable"],
       ["wallpaper", "owned.wallpaper"],
       ["floor", "owned.floor"],
     ] as const;
@@ -281,11 +301,60 @@ export class FeaturePageModal extends Container {
         textColor: active ? 0xffffff : 0x493022,
         onPress: () => {
           this.ownedCategory = category;
+          this.ownedThemePage = 0;
           this.render();
+          if (category === "wallpaper") {
+            this.preloadOwnedBackgrounds();
+          }
         },
       });
-      tab.position.set(180 + index * 230, 190);
+      tab.position.set(125 + index * 230, 190);
       this.content.addChild(tab);
+    });
+  }
+
+  private renderOwnedConsumables(state: GameState): void {
+    const entries = (Object.keys(shopItemDefinitions) as ShopItemId[]).filter((itemId) => {
+      const item = shopItemDefinitions[itemId];
+      return item.kind === "consumable" && (state.shopInventory[itemId] ?? 0) > 0;
+    });
+    if (entries.length === 0) {
+      const empty = new Text({ text: message("owned.noProducts"), style: textStyle(22, 0x76533c, "700") });
+      empty.anchor.set(0.5);
+      empty.position.set(800, 490);
+      this.content.addChild(empty);
+      return;
+    }
+    entries.forEach((itemId, index) => {
+      const x = 180 + (index % 3) * 420;
+      const y = 285 + Math.floor(index / 3) * 220;
+      const card = createCozyPanel(x, y, 380, 195, { fill: 0xfff5df, border: 0xb77a4f, radius: 22 });
+      const texture = this.options.consumableArt[itemId];
+      const art = texture ? new Sprite(texture) : new Sprite();
+      if (texture) {
+        applySmoothTextureSampling(art);
+        art.anchor.set(0.5);
+        art.scale.set(Math.min(130 / texture.width, 105 / texture.height));
+      }
+      art.position.set(x + 92, y + 100);
+      const name = new Text({ text: message(shopItemNameMessages[itemId]), style: textStyle(19, 0x493022, "800") });
+      name.position.set(x + 170, y + 37);
+      const count = new Text({
+        text: message("owned.count", { count: state.shopInventory[itemId] ?? 0 }),
+        style: textStyle(16, 0x76533c, "700"),
+      });
+      count.position.set(x + 170, y + 79);
+      const use = new CanvasButton({
+        label: message("consumable.use"),
+        width: 145,
+        height: 46,
+        color: 0x91aa82,
+        onPress: async () => {
+          await this.options.onUseConsumable(itemId);
+        },
+      });
+      use.position.set(x + 170, y + 125);
+      this.content.addChild(card, art, name, count, use);
     });
   }
 
@@ -301,9 +370,12 @@ export class FeaturePageModal extends Container {
       this.content.addChild(empty);
       return;
     }
-    entries.forEach((itemId, index) => {
+    const pageCount = Math.ceil(entries.length / OWNED_THEMES_PER_PAGE);
+    this.ownedThemePage = Math.min(this.ownedThemePage, Math.max(0, pageCount - 1));
+    const start = this.ownedThemePage * OWNED_THEMES_PER_PAGE;
+    entries.slice(start, start + OWNED_THEMES_PER_PAGE).forEach((itemId, index) => {
       const definition = shopItemDefinitions[itemId];
-      if (definition.kind === "furniture") {
+      if (definition.kind !== category) {
         return;
       }
       const x = 180 + (index % 3) * 420;
@@ -314,11 +386,18 @@ export class FeaturePageModal extends Container {
         border: active ? 0x79945f : 0xb77a4f,
         radius: 22,
       });
-      const preview = new Graphics()
-        .roundRect(x + 28, y + 28, 125, 125, 16)
-        .fill(definition.themeColor)
-        .stroke({ color: 0x68442f, width: 3 });
-      const name = new Text({ text: message(productNameMessages[itemId]), style: textStyle(19, 0x493022, "800") });
+      let preview: Container;
+      if (category === "wallpaper") {
+        preview = createBackgroundPreview(this.options.backgroundArt, itemId, 125, 76);
+        preview.position.set(x + 90, y + 93);
+      } else {
+        preview = new Graphics()
+          .roundRect(-62, -62, 125, 125, 16)
+          .fill(definition.themeColor)
+          .stroke({ color: 0x68442f, width: 3 });
+        preview.position.set(x + 90, y + 90);
+      }
+      const name = new Text({ text: message(shopItemNameMessages[itemId]), style: textStyle(19, 0x493022, "800") });
       name.position.set(x + 175, y + 37);
       const count = new Text({
         text: message("owned.count", { count: state.shopInventory[itemId] ?? 0 }),
@@ -339,6 +418,64 @@ export class FeaturePageModal extends Container {
       apply.position.set(x + 175, y + 115);
       this.content.addChild(card, preview, name, count, apply);
     });
+    this.renderOwnedThemePageControls(pageCount);
+  }
+
+  private renderOwnedThemePageControls(pageCount: number): void {
+    if (pageCount <= 1) {
+      return;
+    }
+    const previous = new CanvasButton({
+      label: message("shop.previousPage"),
+      width: 105,
+      height: 42,
+      fontSize: 15,
+      color: this.ownedThemePage > 0 ? 0xd9ad7d : 0xcbbca9,
+      onPress: () => this.changeOwnedThemePage(-1, pageCount),
+    });
+    previous.position.set(625, 760);
+    const page = new Text({
+      text: message("shop.pageIndicator", { current: this.ownedThemePage + 1, total: pageCount }),
+      style: textStyle(16, 0x604637, "800"),
+    });
+    page.anchor.set(0.5);
+    page.position.set(800, 781);
+    const next = new CanvasButton({
+      label: message("shop.nextPage"),
+      width: 105,
+      height: 42,
+      fontSize: 15,
+      color: this.ownedThemePage < pageCount - 1 ? 0xd9ad7d : 0xcbbca9,
+      onPress: () => this.changeOwnedThemePage(1, pageCount),
+    });
+    next.position.set(870, 760);
+    this.content.addChild(previous, page, next);
+  }
+
+  private changeOwnedThemePage(offset: number, pageCount: number): void {
+    const nextPage = Math.max(0, Math.min(pageCount - 1, this.ownedThemePage + offset));
+    if (nextPage === this.ownedThemePage) {
+      return;
+    }
+    this.ownedThemePage = nextPage;
+    this.render();
+  }
+
+  private preloadOwnedBackgrounds(): void {
+    const state = this.options.getState();
+    const itemIds = (Object.keys(shopItemDefinitions) as ShopItemId[]).filter(
+      (itemId) => shopItemDefinitions[itemId].kind === "wallpaper" && (state.shopInventory[itemId] ?? 0) > 0,
+    );
+    void this.options.backgroundArt
+      .load(itemIds)
+      .then(() => {
+        if (!this.destroyed && this.ownedCategory === "wallpaper") {
+          this.render();
+        }
+      })
+      .catch((error: unknown) => {
+        console.warn("Owned background previews could not be loaded", error);
+      });
   }
 
   private addOwnedCatCard(variant: CatVariant, index: number, activeCat: CatVariant, visibleAtHome: boolean): void {
@@ -510,6 +647,9 @@ export class FeaturePageModal extends Container {
   }
 }
 
+const OWNED_THEMES_PER_PAGE = 6;
+const OWNED_ITEMS_PER_PAGE = 6;
+
 const friendNames: MessageId[] = [
   "friends.nameMango",
   "friends.nameNabi",
@@ -518,33 +658,16 @@ const friendNames: MessageId[] = [
   "friends.nameCodeMeow",
   "friends.nameStudyCat",
 ];
-const productNameMessages: Record<ShopItemId, MessageId> = {
-  "furniture.sofa": "shop.productSofa",
-  "furniture.table": "shop.productTable",
-  "furniture.catTower": "shop.productCatTower",
-  "furniture.bed": "shop.productBed",
-  "furniture.desk": "shop.productDesk",
-  "furniture.premiumTower": "shop.productPremiumTower",
-  "decor.plant": "shop.productPlant",
-  "wallpaper.cream": "shop.productCreamWall",
-  "wallpaper.cloud": "shop.productCloudWall",
-  "wallpaper.forest": "shop.productForestWall",
-  "wallpaper.flower": "shop.productFlowerWall",
-  "wallpaper.night": "shop.productNightWall",
-  "wallpaper.cat": "shop.productCatWall",
-  "floor.oak": "shop.productOakFloor",
-  "floor.check": "shop.productCheckFloor",
-  "floor.stone": "shop.productStoneFloor",
-  "floor.cream": "shop.productCreamFloor",
-  "floor.star": "shop.productStarFloor",
-  "floor.walnut": "shop.productWalnutFloor",
-};
 const genericProductNameMessages: Record<FurnitureKind, MessageId> = {
   sofa: "shop.productSofa",
   desk: "shop.productDesk",
   plant: "shop.productPlant",
   catTree: "shop.productCatTower",
   bed: "shop.productBed",
+  rug: "shop.productForestRug",
+  hideout: "shop.productForestHideout",
+  scratcher: "shop.productForestScratcher",
+  litterBox: "shop.productForestLitterBox",
 };
 const canonicalProductIds: Record<FurnitureKind, ShopItemId> = {
   sofa: "furniture.sofa",
@@ -552,6 +675,10 @@ const canonicalProductIds: Record<FurnitureKind, ShopItemId> = {
   plant: "decor.plant",
   catTree: "furniture.catTower",
   bed: "furniture.bed",
+  rug: "furniture.forest.rug",
+  hideout: "furniture.forest.hideout",
+  scratcher: "furniture.forest.scratcher",
+  litterBox: "furniture.forest.litter-box",
 };
 const catNameMessages: Record<CatVariant, MessageId> = {
   fluffy: "cat.fluffyName",
@@ -576,21 +703,4 @@ function catPortrait(variant: number): Graphics {
     .fill(0x3d2b22)
     .circle(0, 17, 5)
     .fill(0xb96e61);
-}
-
-function furnitureBadge(kind: FurnitureKind): Graphics {
-  const colors: Record<FurnitureKind, number> = {
-    sofa: 0xc97e62,
-    desk: 0xa46d45,
-    plant: 0x7b9b67,
-    catTree: 0xc49a62,
-    bed: 0xd59b7a,
-  };
-  return new Graphics()
-    .circle(0, 0, 62)
-    .fill(0xffe7bd)
-    .stroke({ color: 0x69432c, width: 4 })
-    .roundRect(-38, -25, 76, 52, 12)
-    .fill(colors[kind])
-    .stroke({ color: 0x69432c, width: 3 });
 }

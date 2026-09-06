@@ -1,7 +1,7 @@
 import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
 import type { GameState } from "../../domain/room";
-import type { ShopItemId } from "../../domain/shop";
+import { type ShopItemId, shopItemDefinitions } from "../../domain/shop";
 import { BackButton } from "../components/BackButton";
 import { CanvasButton } from "../components/CanvasButton";
 import { createCozyPageBackground, createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
@@ -9,16 +9,24 @@ import { createCoinAmount, createCoinIcon, createCurrencyBar } from "../componen
 import { layoutToFillViewport } from "../components/fullscreenLayout";
 import { applySmoothTextureSampling } from "../components/smoothSprite";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
+import { createBackgroundPreview } from "../forest/BackgroundPreview";
+import type { BackgroundArtCollection, ForestArt, FurnitureArtCollection } from "../forest/ForestArt";
+import { resolveFurnitureArt } from "../forest/ForestArt";
+import { createFurniturePreview } from "../forest/FurniturePreview";
+import { shopItemNameMessages } from "../shopItemPresentation";
 
 type ShopSceneOptions = {
   getState: () => GameState;
   onBack: () => void;
-  onBuy: (itemId: ShopItemId | null) => void;
+  onBuy: (itemId: ShopItemId) => void;
   heroArt: string;
   backIcon: string;
   coinIcon: string;
+  furnitureArt: FurnitureArtCollection;
+  backgroundArt: BackgroundArtCollection;
+  consumableArt: ForestArt["consumables"];
 };
-type CategoryId = "furniture" | "wallpaper" | "floor" | "decor";
+type CategoryId = "furniture" | "consumable" | "wallpaper" | "floor" | "decor";
 type TabId = "recommended" | "new" | "popular";
 type ProductKind =
   | "sofa"
@@ -32,11 +40,13 @@ type ProductKind =
   | "lamp"
   | "decor"
   | "rug"
+  | "consumable"
   | "package";
-type Product = { name: MessageId; price: string; kind: ProductKind; itemId?: ShopItemId };
+type Product = { kind: ProductKind; itemId: ShopItemId };
 
 const categories: Array<{ id: CategoryId; label: MessageId }> = [
   { id: "furniture", label: "shop.categoryFurnitureWithTower" },
+  { id: "consumable", label: "shop.categoryConsumable" },
   { id: "wallpaper", label: "shop.categoryWallpaper" },
   { id: "floor", label: "shop.categoryFloor" },
   { id: "decor", label: "shop.categoryDecor" },
@@ -50,30 +60,126 @@ const tabs: Array<{ id: TabId; label: MessageId }> = [
 
 const catalog: Record<CategoryId, Product[]> = {
   furniture: [
-    { name: "shop.productSofa", price: "4,800", kind: "sofa", itemId: "furniture.sofa" },
-    { name: "shop.productTable", price: "3,200", kind: "table", itemId: "furniture.table" },
-    { name: "shop.productCatTower", price: "4,200", kind: "catTower", itemId: "furniture.catTower" },
-    { name: "shop.productBed", price: "5,600", kind: "bed", itemId: "furniture.bed" },
-    { name: "shop.productDesk", price: "3,900", kind: "table", itemId: "furniture.desk" },
-    { name: "shop.productPremiumTower", price: "90", kind: "catTower", itemId: "furniture.premiumTower" },
+    { kind: "sofa", itemId: "furniture.sofa" },
+    { kind: "table", itemId: "furniture.table" },
+    { kind: "catTower", itemId: "furniture.catTower" },
+    { kind: "bed", itemId: "furniture.bed" },
+    { kind: "table", itemId: "furniture.desk" },
+    { kind: "catTower", itemId: "furniture.premiumTower" },
+    { kind: "rug", itemId: "furniture.forest.rug" },
+    { kind: "catTower", itemId: "furniture.forest.cat-tower" },
+    { kind: "bed", itemId: "furniture.forest.hideout" },
+    { kind: "catTower", itemId: "furniture.forest.scratcher" },
+    { kind: "bed", itemId: "furniture.forest.litter-box" },
+    { kind: "rug", itemId: "furniture.forest.rug-2" },
+    { kind: "catTower", itemId: "furniture.forest.cat-tower-2" },
+    { kind: "bed", itemId: "furniture.forest.hideout-2" },
+    { kind: "catTower", itemId: "furniture.forest.scratcher-2" },
+    { kind: "bed", itemId: "furniture.forest.litter-box-2" },
+    { kind: "sofa", itemId: "furniture.forest.bench-2" },
+    { kind: "catTower", itemId: "furniture.forest.cat-tower-3" },
+    { kind: "bed", itemId: "furniture.forest.hideout-3" },
+    { kind: "rug", itemId: "furniture.alley.rug" },
+    { kind: "catTower", itemId: "furniture.alley.cat-tower" },
+    { kind: "bed", itemId: "furniture.alley.hideout" },
+    { kind: "catTower", itemId: "furniture.alley.scratcher" },
+    { kind: "bed", itemId: "furniture.alley.litter-box" },
+    { kind: "rug", itemId: "furniture.alley.rug-2" },
+    { kind: "catTower", itemId: "furniture.alley.cat-tower-2" },
+    { kind: "bed", itemId: "furniture.alley.hideout-2" },
+    { kind: "catTower", itemId: "furniture.alley.scratcher-2" },
+    { kind: "catTower", itemId: "furniture.alley.scratcher-3" },
+    { kind: "bed", itemId: "furniture.alley.litter-box-2" },
+    { kind: "bed", itemId: "furniture.alley.litter-box-3" },
+    { kind: "rug", itemId: "furniture.room.rug" },
+    { kind: "catTower", itemId: "furniture.room.cat-tower" },
+    { kind: "bed", itemId: "furniture.room.hideout" },
+    { kind: "catTower", itemId: "furniture.room.scratcher" },
+    { kind: "bed", itemId: "furniture.room.litter-box" },
+    { kind: "rug", itemId: "furniture.room.rug-2" },
+    { kind: "catTower", itemId: "furniture.room.cat-tower-2" },
+    { kind: "catTower", itemId: "furniture.room.cat-tower-3" },
+    { kind: "bed", itemId: "furniture.room.hideout-2" },
+    { kind: "catTower", itemId: "furniture.room.scratcher-2" },
+    { kind: "bed", itemId: "furniture.room.litter-box-2" },
+    { kind: "rug", itemId: "furniture.desk-theme.rug" },
+    { kind: "catTower", itemId: "furniture.desk-theme.cat-tower" },
+    { kind: "bed", itemId: "furniture.desk-theme.hideout" },
+    { kind: "catTower", itemId: "furniture.desk-theme.scratcher" },
+    { kind: "bed", itemId: "furniture.desk-theme.litter-box" },
+    { kind: "rug", itemId: "furniture.desk-theme.rug-2" },
+    { kind: "catTower", itemId: "furniture.desk-theme.cat-tower-2" },
+    { kind: "bed", itemId: "furniture.desk-theme.hideout-2" },
+    { kind: "catTower", itemId: "furniture.desk-theme.scratcher-2" },
+    { kind: "bed", itemId: "furniture.desk-theme.litter-box-2" },
+    { kind: "rug", itemId: "furniture.ocean.rug" },
+    { kind: "catTower", itemId: "furniture.ocean.cat-tower" },
+    { kind: "bed", itemId: "furniture.ocean.hideout" },
+    { kind: "catTower", itemId: "furniture.ocean.scratcher" },
+    { kind: "bed", itemId: "furniture.ocean.litter-box" },
+    { kind: "rug", itemId: "furniture.ocean.rug-2" },
+    { kind: "catTower", itemId: "furniture.ocean.cat-tower-2" },
+    { kind: "catTower", itemId: "furniture.ocean.cat-tower-3" },
+    { kind: "bed", itemId: "furniture.ocean.hideout-2" },
+    { kind: "catTower", itemId: "furniture.ocean.scratcher-2" },
+    { kind: "bed", itemId: "furniture.ocean.litter-box-2" },
+  ],
+  consumable: [
+    { kind: "consumable", itemId: "consumable.salmon-cubes" },
+    { kind: "consumable", itemId: "consumable.chicken-strips" },
+    { kind: "consumable", itemId: "consumable.catnip-biscuits" },
+    { kind: "consumable", itemId: "consumable.tuna-soup" },
   ],
   wallpaper: [
-    { name: "shop.productCreamWall", price: "2,100", kind: "wallpaper", itemId: "wallpaper.cream" },
-    { name: "shop.productCloudWall", price: "2,400", kind: "wallpaper", itemId: "wallpaper.cloud" },
-    { name: "shop.productForestWall", price: "2,800", kind: "wallpaper", itemId: "wallpaper.forest" },
-    { name: "shop.productFlowerWall", price: "2,600", kind: "wallpaper", itemId: "wallpaper.flower" },
-    { name: "shop.productNightWall", price: "70", kind: "wallpaper", itemId: "wallpaper.night" },
-    { name: "shop.productCatWall", price: "3,000", kind: "wallpaper", itemId: "wallpaper.cat" },
+    { kind: "wallpaper", itemId: "wallpaper.cream" },
+    { kind: "wallpaper", itemId: "wallpaper.cloud" },
+    { kind: "wallpaper", itemId: "wallpaper.forest" },
+    { kind: "wallpaper", itemId: "wallpaper.flower" },
+    { kind: "wallpaper", itemId: "wallpaper.night" },
+    { kind: "wallpaper", itemId: "wallpaper.cat" },
+    { kind: "wallpaper", itemId: "wallpaper.modernAlley" },
+    { kind: "wallpaper", itemId: "wallpaper.villageAlley" },
+    { kind: "wallpaper", itemId: "wallpaper.sunnyStudio" },
+    { kind: "wallpaper", itemId: "wallpaper.livingRoom" },
+    { kind: "wallpaper", itemId: "wallpaper.cityOffice" },
+    { kind: "wallpaper", itemId: "wallpaper.botanicalDesk" },
+    { kind: "wallpaper", itemId: "wallpaper.musicDesk" },
+    { kind: "wallpaper", itemId: "wallpaper.sandyCove" },
+    { kind: "wallpaper", itemId: "wallpaper.seasidePromenade" },
+    { kind: "wallpaper", itemId: "wallpaper.workingHarbor" },
   ],
   floor: [
-    { name: "shop.productOakFloor", price: "2,300", kind: "floor", itemId: "floor.oak" },
-    { name: "shop.productCheckFloor", price: "2,600", kind: "floor", itemId: "floor.check" },
-    { name: "shop.productStoneFloor", price: "2,800", kind: "floor", itemId: "floor.stone" },
-    { name: "shop.productCreamFloor", price: "2,100", kind: "floor", itemId: "floor.cream" },
-    { name: "shop.productStarFloor", price: "65", kind: "floor", itemId: "floor.star" },
-    { name: "shop.productWalnutFloor", price: "3,100", kind: "floor", itemId: "floor.walnut" },
+    { kind: "floor", itemId: "floor.oak" },
+    { kind: "floor", itemId: "floor.check" },
+    { kind: "floor", itemId: "floor.stone" },
+    { kind: "floor", itemId: "floor.cream" },
+    { kind: "floor", itemId: "floor.star" },
+    { kind: "floor", itemId: "floor.walnut" },
   ],
-  decor: [{ name: "shop.productPlant", price: "1,700", kind: "plant", itemId: "decor.plant" }],
+  decor: [
+    { kind: "plant", itemId: "decor.plant" },
+    { kind: "plant", itemId: "decor.reed-clump" },
+    { kind: "decor", itemId: "decor.rock-angular" },
+    { kind: "decor", itemId: "decor.rock-round" },
+    { kind: "decor", itemId: "decor.fallen-log" },
+    { kind: "package", itemId: "decor.cardboard-box" },
+    { kind: "package", itemId: "decor.trash-bag" },
+    { kind: "package", itemId: "decor.sealed-box" },
+    { kind: "package", itemId: "decor.plastic-crate" },
+    { kind: "plant", itemId: "decor.alley-food-bowl" },
+    { kind: "plant", itemId: "decor.alley-water-bowl" },
+    { kind: "decor", itemId: "decor.crushed-can" },
+    { kind: "decor", itemId: "decor.old-brick" },
+    { kind: "decor", itemId: "decor.paper-ball" },
+    { kind: "decor", itemId: "decor.plastic-bottle" },
+    { kind: "decor", itemId: "decor.newspaper-stack" },
+    { kind: "decor", itemId: "decor.litter-scoop" },
+    { kind: "decor", itemId: "decor.yarn-ball" },
+    { kind: "decor", itemId: "decor.teaser-set" },
+    { kind: "decor", itemId: "decor.fur-pile" },
+    { kind: "plant", itemId: "decor.room-water-bowl" },
+    { kind: "plant", itemId: "decor.room-food-bowl" },
+  ],
 };
 
 export class ShopScene extends Container {
@@ -81,15 +187,19 @@ export class ShopScene extends Container {
   private readonly navigationLayer = new Container();
   private readonly productLayer = new Container();
   private readonly modalLayer = new Container();
-  private readonly onBuy: (itemId: ShopItemId | null) => void;
+  private readonly onBuy: (itemId: ShopItemId) => void;
   private readonly getState: () => GameState;
   private readonly onBack: () => void;
   private readonly heroArt: string;
   private readonly backIcon: string;
   private readonly coinIcon: string;
+  private readonly furnitureArt: FurnitureArtCollection;
+  private readonly backgroundArt: BackgroundArtCollection;
+  private readonly consumableArt: ForestArt["consumables"];
   private readonly headerLayer = new Container();
   private activeCategory: CategoryId = "furniture";
   private activeTab: TabId = "recommended";
+  private activePage = 0;
 
   constructor(options: ShopSceneOptions) {
     super();
@@ -99,6 +209,9 @@ export class ShopScene extends Container {
     this.heroArt = options.heroArt;
     this.backIcon = options.backIcon;
     this.coinIcon = options.coinIcon;
+    this.furnitureArt = options.furnitureArt;
+    this.backgroundArt = options.backgroundArt;
+    this.consumableArt = options.consumableArt;
     this.addChild(this.content);
     this.buildBackground();
     this.content.addChild(this.headerLayer, this.navigationLayer, this.productLayer, this.modalLayer);
@@ -205,12 +318,19 @@ export class ShopScene extends Container {
     const featured = new Text({ text: message("shop.badgePick"), style: textStyle(14, 0xffe9b2, "800") });
     featured.position.set(1138, 175);
     this.productLayer.addChild(headingPanel, title, description, heroFrame, hero, featured);
-    this.productsForView().forEach((product, index) => {
+    const products = this.productsForView();
+    products.forEach((product, index) => {
       this.buildProductCard(product, index);
     });
+    this.renderPageControls(this.orderedProductsForView().length);
   }
 
   private productsForView(): Product[] {
+    const start = this.activePage * PRODUCTS_PER_PAGE;
+    return this.orderedProductsForView().slice(start, start + PRODUCTS_PER_PAGE);
+  }
+
+  private orderedProductsForView(): Product[] {
     const source = catalog[this.activeCategory];
     if (this.activeTab === "new") {
       return [...source.slice(2), ...source.slice(0, 2)];
@@ -219,6 +339,47 @@ export class ShopScene extends Container {
       return [...source].reverse();
     }
     return source;
+  }
+
+  private renderPageControls(productCount: number): void {
+    const pageCount = Math.ceil(productCount / PRODUCTS_PER_PAGE);
+    if (pageCount <= 1) {
+      return;
+    }
+    const previous = new CanvasButton({
+      label: message("shop.previousPage"),
+      width: 92,
+      height: 38,
+      fontSize: 14,
+      color: this.activePage > 0 ? 0xd9ad7d : 0xcbbca9,
+      onPress: () => this.changePage(-1, pageCount),
+    });
+    previous.position.set(1110, 770);
+    const page = new Text({
+      text: message("shop.pageIndicator", { current: this.activePage + 1, total: pageCount }),
+      style: textStyle(15, 0x604637, "800"),
+    });
+    page.anchor.set(0.5);
+    page.position.set(1325, 789);
+    const next = new CanvasButton({
+      label: message("shop.nextPage"),
+      width: 92,
+      height: 38,
+      fontSize: 14,
+      color: this.activePage < pageCount - 1 ? 0xd9ad7d : 0xcbbca9,
+      onPress: () => this.changePage(1, pageCount),
+    });
+    next.position.set(1400, 770);
+    this.productLayer.addChild(previous, page, next);
+  }
+
+  private changePage(offset: number, pageCount: number): void {
+    const nextPage = Math.max(0, Math.min(pageCount - 1, this.activePage + offset));
+    if (nextPage === this.activePage) {
+      return;
+    }
+    this.activePage = nextPage;
+    this.renderProducts();
   }
 
   private buildProductCard(product: Product, index: number): void {
@@ -232,20 +393,23 @@ export class ShopScene extends Container {
     const badgeText = new Text({ text: message(badgeId), style: textStyle(13, 0xffffff, "800") });
     badgeText.anchor.set(0.5);
     badgeText.position.set(x + 52, y + 29);
-    const name = new Text({ text: message(product.name), style: textStyle(17, 0x3d2b22, "800") });
+    const name = new Text({
+      text: message(shopItemNameMessages[product.itemId]),
+      style: textStyle(17, 0x3d2b22, "800"),
+    });
     name.anchor.set(0.5);
     name.position.set(x + 275, y + 38);
-    const art = drawProduct(product.kind, index);
-    art.scale.set(0.74);
+    const definition = shopItemDefinitions[product.itemId];
+    const art = this.createProductArt(product, index);
     art.position.set(x + 105, y + 112);
-    const price = createCoinAmount(this.coinIcon, product.price, {
+    const price = createCoinAmount(this.coinIcon, definition.price, {
       color: 0x8b571e,
       fontSize: 18,
       iconSize: 24,
       gap: 10,
     });
     price.position.set(x + 275 - price.width / 2, y + 82);
-    const ownedCount = product.itemId ? (this.getState().shopInventory[product.itemId] ?? 0) : 0;
+    const ownedCount = this.getState().shopInventory[product.itemId] ?? 0;
     const owned = new Text({
       text: message("shop.ownedCount", { count: ownedCount }),
       style: textStyle(14, 0x6f7652, "700"),
@@ -263,6 +427,34 @@ export class ShopScene extends Container {
     this.productLayer.addChild(card, badge, badgeText, name, art, price, owned, buy);
   }
 
+  private createProductArt(product: Product, index: number): Container {
+    const definition = shopItemDefinitions[product.itemId];
+    if (definition.kind === "furniture") {
+      return createFurniturePreview(
+        resolveFurnitureArt(this.furnitureArt, definition.furnitureKind, product.itemId),
+        155,
+        122,
+      );
+    }
+    if (definition.kind === "wallpaper") {
+      return createBackgroundPreview(this.backgroundArt, product.itemId, 155, 94);
+    }
+    if (definition.kind === "consumable") {
+      const texture = this.consumableArt[product.itemId];
+      if (texture) {
+        const sprite = new Sprite(texture);
+        applySmoothTextureSampling(sprite);
+        sprite.anchor.set(0.5);
+        const scale = Math.min(155 / texture.width, 112 / texture.height);
+        sprite.scale.set(scale);
+        return sprite;
+      }
+    }
+    const art = drawProduct(product.kind, index);
+    art.scale.set(0.74);
+    return art;
+  }
+
   private showPurchaseConfirmation(product: Product): void {
     this.closePurchaseConfirmation();
     const blocker = new Graphics().rect(0, 0, BASE_WIDTH, BASE_HEIGHT).fill({ color: 0x2f211b, alpha: 0.58 });
@@ -271,13 +463,13 @@ export class ShopScene extends Container {
     const coin = createCoinIcon(this.coinIcon, 72);
     coin.position.set(764, 250);
     const title = new Text({
-      text: message("shop.confirmTitle", { item: message(product.name) }),
+      text: message("shop.confirmTitle", { item: message(shopItemNameMessages[product.itemId]) }),
       style: { ...textStyle(30, 0x4b3021, "800"), align: "center", wordWrap: true, wordWrapWidth: 650 },
     });
     title.anchor.set(0.5, 0);
     title.position.set(800, 355);
     const detail = new Text({
-      text: message("shop.confirmDetail", { amount: product.price }),
+      text: message("shop.confirmDetail", { amount: shopItemDefinitions[product.itemId].price.toLocaleString() }),
       style: { ...textStyle(18, 0x6b4935, "600"), align: "center", wordWrap: true, wordWrapWidth: 620, lineHeight: 29 },
     });
     detail.anchor.set(0.5, 0);
@@ -299,7 +491,7 @@ export class ShopScene extends Container {
       color: 0xf2aa4d,
       onPress: () => {
         this.closePurchaseConfirmation();
-        this.onBuy(product.itemId ?? null);
+        this.onBuy(product.itemId);
       },
     });
     confirm.position.set(855, 560);
@@ -315,16 +507,35 @@ export class ShopScene extends Container {
       return;
     }
     this.activeCategory = category;
+    this.activePage = 0;
     this.renderNavigation();
     this.renderProducts();
+    if (category === "wallpaper") {
+      this.preloadBackgroundProducts();
+    }
   }
   private selectTab(tab: TabId): void {
     if (tab === this.activeTab) {
       return;
     }
     this.activeTab = tab;
+    this.activePage = 0;
     this.renderNavigation();
     this.renderProducts();
+  }
+
+  private preloadBackgroundProducts(): void {
+    const itemIds = catalog.wallpaper.map((product) => product.itemId);
+    void this.backgroundArt
+      .load(itemIds)
+      .then(() => {
+        if (!this.destroyed && this.activeCategory === "wallpaper") {
+          this.renderProducts();
+        }
+      })
+      .catch((error: unknown) => {
+        console.warn("Background shop previews could not be loaded", error);
+      });
   }
   private clearLayer(layer: Container): void {
     layer.removeChildren().forEach((child) => {
@@ -332,6 +543,8 @@ export class ShopScene extends Container {
     });
   }
 }
+
+const PRODUCTS_PER_PAGE = 6;
 
 function tabDescription(tab: TabId): MessageId {
   if (tab === "new") {

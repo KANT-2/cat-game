@@ -103,6 +103,30 @@ describe("LocalGameClient", () => {
     expect(repository.save).not.toHaveBeenCalled();
   });
 
+  it("stores purchased treats and consumes exactly one for an owned cat", () => {
+    const repository = new MemoryRepository();
+    const client = new LocalGameClient(repository);
+
+    expect(client.buyShopItem("consumable.salmon-cubes")).toMatchObject({
+      ok: true,
+      itemType: "consumable",
+    });
+    expect(client.useConsumable("consumable.salmon-cubes", "fluffy")).toEqual({
+      ok: true,
+      itemId: "consumable.salmon-cubes",
+      effect: "happy",
+      remainingQuantity: 0,
+    });
+    expect(client.getSnapshot().shopInventory["consumable.salmon-cubes"]).toBe(0);
+    expect(client.useConsumable("consumable.salmon-cubes", "fluffy")).toEqual({ ok: false, reason: "not-owned" });
+    expect(client.useConsumable("furniture.sofa", "fluffy")).toEqual({ ok: false, reason: "not-consumable" });
+    expect(client.buyShopItem("consumable.chicken-strips")).toMatchObject({ ok: true });
+    expect(client.useConsumable("consumable.chicken-strips", "tabby")).toEqual({
+      ok: false,
+      reason: "cat-not-owned",
+    });
+  });
+
   it("buys former premium products with the same coin balance", () => {
     const repository = new MemoryRepository();
     repository.state.coins = 90;

@@ -41,6 +41,7 @@ import type {
   QuizAnswerResult,
   QuizView,
   StudyTaskView,
+  UseConsumableResult,
 } from "./GameClient";
 
 export class LocalGameClient implements GameClient {
@@ -196,12 +197,36 @@ export class LocalGameClient implements GameClient {
     return { ok: true, itemId, itemType: item.kind, remainingCoins: this.state.coins };
   }
 
+  useConsumable(itemId: ShopItemId, catVariant: CatVariant): UseConsumableResult {
+    const item = shopItemDefinitions[itemId];
+    if (!item) {
+      return { ok: false, reason: "item-not-found" };
+    }
+    if (item.kind !== "consumable") {
+      return { ok: false, reason: "not-consumable" };
+    }
+    if (!this.state.ownedCats.includes(catVariant)) {
+      return { ok: false, reason: "cat-not-owned" };
+    }
+    const owned = this.state.shopInventory[itemId] ?? 0;
+    if (owned <= 0) {
+      return { ok: false, reason: "not-owned" };
+    }
+    const remainingQuantity = owned - 1;
+    this.state = {
+      ...this.state,
+      shopInventory: { ...this.state.shopInventory, [itemId]: remainingQuantity },
+    };
+    this.commit();
+    return { ok: true, itemId, effect: item.effect, remainingQuantity };
+  }
+
   applyRoomTheme(itemId: ShopItemId): ApplyRoomThemeResult {
     const item = shopItemDefinitions[itemId];
     if (!item) {
       return { ok: false, reason: "item-not-found" };
     }
-    if (item.kind === "furniture") {
+    if (item.kind !== "wallpaper" && item.kind !== "floor") {
       return { ok: false, reason: "not-theme" };
     }
     if ((this.state.shopInventory[itemId] ?? 0) <= 0) {

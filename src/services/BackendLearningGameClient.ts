@@ -21,6 +21,7 @@ import type {
   QuizAnswerResult,
   QuizView,
   StudyTaskView,
+  UseConsumableResult,
 } from "../core/GameClient";
 import {
   ATTENDANCE_DAILY_COINS,
@@ -161,9 +162,28 @@ export class BackendLearningGameClient implements GameClient {
     }
   }
 
+  async useConsumable(itemId: ShopItemId, catVariant: CatVariant): Promise<UseConsumableResult> {
+    const item = shopItemDefinitions[itemId];
+    if (item.kind !== "consumable") {
+      return { ok: false, reason: "not-consumable" };
+    }
+    try {
+      const mutation = await this.api.useGameConsumable(createRequestId(), itemId, catVariant);
+      this.applyServerSnapshot(mutation.snapshot);
+      const remainingQuantity =
+        mutation.snapshot.items.find((entry) => entry.catalogKey === itemId)?.availableQuantity ?? 0;
+      return { ok: true, itemId, effect: item.effect, remainingQuantity };
+    } catch (error) {
+      if (isBackendReason(error, "not-owned") || isBackendReason(error, "resource-not-found")) {
+        return { ok: false, reason: "not-owned" };
+      }
+      return { ok: false, reason: "server-unavailable" };
+    }
+  }
+
   async applyRoomTheme(itemId: ShopItemId): Promise<ApplyRoomThemeResult> {
     const item = shopItemDefinitions[itemId];
-    if (item.kind === "furniture") {
+    if (item.kind !== "wallpaper" && item.kind !== "floor") {
       return { ok: false, reason: "not-theme" };
     }
     try {
@@ -486,6 +506,10 @@ const canonicalItemIds: Record<FurnitureKind, ShopItemId> = {
   plant: "decor.plant",
   catTree: "furniture.catTower",
   bed: "furniture.bed",
+  rug: "furniture.forest.rug",
+  hideout: "furniture.forest.hideout",
+  scratcher: "furniture.forest.scratcher",
+  litterBox: "furniture.forest.litter-box",
 };
 
 function mergeServerSnapshot(base: GameState, server: BackendGameSnapshot): GameState {
@@ -504,7 +528,17 @@ function mergeServerSnapshot(base: GameState, server: BackendGameSnapshot): Game
   const activeCat: CatVariant = isCatVariant(server.activeCatKey)
     ? server.activeCatKey
     : (ownedCats[0] ?? base.activeCat);
-  const inventory: Record<FurnitureKind, number> = { sofa: 0, desk: 0, plant: 0, catTree: 0, bed: 0 };
+  const inventory: Record<FurnitureKind, number> = {
+    sofa: 0,
+    desk: 0,
+    plant: 0,
+    catTree: 0,
+    bed: 0,
+    rug: 0,
+    hideout: 0,
+    scratcher: 0,
+    litterBox: 0,
+  };
   const shopInventory: Partial<Record<ShopItemId, number>> = {};
   const itemKinds = new Map<ShopItemId, FurnitureKind>();
 

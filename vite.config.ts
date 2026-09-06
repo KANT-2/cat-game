@@ -47,7 +47,19 @@ export default defineConfig({
       workbox: {
         navigateFallback: "/index.html",
         globPatterns: ["**/*.{js,css,html,json,png,webp,svg,woff2}"],
+        globIgnores: ["assets/backgrounds/**/*"],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith("/assets/backgrounds/"),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "location-backgrounds-v1",
+              cacheableResponse: { statuses: [0, 200] },
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
+        ],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,

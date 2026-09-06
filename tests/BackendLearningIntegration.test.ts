@@ -99,8 +99,22 @@ describe("backend learning integration", () => {
         });
       }
       if (url.pathname === "/api/v1/game/shop/purchases" && init?.method === "POST") {
-        expect(JSON.parse(String(init.body))).toMatchObject({ item_catalog_key: "furniture.sofa", quantity: 1 });
+        const body = JSON.parse(String(init.body)) as { item_catalog_key: string };
+        if (body.item_catalog_key === "consumable.salmon-cubes") {
+          return json({ snapshot: gameSnapshot(320, 1, { consumableQuantity: 1 }), result: {} });
+        }
+        expect(body).toMatchObject({ item_catalog_key: "furniture.sofa" });
         return json({ snapshot: gameSnapshot(500, 1), result: {} });
+      }
+      if (url.pathname === "/api/v1/game/consumables/use" && init?.method === "POST") {
+        expect(JSON.parse(String(init.body))).toMatchObject({
+          item_catalog_key: "consumable.salmon-cubes",
+          cat_catalog_key: "fluffy",
+        });
+        return json({
+          snapshot: gameSnapshot(320, 1, { consumableQuantity: 0 }),
+          result: { effect: "happy", remaining_quantity: 0 },
+        });
       }
       if (url.pathname === "/api/v1/game/learning/reset" && init?.method === "POST") {
         return json({
@@ -161,6 +175,16 @@ describe("backend learning integration", () => {
     expect(client.getDailyQuests()[0]).toMatchObject({ progress: 0, claimed: true });
     await expect(client.buyShopItem("furniture.sofa")).resolves.toMatchObject({ ok: true });
     expect(client.getSnapshot()).toMatchObject({ coins: 500, shopInventory: { "furniture.sofa": 1 } });
+    await expect(client.buyShopItem("consumable.salmon-cubes")).resolves.toMatchObject({
+      ok: true,
+      itemType: "consumable",
+    });
+    await expect(client.useConsumable("consumable.salmon-cubes", "fluffy")).resolves.toEqual({
+      ok: true,
+      itemId: "consumable.salmon-cubes",
+      effect: "happy",
+      remainingQuantity: 0,
+    });
     const refreshed = vi.fn();
     client.subscribe(refreshed);
     await expect(client.refreshFromServer()).resolves.toBe(true);
@@ -318,6 +342,7 @@ function gameSnapshot(
     hasCodeCompletion?: boolean;
     bonusClaimed?: boolean;
     memories?: string[];
+    consumableQuantity?: number;
   } = {},
 ) {
   return {
@@ -354,6 +379,17 @@ function gameSnapshot(
         owned_quantity: sofaQuantity,
         available_quantity: sofaQuantity,
       },
+      ...(daily.consumableQuantity === undefined
+        ? []
+        : [
+            {
+              catalog_key: "consumable.salmon-cubes",
+              category: "CONSUMABLE",
+              furniture_kind: null,
+              owned_quantity: daily.consumableQuantity,
+              available_quantity: daily.consumableQuantity,
+            },
+          ]),
     ],
     placements: [],
   };

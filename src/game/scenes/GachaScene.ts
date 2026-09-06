@@ -2,8 +2,9 @@ import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
 import type { Awaitable, GachaDrawResult, GachaReward } from "../../core/GameClient";
 import type { CatVariant } from "../../domain/cats";
-import { type GachaDrawCount, type GachaRewardId, gachaCost } from "../../domain/gacha";
+import { type GachaDrawCount, gachaCost } from "../../domain/gacha";
 import type { GameState } from "../../domain/room";
+import { shopItemDefinitions } from "../../domain/shop";
 import { BackButton } from "../components/BackButton";
 import { CanvasButton } from "../components/CanvasButton";
 import { createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
@@ -11,6 +12,11 @@ import { createCoinAmount, createCoinIcon } from "../components/CurrencyBar";
 import { layoutToFillViewport } from "../components/fullscreenLayout";
 import { applySmoothTextureSampling } from "../components/smoothSprite";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
+import type { CatAnimationLibrary } from "../entities/CatAnimations";
+import type { FurnitureArtCollection } from "../forest/ForestArt";
+import { resolveFurnitureArt } from "../forest/ForestArt";
+import { createFurniturePreview } from "../forest/FurniturePreview";
+import { shopItemNameMessages } from "../shopItemPresentation";
 
 type GachaSceneOptions = {
   getState: () => GameState;
@@ -21,6 +27,8 @@ type GachaSceneOptions = {
   machineArt: string;
   backIcon: string;
   coinIcon: string;
+  catAnimations: CatAnimationLibrary;
+  furnitureArt: FurnitureArtCollection;
 };
 
 export class GachaScene extends Container {
@@ -151,7 +159,7 @@ export class GachaScene extends Container {
     const result = await this.options.onDraw(count);
     this.drawPending = false;
     if (!result.ok) {
-      this.showFailure();
+      this.showFailure(result.reason);
       return;
     }
     if (this.coinsText) {
@@ -160,10 +168,12 @@ export class GachaScene extends Container {
     this.showResults(result);
   }
 
-  private showFailure(): void {
+  private showFailure(reason: Extract<GachaDrawResult, { ok: false }>["reason"]): void {
     this.clearResults();
     const panel = createCozyPanel(350, 190, 900, 520, { fill: 0xfff4df, border: 0x7b4b32, radius: 30 });
-    const title = centeredText(message("gacha.insufficientCoins"), 800, 355, 32);
+    const messageId: MessageId =
+      reason === "insufficient-coins" ? "gacha.insufficientCoins" : "gacha.serverUnavailable";
+    const title = centeredText(message(messageId), 800, 355, 32);
     const close = new CanvasButton({
       label: message("gacha.resultClose"),
       width: 180,
@@ -219,16 +229,18 @@ export class GachaScene extends Container {
   private addResultCard(reward: GachaReward, index: number, total: number): void {
     const columns = total === 1 ? 1 : 4;
     const cardWidth = total === 1 ? 400 : 205;
-    const x = total === 1 ? 600 : 370 + (index % columns) * 220;
-    const y = total === 1 ? 265 : 235 + Math.floor(index / columns) * 145;
+    const row = Math.floor(index / columns);
+    const cardsInRow = Math.min(columns, total - row * columns);
+    const rowWidth = cardsInRow * cardWidth + (cardsInRow - 1) * 15;
+    const x = total === 1 ? 600 : (BASE_WIDTH - rowWidth) / 2 + (index % columns) * 220;
+    const y = total === 1 ? 265 : 235 + row * 145;
     const card = new Graphics()
       .roundRect(x, y, cardWidth, total === 1 ? 370 : 130, 20)
       .fill(0xffead0)
       .stroke({ color: 0x8a5738, width: 3 });
-    const art = rewardArt(reward.id);
-    art.scale.set(total === 1 ? 1.65 : 0.58);
+    const art = this.createRewardArt(reward, total === 1 ? 270 : 105, total === 1 ? 220 : 78);
     art.position.set(x + cardWidth / 2, y + (total === 1 ? 165 : 65));
-    const rewardName = message(rewardNameMessages[reward.id]);
+    const rewardName = message(rewardNameMessage(reward));
     const name = centeredText(rewardName, x + cardWidth / 2, y + (total === 1 ? 295 : 105), total === 1 ? 24 : 14);
     this.resultLayer.addChild(card, art, name);
     if (reward.duplicate) {
@@ -240,6 +252,28 @@ export class GachaScene extends Container {
       );
       this.resultLayer.addChild(duplicate);
     }
+  }
+
+  private createRewardArt(reward: GachaReward, maxWidth: number, maxHeight: number): Sprite {
+    if (reward.kind === "cat" && reward.catVariant) {
+      const sprite = new Sprite(this.options.catAnimations[reward.catVariant].idle.textures[0]);
+      applySmoothTextureSampling(sprite);
+      sprite.anchor.set(0.5);
+      const scale = Math.min(maxWidth / sprite.texture.width, maxHeight / sprite.texture.height);
+      sprite.scale.set(scale);
+      return sprite;
+    }
+    if (reward.kind === "furniture" && reward.shopItemId) {
+      const definition = shopItemDefinitions[reward.shopItemId];
+      if (definition.kind === "furniture") {
+        return createFurniturePreview(
+          resolveFurnitureArt(this.options.furnitureArt, definition.furnitureKind, reward.shopItemId),
+          maxWidth,
+          maxHeight,
+        );
+      }
+    }
+    throw new Error(`Gacha reward art is not configured: ${reward.id}`);
   }
 
   private clearResults(): void {
@@ -272,95 +306,28 @@ function createGachaCurrencyBar(iconSrc: string, amount: number): { container: C
   container.addChild(shadow, background, innerWash, icon, amountText);
   return { container, amountText };
 }
-function drawMiniCat(color: number): Graphics {
-  return new Graphics()
-    .ellipse(0, 20, 35, 25)
-    .fill(color)
-    .stroke({ color: 0x4a3024, width: 3 })
-    .circle(0, -12, 29)
-    .fill(color)
-    .stroke({ color: 0x4a3024, width: 3 })
-    .poly([-23, -28, -18, -52, -3, -31, 11, -31, 23, -53, 25, -25])
-    .fill(color)
-    .stroke({ color: 0x4a3024, width: 3 })
-    .circle(-9, -13, 3)
-    .circle(9, -13, 3)
-    .fill(0xffd36c);
-}
-function drawDesk(): Graphics {
-  return new Graphics()
-    .rect(-35, -15, 70, 35)
-    .fill(0x9b603b)
-    .stroke({ color: 0x553426, width: 3 })
-    .rect(-29, 20, 7, 35)
-    .rect(22, 20, 7, 35)
-    .fill(0x6f422d);
-}
-
-function rewardArt(rewardId: GachaRewardId): Graphics {
-  if (rewardId === "cat.ink") {
-    return drawMiniCat(0x333333);
-  }
-  if (rewardId === "furniture.desk") {
-    return drawDesk();
-  }
-  if (rewardId === "furniture.catTower") {
-    return drawCatTower();
-  }
-  if (rewardId === "decor.plant") {
-    return drawPlant();
-  }
-  return drawSofa();
-}
-
-function drawCatTower(): Graphics {
-  return new Graphics()
-    .roundRect(-28, 5, 56, 55, 7)
-    .fill(0xb77b49)
-    .stroke({ color: 0x553426, width: 3 })
-    .rect(-5, -52, 10, 58)
-    .fill(0x8d5b38)
-    .ellipse(0, -55, 38, 12)
-    .fill(0xc58e55)
-    .stroke({ color: 0x553426, width: 3 });
-}
-
-function drawPlant(): Graphics {
-  return new Graphics()
-    .roundRect(-24, 15, 48, 40, 8)
-    .fill(0xbc8259)
-    .stroke({ color: 0x553426, width: 3 })
-    .ellipse(-14, -5, 13, 31)
-    .ellipse(8, -14, 14, 36)
-    .ellipse(20, 0, 12, 28)
-    .fill(0x6f9858)
-    .stroke({ color: 0x43623b, width: 2 });
-}
-
-function drawSofa(): Graphics {
-  return new Graphics()
-    .roundRect(-48, -20, 96, 55, 13)
-    .fill(0xc97e62)
-    .stroke({ color: 0x553426, width: 3 })
-    .roundRect(-55, 8, 110, 35, 12)
-    .fill(0xd79a79)
-    .stroke({ color: 0x553426, width: 3 });
-}
-
 function createBlocker(): Graphics {
   const blocker = new Graphics().rect(0, 0, BASE_WIDTH, BASE_HEIGHT).fill({ color: 0x2f211b, alpha: 0.58 });
   blocker.eventMode = "static";
   return blocker;
 }
 
-const rewardNameMessages: Record<GachaRewardId, MessageId> = {
-  "cat.ink": "gacha.blackCat",
-  "cat.tabby": "gacha.tabbyCat",
-  "furniture.desk": "gacha.studyDesk",
-  "furniture.catTower": "gacha.miniCatTower",
-  "decor.plant": "shop.productPlant",
-  "furniture.sofa": "shop.productSofa",
+const catNameMessages: Record<CatVariant, MessageId> = {
+  fluffy: "cat.fluffyName",
+  siamese: "cat.siameseName",
+  ink: "cat.inkName",
+  tabby: "cat.tabbyName",
 };
+
+function rewardNameMessage(reward: GachaReward): MessageId {
+  if (reward.kind === "furniture" && reward.shopItemId) {
+    return shopItemNameMessages[reward.shopItemId];
+  }
+  if (reward.kind === "cat" && reward.catVariant) {
+    return catNameMessages[reward.catVariant];
+  }
+  throw new Error(`Gacha reward name is not configured: ${reward.id}`);
+}
 
 type DrawButtonOptions = {
   title: string;

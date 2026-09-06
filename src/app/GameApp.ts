@@ -132,7 +132,7 @@ export class GameApp {
         siamese: requireAnimations("siamese"),
         tabby: requireAnimations("tabby"),
       };
-      forestArt = await loadForestArt(assetCatalog);
+      forestArt = await loadForestArt(assetCatalog, gameClient.getSnapshot().activeWallpaper);
       loading.setProgress(0.98);
     } catch (error) {
       loading.showError();

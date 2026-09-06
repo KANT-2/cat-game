@@ -11,14 +11,14 @@ import {
   ROOM_GRID_WIDTH,
   rotatedSize,
 } from "../../domain/room";
-import type { ShopItemId } from "../../domain/shop";
+import type { ConsumableEffect, ShopItemId } from "../../domain/shop";
 import { shopItemDefinitions } from "../../domain/shop";
 import { gridCellPolygon, gridToScreen, screenToGrid } from "../belt";
 import { CLEARING_GRID, textStyle } from "../config";
 import { CatActor, type CatDropTarget } from "../entities/CatActor";
 import type { CatAction, CatAnimationLibrary } from "../entities/CatAnimations";
 import { furniturePresentation } from "../presentation/furniturePresentation";
-import type { ForestArt } from "./ForestArt";
+import { type ForestArt, resolveBackgroundArt, resolveFurnitureArt } from "./ForestArt";
 import { FurnitureView } from "./FurnitureView";
 
 type ForestClearingViewOptions = {
@@ -47,6 +47,12 @@ const PREFERRED_SPAWN_MIN_X = 1;
 const PREFERRED_SPAWN_MAX_X = ROOM_GRID_WIDTH - 2;
 const PREFERRED_SPAWN_MIN_Y = 2;
 const PREFERRED_SPAWN_MAX_Y = 5;
+const CONSUMABLE_ACTIONS: Record<ConsumableEffect, CatAction> = {
+  happy: "jump",
+  playful: "attack",
+  relaxed: "groom",
+  curious: "surprise",
+};
 
 export class ForestClearingView extends Container {
   private readonly backgroundLayer = new Container({ label: "forest-background" });
@@ -107,7 +113,6 @@ export class ForestClearingView extends Container {
       this.foregroundLayer,
     );
 
-    this.drawForest();
     this.syncTheme();
     this.buildGroundGrid();
     this.rebuildFurniture();
@@ -148,6 +153,13 @@ export class ForestClearingView extends Container {
   syncFurniture(): void {
     this.rebuildFurniture();
     this.updateSelection();
+  }
+
+  /** 현재 선택된 홈 고양이에게 소모품 효과에 맞는 긍정적 동작을 즉시 재생한다. */
+  playConsumableEffect(effect: ConsumableEffect): void {
+    const activeVariant = this.activeCatVariant ?? this.getActiveCat();
+    const cat = this.cats.get(activeVariant) ?? this.cats.values().next().value;
+    cat?.playAction(CONSUMABLE_ACTIONS[effect]);
   }
 
   /**
@@ -212,19 +224,20 @@ export class ForestClearingView extends Container {
     return gridToScreen(CLEARING_GRID, x, y);
   }
 
-  /** 선택한 벽지·바닥재의 색감을 야외 홈 배경과 공터에 즉시 반영한다. */
+  /** 선택한 배경 이미지와 바닥재 색감을 홈 장소에 즉시 반영한다. */
   syncTheme(): void {
+    this.backgroundLayer.removeChildren().forEach((child) => {
+      child.destroy({ children: true });
+    });
     this.themeLayer.removeChildren().forEach((child) => {
       child.destroy({ children: true });
     });
     const wallpaper = this.getActiveWallpaper();
     const floor = this.getActiveFloor();
-    if (wallpaper) {
-      const item = shopItemDefinitions[wallpaper];
-      if (item.kind === "wallpaper") {
-        this.themeLayer.addChild(new Graphics().rect(0, 0, 1600, 410).fill({ color: item.themeColor, alpha: 0.26 }));
-      }
-    }
+    const background = new Sprite(resolveBackgroundArt(this.art.backgrounds, wallpaper));
+    background.width = 1600;
+    background.height = 900;
+    this.backgroundLayer.addChild(background);
     if (floor) {
       const item = shopItemDefinitions[floor];
       if (item.kind === "floor") {
@@ -245,12 +258,6 @@ export class ForestClearingView extends Container {
         );
       }
     }
-  }
-  private drawForest(): void {
-    const background = new Sprite(this.art.background);
-    background.width = 1600;
-    background.height = 900;
-    this.backgroundLayer.addChild(background);
   }
 
   private buildGroundGrid(): void {
@@ -299,7 +306,7 @@ export class ForestClearingView extends Container {
       this.entityLayer.addChild(
         new FurnitureView({
           item,
-          art: this.art.furniture[item.kind],
+          art: resolveFurnitureArt(this.art.furniture, item.kind, item.shopItemId),
           project: (x, y) => this.project(x, y),
           onTap: (placed) => this.handleFurnitureTap(placed),
         }),

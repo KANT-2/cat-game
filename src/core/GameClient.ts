@@ -3,7 +3,7 @@ import type { CatVariant } from "../domain/cats";
 import type { DailyQuestId } from "../domain/dailyQuest";
 import type { GachaDrawCount, GachaRewardId } from "../domain/gacha";
 import type { FurnitureKind, GameSettings, GameState } from "../domain/room";
-import type { ShopItemId } from "../domain/shop";
+import type { ConsumableEffect, ShopItemId } from "../domain/shop";
 import type { CodeTestResult, StudyConcept, StudyDifficulty, StudyTaskType } from "../domain/study";
 
 /** 가구 배치를 요청할 때 UI가 게임 시스템에 전달하는 직렬화 가능한 명령이다. */
@@ -33,7 +33,7 @@ export type PurchaseResult =
   | {
       ok: true;
       itemId: ShopItemId;
-      itemType: "wallpaper" | "floor";
+      itemType: "wallpaper" | "floor" | "consumable";
       remainingCoins: number;
     }
   | { ok: false; reason: "item-not-found" | "insufficient-coins" | "server-unavailable" };
@@ -41,6 +41,10 @@ export type PurchaseResult =
 export type ApplyRoomThemeResult =
   | { ok: true; itemId: ShopItemId; itemType: "wallpaper" | "floor" }
   | { ok: false; reason: "item-not-found" | "not-owned" | "not-theme" | "server-unavailable" };
+
+export type UseConsumableResult =
+  | { ok: true; itemId: ShopItemId; effect: ConsumableEffect; remainingQuantity: number }
+  | { ok: false; reason: "item-not-found" | "not-consumable" | "not-owned" | "cat-not-owned" | "server-unavailable" };
 
 export type GachaReward = {
   id: GachaRewardId;
@@ -260,6 +264,17 @@ export interface GameClient {
    * @remarks 성공한 구매만 상태를 저장하고 구독자에게 새 스냅샷을 알린다.
    */
   buyShopItem(itemId: ShopItemId): Awaitable<PurchaseResult>;
+
+  /**
+   * 보유한 간식 한 개를 소비하고 선택한 고양이의 긍정적 반응 종류를 반환한다.
+   *
+   * @param itemId - `consumable` 종류로 등록된 안정적인 상점 상품 ID.
+   * @param catVariant - 간식을 받을 현재 보유 고양이 종류.
+   * @returns 성공 시 표시할 반응과 남은 수량, 실패 시 UI가 처리할 수 있는 이유.
+   *
+   * @remarks 원격 클라이언트에서는 수량 차감과 멱등 처리를 서버가 권위 있게 결정한다.
+   */
+  useConsumable(itemId: ShopItemId, catVariant: CatVariant): Awaitable<UseConsumableResult>;
 
   /** 보유한 벽지 또는 바닥재를 현재 방 테마로 적용한다. */
   applyRoomTheme(itemId: ShopItemId): Awaitable<ApplyRoomThemeResult>;
