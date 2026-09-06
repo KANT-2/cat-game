@@ -1,4 +1,4 @@
-import { Container, type FederatedPointerEvent, Graphics, Text } from "pixi.js";
+import { Container, Graphics, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
 import type {
   Awaitable,
@@ -16,6 +16,7 @@ import { createCozyPageBackground, createCozyPanel, createTitleOrnament } from "
 import { createCoinAmount } from "../components/CurrencyBar";
 import { layoutToFillViewport } from "../components/fullscreenLayout";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
+import type { CodeEditorOverlay, CodeEditorOverlayFactory } from "../ports/CodeEditorOverlay";
 import { formatStudyDetails, summarizeStudyText } from "../presentation/studyPresentation";
 
 type FilterValue<T extends string> = "all" | T;
@@ -31,6 +32,7 @@ type StudyModalOptions = {
   onClose: () => void;
   backIcon: string;
   coinIcon: string;
+  codeEditorFactory: CodeEditorOverlayFactory;
 };
 
 const conceptMessages: Record<StudyConcept, MessageId> = {
@@ -63,7 +65,7 @@ export class StudyModal extends Container {
   private difficultyFilter: FilterValue<StudyDifficulty> = "all";
   private openFilterSelect: FilterSelectId | null = null;
   private taskPage = 0;
-  private codeEditor: CanvasCodeEditor | null = null;
+  private codeEditor: CodeEditorOverlay | null = null;
   private hintsUsed = 0;
   private submissionPending = false;
 
@@ -81,6 +83,7 @@ export class StudyModal extends Container {
   layout(width: number, height: number): void {
     this.background.clear().rect(0, 0, width, height).fill(0xf2d7aa);
     layoutToFillViewport(this.page, width, height);
+    this.layoutCodeEditor();
   }
 
   private renderDashboard(): void {
@@ -595,16 +598,28 @@ export class StudyModal extends Container {
       style: { ...textStyle(15, 0x76533c, "600"), wordWrap: true, wordWrapWidth: 470 },
     });
     editorHelp.position.set(625, 193);
-    this.codeEditor = new CanvasCodeEditor(challenge.signature, draftBody);
-    this.codeEditor.position.set(625, 235);
     const editorStatus = new Text({
       text: message(restored ? "study.draftRestored" : "study.editorIdle"),
       style: textStyle(14, 0x76533c, "700"),
     });
     editorStatus.position.set(625, 708);
-    this.codeEditor.onFocusChange = (focused) => {
-      editorStatus.text = message(focused ? "study.editorFocused" : "study.editorIdle");
-    };
+    this.codeEditor = this.options.codeEditorFactory.create({
+      language: challenge.language,
+      signature: challenge.signature,
+      initialValue: draftBody,
+      ariaLabel: message("study.codeEditorAriaLabel"),
+      onFocusChange: (focused) => {
+        if (!editorStatus.destroyed) {
+          editorStatus.text = message(focused ? "study.editorFocused" : "study.editorIdle");
+        }
+      },
+      onLoadError: () => {
+        if (!editorStatus.destroyed) {
+          editorStatus.text = message("study.editorUnavailable");
+        }
+      },
+    });
+    this.layoutCodeEditor();
     const reset = new CanvasButton({
       label: message("study.resetCode"),
       width: 112,
@@ -612,7 +627,8 @@ export class StudyModal extends Container {
       fontSize: 14,
       color: 0xd9c5aa,
       onPress: () => {
-        this.codeEditor?.reset();
+        this.codeEditor?.setValue(challenge.starterBody);
+        this.codeEditor?.focus();
         editorStatus.text = message("study.codeReset");
       },
     });
@@ -651,7 +667,6 @@ export class StudyModal extends Container {
       editorHelp,
       reset,
       paste,
-      this.codeEditor,
       editorStatus,
       submit,
     );
@@ -681,7 +696,7 @@ export class StudyModal extends Container {
     if (this.submissionPending) {
       return;
     }
-    const body = this.codeEditor?.value ?? "";
+    const body = this.codeEditor?.getValue() ?? "";
     this.submissionPending = true;
     status.text = message("study.gradingInProgress");
     let result: CodeSubmissionResult;
@@ -744,6 +759,7 @@ export class StudyModal extends Container {
 
   private showFeedback(passed: boolean, detailValue: string, tests: FeedbackTest[], onContinue: () => void): void {
     this.closeFeedback();
+    this.codeEditor?.setVisible(false);
     const blocker = new Graphics().rect(0, 0, BASE_WIDTH, BASE_HEIGHT).fill({ color: 0x2f211b, alpha: 0.58 });
     blocker.eventMode = "static";
     const modalTop = tests.length > 0 ? 105 : 155;
@@ -849,480 +865,28 @@ export class StudyModal extends Container {
       child.destroy({ children: true });
     });
   }
+
+  override destroy(options?: Parameters<Container["destroy"]>[0]): void {
+    this.codeEditor?.destroy();
+    this.codeEditor = null;
+    super.destroy(options);
+  }
+
+  private layoutCodeEditor(): void {
+    if (!this.codeEditor) {
+      return;
+    }
+    const scale = this.page.scale.x;
+    this.codeEditor.setBounds({
+      left: this.page.x + 625 * scale,
+      top: this.page.y + 235 * scale,
+      width: 860 * scale,
+      height: 455 * scale,
+      scale,
+    });
+  }
 }
 
 function resolveGameText(value: GameText): string {
   return "text" in value ? value.text : message(value.messageId);
-}
-
-class CanvasCodeEditor extends Container {
-  private readonly codeText: Text;
-  private readonly lineNumberText: Text;
-  private readonly focusRing: Graphics;
-  private readonly selectionHighlight = new Graphics();
-  private readonly starterBody: string;
-  private readonly hasSignature: boolean;
-  private focused = false;
-  private bodyValue: string;
-  private cursorIndex: number;
-  private selectionAnchor: number | null = null;
-  private firstVisibleLine = 0;
-  private horizontalScroll = 0;
-  private history: EditorSnapshot[];
-  private historyIndex = 0;
-  private readonly keyHandler = (event: KeyboardEvent): void => this.handleKey(event);
-  private readonly pasteHandler = (event: ClipboardEvent): void => this.handlePaste(event);
-  private readonly copyHandler = (event: ClipboardEvent): void => this.handleCopy(event);
-  private readonly cutHandler = (event: ClipboardEvent): void => this.handleCut(event);
-  onFocusChange: ((focused: boolean) => void) | null = null;
-
-  constructor(signature: string, starterBody: string) {
-    super();
-    this.starterBody = limitEditorValue(starterBody);
-    this.bodyValue = this.starterBody;
-    this.cursorIndex = this.bodyValue.length;
-    this.history = [{ value: this.bodyValue, cursorIndex: this.cursorIndex }];
-    this.hasSignature = signature.trim().length > 0;
-    const background = new Graphics()
-      .roundRect(0, 0, 860, 455, 18)
-      .fill(0x202630)
-      .stroke({ color: 0x586473, width: 3 });
-    background.eventMode = "static";
-    background.cursor = "text";
-    background.on("pointertap", (event: FederatedPointerEvent) => this.placeCursor(event));
-    this.focusRing = new Graphics();
-    const gutter = new Graphics().roundRect(4, 4, 54, 447, 14).fill(0x1a2029);
-    const signatureLineNumber = new Text({
-      text: "1",
-      style: { ...textStyle(15, 0x75808d, "600"), fontFamily: "Consolas, monospace" },
-    });
-    signatureLineNumber.anchor.set(1, 0);
-    signatureLineNumber.position.set(43, 27);
-    signatureLineNumber.visible = this.hasSignature;
-    const signatureText = new Text({
-      text: signature,
-      style: { ...textStyle(20, 0x83c9e8, "700"), fontFamily: "Consolas, monospace" },
-    });
-    signatureText.position.set(76, 25);
-    signatureText.visible = this.hasSignature;
-    const bodyTextY = this.bodyTextY();
-    this.lineNumberText = new Text({
-      text: "",
-      style: { ...textStyle(15, 0x75808d, "600"), fontFamily: "Consolas, monospace", lineHeight: 28 },
-    });
-    this.lineNumberText.anchor.set(1, 0);
-    this.lineNumberText.position.set(43, bodyTextY + 2);
-    this.codeText = new Text({
-      text: "",
-      style: { ...textStyle(18, 0xe7eccf, "500"), fontFamily: "Consolas, monospace", lineHeight: 28 },
-    });
-    this.codeText.position.set(EDITOR_TEXT_X, bodyTextY);
-    const codeViewport = new Container();
-    codeViewport.addChild(this.selectionHighlight, this.codeText);
-    const codeMask = new Graphics().rect(60, bodyTextY - 2, 792, 443 - bodyTextY).fill(0xffffff);
-    codeViewport.mask = codeMask;
-    this.addChild(
-      background,
-      gutter,
-      this.focusRing,
-      signatureLineNumber,
-      signatureText,
-      this.lineNumberText,
-      codeViewport,
-      codeMask,
-    );
-    this.refresh();
-    window.addEventListener("keydown", this.keyHandler);
-    window.addEventListener("paste", this.pasteHandler);
-    window.addEventListener("copy", this.copyHandler);
-    window.addEventListener("cut", this.cutHandler);
-  }
-
-  get value(): string {
-    return this.bodyValue;
-  }
-
-  append(value: string): void {
-    this.setFocused(true);
-    this.replaceSelection(value);
-  }
-
-  reset(): void {
-    this.setFocused(true);
-    this.applyEdit(this.starterBody, this.starterBody.length);
-  }
-
-  override destroy(options?: Parameters<Container["destroy"]>[0]): void {
-    window.removeEventListener("keydown", this.keyHandler);
-    window.removeEventListener("paste", this.pasteHandler);
-    window.removeEventListener("copy", this.copyHandler);
-    window.removeEventListener("cut", this.cutHandler);
-    super.destroy(options);
-  }
-
-  private setFocused(focused: boolean): void {
-    this.focused = focused;
-    this.onFocusChange?.(focused);
-    this.refresh();
-  }
-
-  private handlePaste(event: ClipboardEvent): void {
-    if (!this.focused) {
-      return;
-    }
-    const value = event.clipboardData?.getData("text") ?? "";
-    if (!value) {
-      return;
-    }
-    event.preventDefault();
-    this.replaceSelection(value);
-  }
-
-  private handleCopy(event: ClipboardEvent): void {
-    if (!this.focused) {
-      return;
-    }
-    const selection = this.selectionRange();
-    if (!selection || !event.clipboardData) {
-      return;
-    }
-    event.clipboardData.setData("text/plain", this.bodyValue.slice(selection.start, selection.end));
-    event.preventDefault();
-  }
-
-  private handleCut(event: ClipboardEvent): void {
-    const selection = this.selectionRange();
-    if (!this.focused || !selection || !event.clipboardData) {
-      return;
-    }
-    event.clipboardData.setData("text/plain", this.bodyValue.slice(selection.start, selection.end));
-    event.preventDefault();
-    this.replaceSelection("");
-  }
-
-  private handleKey(event: KeyboardEvent): void {
-    if (!this.focused) {
-      return;
-    }
-    if (event.key === "Escape") {
-      this.setFocused(false);
-      return;
-    }
-    const modifier = event.ctrlKey || event.metaKey;
-    const lowerKey = event.key.toLowerCase();
-    if (modifier && lowerKey === "a") {
-      this.selectionAnchor = 0;
-      this.cursorIndex = this.bodyValue.length;
-      event.preventDefault();
-      this.refresh();
-      return;
-    }
-    if (modifier && lowerKey === "z") {
-      if (event.shiftKey) {
-        this.redo();
-      } else {
-        this.undo();
-      }
-      event.preventDefault();
-      return;
-    }
-    if (modifier && lowerKey === "y") {
-      this.redo();
-      event.preventDefault();
-      return;
-    }
-    if (modifier && (lowerKey === "c" || lowerKey === "x" || lowerKey === "v")) {
-      return;
-    }
-    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-      this.moveHorizontally(event.key === "ArrowLeft" ? -1 : 1, event.shiftKey);
-    } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
-      this.moveVertically(event.key === "ArrowUp" ? -1 : 1, event.shiftKey);
-    } else if (event.key === "Home" || event.key === "End") {
-      this.moveToLineBoundary(event.key === "End", event.shiftKey, modifier);
-    } else if (event.key === "Backspace") {
-      this.backspace();
-    } else if (event.key === "Delete") {
-      this.deleteForward();
-    } else if (event.key === "Enter") {
-      const lineStart = this.bodyValue.lastIndexOf("\n", this.cursorIndex - 1) + 1;
-      const currentLine = this.bodyValue.slice(lineStart, this.cursorIndex);
-      const indentation = currentLine.match(/^\s*/)?.[0] ?? "";
-      this.replaceSelection(`\n${indentation}${currentLine.trimEnd().endsWith(":") ? "    " : ""}`);
-    } else if (event.key === "Tab") {
-      this.insertTab(event.shiftKey);
-    } else if (event.key.length === 1) {
-      this.replaceSelection(event.key);
-    } else {
-      return;
-    }
-    event.preventDefault();
-  }
-
-  private refresh(): void {
-    const bodyLines = this.bodyValue.split("\n");
-    const cursor = indexToLineColumn(this.bodyValue, this.cursorIndex);
-    const visibleLineCount = this.visibleLineCount();
-    if (cursor.line < this.firstVisibleLine) {
-      this.firstVisibleLine = cursor.line;
-    } else if (cursor.line >= this.firstVisibleLine + visibleLineCount) {
-      this.firstVisibleLine = cursor.line - visibleLineCount + 1;
-    }
-    this.firstVisibleLine = Math.max(
-      0,
-      Math.min(this.firstVisibleLine, Math.max(0, bodyLines.length - visibleLineCount)),
-    );
-    if (cursor.column < this.horizontalScroll) {
-      this.horizontalScroll = cursor.column;
-    } else if (cursor.column >= this.horizontalScroll + MAX_EDITOR_VISIBLE_COLUMNS) {
-      this.horizontalScroll = cursor.column - MAX_EDITOR_VISIBLE_COLUMNS + 1;
-    }
-    const visibleLines = bodyLines.slice(this.firstVisibleLine, this.firstVisibleLine + visibleLineCount);
-    if (
-      this.focused &&
-      cursor.line >= this.firstVisibleLine &&
-      cursor.line < this.firstVisibleLine + visibleLines.length
-    ) {
-      const row = cursor.line - this.firstVisibleLine;
-      const line = visibleLines[row];
-      visibleLines[row] = `${line.slice(0, cursor.column)}▌${line.slice(cursor.column)}`;
-    }
-    const firstVisibleLineNumber = this.firstVisibleLine + (this.hasSignature ? 2 : 1);
-    const lineNumbers = visibleLines.map((_, index) => String(firstVisibleLineNumber + index));
-    this.codeText.text = visibleLines.join("\n");
-    this.codeText.position.set(EDITOR_TEXT_X - this.horizontalScroll * EDITOR_CHARACTER_WIDTH, this.bodyTextY());
-    this.lineNumberText.text = lineNumbers.join("\n");
-    this.drawSelection(bodyLines);
-    this.focusRing.clear();
-    if (this.focused) {
-      this.focusRing.roundRect(3, 3, 854, 449, 16).stroke({ color: 0xe7a854, width: 4 });
-    }
-  }
-
-  private placeCursor(event: FederatedPointerEvent): void {
-    const local = event.getLocalPosition(this);
-    const lines = this.bodyValue.split("\n");
-    const row = Math.max(0, Math.floor((local.y - this.bodyTextY()) / EDITOR_LINE_HEIGHT));
-    const line = Math.min(lines.length - 1, this.firstVisibleLine + row);
-    const clickedColumn = Math.round((local.x - EDITOR_TEXT_X) / EDITOR_CHARACTER_WIDTH) + this.horizontalScroll;
-    const column = Math.max(0, Math.min(lines[line].length, clickedColumn));
-    this.moveCursor(lineColumnToIndex(lines, line, column), event.shiftKey);
-    this.setFocused(true);
-  }
-
-  private moveHorizontally(offset: -1 | 1, extendSelection: boolean): void {
-    const selection = this.selectionRange();
-    if (!extendSelection && selection) {
-      this.moveCursor(offset < 0 ? selection.start : selection.end, false);
-      return;
-    }
-    this.moveCursor(this.cursorIndex + offset, extendSelection);
-  }
-
-  private moveVertically(offset: -1 | 1, extendSelection: boolean): void {
-    const lines = this.bodyValue.split("\n");
-    const current = indexToLineColumn(this.bodyValue, this.cursorIndex);
-    const line = Math.max(0, Math.min(lines.length - 1, current.line + offset));
-    this.moveCursor(lineColumnToIndex(lines, line, Math.min(current.column, lines[line].length)), extendSelection);
-  }
-
-  private moveToLineBoundary(toEnd: boolean, extendSelection: boolean, wholeDocument: boolean): void {
-    if (wholeDocument) {
-      this.moveCursor(toEnd ? this.bodyValue.length : 0, extendSelection);
-      return;
-    }
-    const lines = this.bodyValue.split("\n");
-    const current = indexToLineColumn(this.bodyValue, this.cursorIndex);
-    this.moveCursor(lineColumnToIndex(lines, current.line, toEnd ? lines[current.line].length : 0), extendSelection);
-  }
-
-  private moveCursor(index: number, extendSelection: boolean): void {
-    if (extendSelection && this.selectionAnchor === null) {
-      this.selectionAnchor = this.cursorIndex;
-    } else if (!extendSelection) {
-      this.selectionAnchor = null;
-    }
-    this.cursorIndex = Math.max(0, Math.min(this.bodyValue.length, index));
-    this.refresh();
-  }
-
-  private backspace(): void {
-    if (this.selectionRange()) {
-      this.replaceSelection("");
-      return;
-    }
-    if (this.cursorIndex === 0) {
-      return;
-    }
-    this.selectionAnchor = this.cursorIndex - 1;
-    this.replaceSelection("");
-  }
-
-  private deleteForward(): void {
-    if (this.selectionRange()) {
-      this.replaceSelection("");
-      return;
-    }
-    if (this.cursorIndex >= this.bodyValue.length) {
-      return;
-    }
-    this.selectionAnchor = this.cursorIndex + 1;
-    this.replaceSelection("");
-  }
-
-  private insertTab(outdent: boolean): void {
-    if (!outdent) {
-      const column = indexToLineColumn(this.bodyValue, this.cursorIndex).column;
-      this.replaceSelection(" ".repeat(4 - (column % 4)));
-      return;
-    }
-    if (this.selectionRange()) {
-      return;
-    }
-    const lineStart = this.bodyValue.lastIndexOf("\n", this.cursorIndex - 1) + 1;
-    const removable = this.bodyValue.slice(lineStart, this.cursorIndex).match(/^ {1,4}/)?.[0].length ?? 0;
-    if (removable === 0) {
-      return;
-    }
-    this.selectionAnchor = lineStart;
-    this.cursorIndex = lineStart + removable;
-    this.replaceSelection("");
-  }
-
-  private replaceSelection(insertedValue: string): void {
-    const selection = this.selectionRange() ?? { start: this.cursorIndex, end: this.cursorIndex };
-    const normalized = insertedValue.replace(/\r/g, "");
-    const availableLength = MAX_EDITOR_CHARACTERS - (this.bodyValue.length - (selection.end - selection.start));
-    const inserted = normalized.slice(0, Math.max(0, availableLength));
-    const nextValue = `${this.bodyValue.slice(0, selection.start)}${inserted}${this.bodyValue.slice(selection.end)}`;
-    this.applyEdit(nextValue, selection.start + inserted.length);
-  }
-
-  private applyEdit(value: string, cursorIndex: number): void {
-    const limitedValue = limitEditorValue(value);
-    const nextCursorIndex = Math.min(limitedValue.length, cursorIndex);
-    this.selectionAnchor = null;
-    if (limitedValue === this.bodyValue) {
-      this.cursorIndex = nextCursorIndex;
-      this.refresh();
-      return;
-    }
-    this.bodyValue = limitedValue;
-    this.cursorIndex = nextCursorIndex;
-    this.history = this.history.slice(0, this.historyIndex + 1);
-    this.history.push({ value: this.bodyValue, cursorIndex: this.cursorIndex });
-    this.historyIndex = this.history.length - 1;
-    this.refresh();
-  }
-
-  private undo(): void {
-    if (this.historyIndex === 0) {
-      return;
-    }
-    this.historyIndex -= 1;
-    this.restoreHistory();
-  }
-
-  private redo(): void {
-    if (this.historyIndex >= this.history.length - 1) {
-      return;
-    }
-    this.historyIndex += 1;
-    this.restoreHistory();
-  }
-
-  private restoreHistory(): void {
-    const snapshot = this.history[this.historyIndex];
-    this.bodyValue = snapshot.value;
-    this.cursorIndex = snapshot.cursorIndex;
-    this.selectionAnchor = null;
-    this.refresh();
-  }
-
-  private selectionRange(): EditorSelection | null {
-    if (this.selectionAnchor === null || this.selectionAnchor === this.cursorIndex) {
-      return null;
-    }
-    return {
-      start: Math.min(this.selectionAnchor, this.cursorIndex),
-      end: Math.max(this.selectionAnchor, this.cursorIndex),
-    };
-  }
-
-  private drawSelection(lines: string[]): void {
-    this.selectionHighlight.clear();
-    const selection = this.selectionRange();
-    if (!selection) {
-      return;
-    }
-    const offsets = lineOffsets(lines);
-    const visibleEnd = Math.min(lines.length, this.firstVisibleLine + this.visibleLineCount());
-    for (let line = this.firstVisibleLine; line < visibleEnd; line += 1) {
-      const lineStart = offsets[line];
-      const lineEnd = lineStart + lines[line].length;
-      const startColumn = Math.max(0, selection.start - lineStart);
-      let endColumn = Math.min(lines[line].length, selection.end - lineStart);
-      if (selection.end > lineEnd && selection.start <= lineEnd) {
-        endColumn += 1;
-      }
-      if (endColumn <= startColumn) {
-        continue;
-      }
-      const visibleStart = Math.max(startColumn, this.horizontalScroll);
-      const visibleColumnEnd = Math.min(endColumn, this.horizontalScroll + MAX_EDITOR_VISIBLE_COLUMNS);
-      if (visibleColumnEnd <= visibleStart) {
-        continue;
-      }
-      const x = EDITOR_TEXT_X + (visibleStart - this.horizontalScroll) * EDITOR_CHARACTER_WIDTH;
-      const y = this.bodyTextY() + (line - this.firstVisibleLine) * EDITOR_LINE_HEIGHT;
-      this.selectionHighlight
-        .rect(x, y + 2, (visibleColumnEnd - visibleStart) * EDITOR_CHARACTER_WIDTH, EDITOR_LINE_HEIGHT - 3)
-        .fill({ color: 0x4779a8, alpha: 0.62 });
-    }
-  }
-
-  private bodyTextY(): number {
-    return this.hasSignature ? 68 : 25;
-  }
-
-  private visibleLineCount(): number {
-    return this.hasSignature ? 13 : 14;
-  }
-}
-
-const MAX_EDITOR_CHARACTERS = 900;
-const MAX_EDITOR_VISIBLE_COLUMNS = 68;
-const EDITOR_TEXT_X = 76;
-const EDITOR_LINE_HEIGHT = 28;
-const EDITOR_CHARACTER_WIDTH = 10.8;
-
-type EditorSnapshot = { value: string; cursorIndex: number };
-type EditorSelection = { start: number; end: number };
-
-function limitEditorValue(value: string): string {
-  return value.slice(0, MAX_EDITOR_CHARACTERS);
-}
-
-function indexToLineColumn(value: string, index: number): { line: number; column: number } {
-  const beforeCursor = value.slice(0, index);
-  const lines = beforeCursor.split("\n");
-  return { line: lines.length - 1, column: lines.at(-1)?.length ?? 0 };
-}
-
-function lineColumnToIndex(lines: string[], line: number, column: number): number {
-  let index = 0;
-  for (let currentLine = 0; currentLine < line; currentLine += 1) {
-    index += lines[currentLine].length + 1;
-  }
-  return index + column;
-}
-
-function lineOffsets(lines: string[]): number[] {
-  const offsets: number[] = [];
-  let offset = 0;
-  for (const line of lines) {
-    offsets.push(offset);
-    offset += line.length + 1;
-  }
-  return offsets;
 }

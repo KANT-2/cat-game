@@ -316,10 +316,13 @@ export class ForestClearingView extends Container {
 
   private handleFurnitureTap(item: PlacedFurniture): void {
     if (!this.editMode) {
-      this.onSelectFurniture(item);
       return;
     }
-    this.onToast(message("furniture.finishCurrentPlacement"));
+    if (this.selectedFurniture) {
+      this.onToast(message("furniture.finishCurrentPlacement"));
+      return;
+    }
+    this.onSelectFurniture(item);
   }
 
   private async handleGroundTap(x: number, y: number): Promise<void> {

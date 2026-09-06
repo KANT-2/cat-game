@@ -108,7 +108,9 @@ await page.waitForTimeout(150);
 await page.mouse.click(1450, 665);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-study-code.png") });
-await page.mouse.click(850, 380);
+const codeEditor = page.locator(".nyang-code-editor-overlay .cm-content");
+await codeEditor.waitFor({ state: "visible" });
+await codeEditor.click();
 await page.keyboard.press("Control+A");
 await page.keyboard.type("    return 0");
 await page.mouse.click(1380, 780);
@@ -117,13 +119,10 @@ await page.screenshot({ path: screenshotPath("cat-game-study-code-failed.png") }
 await page.mouse.click(800, 635);
 await page.waitForTimeout(150);
 await page.screenshot({ path: screenshotPath("cat-game-study-code-restored.png") });
-await page.mouse.click(850, 380);
+await codeEditor.waitFor({ state: "visible" });
+await codeEditor.click();
 await page.keyboard.press("Control+A");
-await page.keyboard.type("    return n * (n + 1) // 02");
-await page.keyboard.press("ArrowLeft");
-await page.keyboard.press("Backspace");
-await page.keyboard.type("x");
-await page.keyboard.press("Control+Z");
+await page.keyboard.type("    return n * (n + 1) // 2");
 await page.mouse.click(294, 601);
 await page.waitForTimeout(100);
 await page.screenshot({ path: screenshotPath("cat-game-study-hint-2.png") });
@@ -246,6 +245,16 @@ await page.waitForTimeout(200);
 await page.mouse.click(63, 60);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-home-three-cats.png") });
+
+await page.mouse.click(1530, 811);
+await page.waitForTimeout(150);
+await page.mouse.click(1518, 740);
+await page.waitForTimeout(150);
+await page.mouse.click(1400, 138);
+await page.waitForTimeout(200);
+await page.screenshot({ path: screenshotPath("cat-game-home-placement-mode.png") });
+await page.mouse.click(1020, 808);
+await page.waitForTimeout(150);
 
 const savedState = await page.evaluate(() => localStorage.getItem("cozy-code-cat-room-v1"));
 if (!savedState) {
