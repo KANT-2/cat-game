@@ -23,6 +23,7 @@ import type {
   QuizAnswerResult,
   QuizView,
   StudyTaskView,
+  StudyMasteryView,
   UseConsumableResult,
 } from "../core/GameClient";
 import {
@@ -41,6 +42,7 @@ import type { FurnitureKind, GameSettings, GameState } from "../domain/room";
 import { type ShopItemId, shopItemDefinitions } from "../domain/shop";
 import {
   type BackendApiClient,
+  type BackendConceptProficiency,
   BackendApiError,
   type BackendGameSnapshot,
   type BackendLearningTask,
@@ -55,12 +57,14 @@ export class BackendLearningGameClient implements GameClient {
   private stateVersion: number;
   private snapshotGeneration = 0;
   private readonly catAssetPublicIds = new Map<CatVariant, string>();
+  private mastery: StudyMasteryView;
 
   private constructor(
     local: GameClient,
     private readonly api: BackendApiClient,
     tasks: BackendLearningTask[],
     snapshot: BackendGameSnapshot,
+    proficiencies: BackendConceptProficiency[],
   ) {
     for (const task of tasks) {
       this.tasks.set(task.publicId, task);
@@ -69,6 +73,7 @@ export class BackendLearningGameClient implements GameClient {
     this.dailyHasCodeCompletion = snapshot.dailyHasCodeCompletion;
     this.stateVersion = snapshot.stateVersion;
     this.syncCatAssetPublicIds(snapshot);
+    this.mastery = toStudyMastery(proficiencies);
   }
 
   /** 서버 연결과 추천 과제 초기화를 마친 원격 학습 클라이언트를 만든다. */
@@ -79,8 +84,12 @@ export class BackendLearningGameClient implements GameClient {
 
   /** 인증이 끝난 HTTP 어댑터에서 서버 스냅샷과 추천 과제를 병렬로 읽어 원격 클라이언트를 만든다. */
   static async createConnected(local: GameClient, api: BackendApiClient): Promise<BackendLearningGameClient> {
-    const [tasks, snapshot] = await Promise.all([api.getLearningRecommendations(10), api.getGameSnapshot()]);
-    return new BackendLearningGameClient(local, api, tasks, snapshot);
+    const [tasks, snapshot, proficiencies] = await Promise.all([
+      api.getLearningRecommendations(10),
+      api.getGameSnapshot(),
+      api.getLearningProficiencies(),
+    ]);
+    return new BackendLearningGameClient(local, api, tasks, snapshot, proficiencies);
   }
 
   getSnapshot(): GameState {
@@ -99,7 +108,11 @@ export class BackendLearningGameClient implements GameClient {
    */
   async refreshFromServer(): Promise<boolean> {
     const generation = this.snapshotGeneration;
-    const [tasks, snapshot] = await Promise.all([this.api.getLearningRecommendations(10), this.api.getGameSnapshot()]);
+    const [tasks, snapshot, proficiencies] = await Promise.all([
+      this.api.getLearningRecommendations(10),
+      this.api.getGameSnapshot(),
+      this.api.getLearningProficiencies(),
+    ]);
     if (generation !== this.snapshotGeneration || snapshot.stateVersion < this.stateVersion) {
       return false;
     }
@@ -107,6 +120,7 @@ export class BackendLearningGameClient implements GameClient {
     for (const task of tasks) {
       this.tasks.set(task.publicId, task);
     }
+    this.mastery = toStudyMastery(proficiencies);
     this.applyServerSnapshot(snapshot);
     return true;
   }
@@ -277,7 +291,12 @@ export class BackendLearningGameClient implements GameClient {
       }
       if (attempt.correct) {
         task.completed = true;
-        this.applyServerSnapshot(await this.api.getGameSnapshot());
+        const [snapshot, proficiencies] = await Promise.all([
+          this.api.getGameSnapshot(),
+          this.api.getLearningProficiencies(),
+        ]);
+        this.mastery = toStudyMastery(proficiencies);
+        this.applyServerSnapshot(snapshot);
       }
       return {
         ok: true,
@@ -295,6 +314,10 @@ export class BackendLearningGameClient implements GameClient {
 
   getStudyTasks(): StudyTaskView[] {
     return [...this.tasks.values()].map(toStudyTaskView);
+  }
+
+  getStudyMastery(): StudyMasteryView {
+    return { ...this.mastery };
   }
 
   getCodeChallenge(challengeId: string): CodeChallengeView | null {
@@ -334,7 +357,12 @@ export class BackendLearningGameClient implements GameClient {
       }
       if (attempt.correct) {
         task.completed = true;
-        this.applyServerSnapshot(await this.api.getGameSnapshot());
+        const [snapshot, proficiencies] = await Promise.all([
+          this.api.getGameSnapshot(),
+          this.api.getLearningProficiencies(),
+        ]);
+        this.mastery = toStudyMastery(proficiencies);
+        this.applyServerSnapshot(snapshot);
       }
       return {
         ok: true,
@@ -448,11 +476,15 @@ export class BackendLearningGameClient implements GameClient {
   async resetLearningProgress(): Promise<LearningResetResult> {
     try {
       const mutation = await this.api.resetGameLearning();
-      const tasks = await this.api.getLearningRecommendations(10);
+      const [tasks, proficiencies] = await Promise.all([
+        this.api.getLearningRecommendations(10),
+        this.api.getLearningProficiencies(),
+      ]);
       this.tasks.clear();
       for (const task of tasks) {
         this.tasks.set(task.publicId, task);
       }
+      this.mastery = toStudyMastery(proficiencies);
       this.applyServerSnapshot(mutation.snapshot);
       return { ok: true };
     } catch (error) {
@@ -827,6 +859,28 @@ function mapConcept(value: string): StudyTaskView["concept"] {
     return name;
   }
   return "other";
+}
+
+function toStudyMastery(proficiencies: BackendConceptProficiency[]): StudyMasteryView {
+  const buckets: Record<StudyTaskView["concept"], { weightedTotal: number; attempts: number }> = {
+    variables: { weightedTotal: 0, attempts: 0 },
+    conditionals: { weightedTotal: 0, attempts: 0 },
+    loops: { weightedTotal: 0, attempts: 0 },
+    functions: { weightedTotal: 0, attempts: 0 },
+    other: { weightedTotal: 0, attempts: 0 },
+  };
+  for (const proficiency of proficiencies) {
+    const bucket = buckets[mapConcept(proficiency.conceptName)];
+    const weight = Math.max(1, proficiency.attempts);
+    bucket.weightedTotal += proficiency.proficiencyLevel * weight;
+    bucket.attempts += weight;
+  }
+  return Object.fromEntries(
+    Object.entries(buckets).map(([concept, value]) => [
+      concept,
+      value.attempts === 0 ? 0 : Math.round(value.weightedTotal / value.attempts),
+    ]),
+  ) as StudyMasteryView;
 }
 
 function mapDifficulty(value: BackendLearningTask["difficulty"]): StudyTaskView["difficulty"] {

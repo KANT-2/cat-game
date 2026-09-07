@@ -78,6 +78,16 @@ describe("backend learning integration", () => {
           },
         ]);
       }
+      if (url.pathname === "/api/v1/learning/proficiencies") {
+        return json([
+          {
+            concept_public_id: "44444444-4444-4444-8444-444444444444",
+            name: "PYTHON:variables",
+            attempts: 10,
+            proficiency_level: 70,
+          },
+        ]);
+      }
       if (url.pathname === "/api/v1/game/snapshot") {
         snapshotReads += 1;
         return json(
@@ -157,6 +167,7 @@ describe("backend learning integration", () => {
     expect(client.getStudyTasks()).toMatchObject([
       { id: taskId, type: "quiz", concept: "variables", title: { text: "두 수의 합" }, completed: false },
     ]);
+    expect(client.getStudyMastery().variables).toBe(70);
     expect(client.getSnapshot().catMemories.fluffy).toEqual(["반복문을 연습했어요"]);
     await expect(client.clearCatMemories()).resolves.toEqual({ ok: true, removed: 1 });
     expect(client.getSnapshot().catMemories).toEqual({});
@@ -244,6 +255,9 @@ describe("backend learning integration", () => {
           },
         ]);
       }
+      if (pathname === "/api/v1/learning/proficiencies") {
+        return json([]);
+      }
       if (pathname === "/api/v1/game/snapshot") {
         return json(gameSnapshot(1_000, 0));
       }
@@ -294,6 +308,9 @@ describe("backend learning integration", () => {
       if (pathname === "/api/v1/learning/recommendations") {
         return json([]);
       }
+      if (pathname === "/api/v1/learning/proficiencies") {
+        return json([]);
+      }
       if (pathname === "/api/v1/game/snapshot") {
         return json(gameSnapshot(1_000, 0, { memories }));
       }
@@ -330,6 +347,9 @@ describe("backend learning integration", () => {
         return json(userPayload());
       }
       if (pathname === "/api/v1/learning/recommendations") {
+        return json([]);
+      }
+      if (pathname === "/api/v1/learning/proficiencies") {
         return json([]);
       }
       if (pathname === "/api/v1/game/snapshot") {
