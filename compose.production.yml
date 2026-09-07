@@ -29,6 +29,7 @@ services:
         python -m alembic -c alembic.ini.example upgrade head &&
         python scripts/seed_game_catalog.py &&
         python scripts/seed_learning_tasks.py &&
+        python scripts/seed_sql_tasks.py &&
         exec uvicorn app.main:app --host 0.0.0.0 --port 8000
         --proxy-headers --forwarded-allow-ips=*
     environment:
@@ -74,6 +75,11 @@ services:
       GRADING_OUTPUT_BYTES: ${CAT_GAME_GRADING_OUTPUT_BYTES:-65536}
       GRADING_MAX_CONCURRENCY: ${CAT_GAME_GRADING_MAX_CONCURRENCY:-2}
       GRADING_LEASE_SECONDS: ${CAT_GAME_GRADING_LEASE_SECONDS:-60}
+      SQL_GRADING_DATABASE_URL: ${CAT_GAME_SQL_GRADING_DATABASE_URL:?set CAT_GAME_SQL_GRADING_DATABASE_URL}
+      SQL_GRADING_CONNECT_TIMEOUT_SECONDS: ${CAT_GAME_SQL_GRADING_CONNECT_TIMEOUT_SECONDS:-3}
+      SQL_GRADING_STATEMENT_TIMEOUT_MS: ${CAT_GAME_SQL_GRADING_STATEMENT_TIMEOUT_MS:-1000}
+      SQL_GRADING_MAX_ROWS: ${CAT_GAME_SQL_GRADING_MAX_ROWS:-1000}
+      SQL_GRADING_OUTPUT_BYTES: ${CAT_GAME_SQL_GRADING_OUTPUT_BYTES:-65536}
       DOCKER_HOST: ${CAT_GAME_GRADING_DOCKER_HOST:?set CAT_GAME_GRADING_DOCKER_HOST}
       DOCKER_TLS_VERIFY: ${CAT_GAME_GRADING_DOCKER_TLS_VERIFY:-1}
       DOCKER_CERT_PATH: /run/secrets/grading-docker
