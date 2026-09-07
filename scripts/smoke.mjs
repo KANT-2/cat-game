@@ -124,13 +124,16 @@ await page.waitForTimeout(150);
 await page.mouse.click(940, 773);
 await page.waitForTimeout(150);
 await page.mouse.click(1450, 665);
-await page.waitForTimeout(200);
-await page.screenshot({ path: screenshotPath("cat-game-study-code.png") });
 const codeEditor = page.locator(".nyang-code-editor-overlay .cm-content");
 await codeEditor.waitFor({ state: "visible" });
+const initialCode = await codeEditor.textContent();
+if (!initialCode?.includes("def sum_to(n):")) {
+  throw new Error(`code editor did not preload the full function: ${JSON.stringify(initialCode)}`);
+}
+await page.screenshot({ path: screenshotPath("cat-game-study-code.png") });
 await codeEditor.click();
 await page.keyboard.press("Control+A");
-await page.keyboard.type("    return 0");
+await page.keyboard.type("def sum_to(n):\n    return 0");
 await page.mouse.click(1380, 780);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-study-code-failed.png") });
@@ -140,7 +143,7 @@ await page.screenshot({ path: screenshotPath("cat-game-study-code-restored.png")
 await codeEditor.waitFor({ state: "visible" });
 await codeEditor.click();
 await page.keyboard.press("Control+A");
-await page.keyboard.type("    return n * (n + 1) // 2");
+await page.keyboard.type("def sum_to(n):\n    return n * (n + 1) // 2");
 await page.mouse.click(294, 601);
 await page.waitForTimeout(100);
 await page.screenshot({ path: screenshotPath("cat-game-study-hint-2.png") });

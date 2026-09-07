@@ -428,24 +428,23 @@ export class LocalGameClient implements GameClient {
       prompt: { messageId: challenge.promptMessage },
       rewardCoins: challenge.rewardCoins,
       completed: this.state.completedCodeChallengeIds.includes(challengeId),
-      signature: challenge.signature,
-      starterBody: challenge.starterBody,
+      starterCode: challenge.starterCode,
       examples: { messageId: challenge.examplesMessage },
       hints: challenge.hintMessages.map((messageId) => ({ messageId })),
       bonusCoins: challenge.bonusCoins,
     };
   }
 
-  submitCodeChallenge(challengeId: string, body: string, hintsUsed: number): CodeSubmissionResult {
+  submitCodeChallenge(challengeId: string, code: string, hintsUsed: number): CodeSubmissionResult {
     this.ensureDailyState();
     const challenge = codeChallengeDefinitions[challengeId];
     if (!challenge) {
       return { ok: false, reason: "challenge-not-found" };
     }
-    if (body.trim().length === 0) {
+    if (code.trim().length === 0) {
       return { ok: false, reason: "empty-code" };
     }
-    const grade = gradeSumChallenge(body);
+    const grade = gradeSumChallenge(code);
     if (!grade.passed) {
       return { ok: true, passed: false, tests: grade.tests, firstCompletion: false, coinsAwarded: 0 };
     }

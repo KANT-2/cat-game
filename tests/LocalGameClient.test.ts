@@ -273,7 +273,7 @@ describe("LocalGameClient", () => {
     expect(repository.save).not.toHaveBeenCalled();
   });
 
-  it("grades a function-body challenge and preserves the base reward when hints are used", () => {
+  it("grades an editable full-function challenge and preserves the base reward when hints are used", () => {
     const repository = new MemoryRepository();
     const client = new LocalGameClient(
       repository,
@@ -281,12 +281,19 @@ describe("LocalGameClient", () => {
       () => new Date(2026, 8, 3),
     );
 
-    const failed = client.submitCodeChallenge("python-sum-001", "    return 0", 0);
+    const failed = client.submitCodeChallenge("python-sum-001", "def sum_to(n):\n    return 0", 0);
     expect(failed).toMatchObject({ ok: true, passed: false, coinsAwarded: 0 });
+
+    const missingEntrypoint = client.submitCodeChallenge(
+      "python-sum-001",
+      "def renamed(n):\n    return n * (n + 1) // 2",
+      0,
+    );
+    expect(missingEntrypoint).toMatchObject({ ok: true, passed: false, coinsAwarded: 0 });
 
     const passed = client.submitCodeChallenge(
       "python-sum-001",
-      "    total = 0\n    for i in range(1, n + 1):\n        total += i\n    return total",
+      "def sum_to(n):\n    total = 0\n    for i in range(1, n + 1):\n        total += i\n    return total",
       2,
     );
     expect(passed).toMatchObject({ ok: true, passed: true, firstCompletion: true, coinsAwarded: 40 });

@@ -5,6 +5,8 @@ import { chromium } from "playwright";
 const apiUrl = (process.env.CAT_GAME_API_URL ?? "http://127.0.0.1:8000").replace(/\/+$/, "");
 const gameUrl = process.env.GAME_URL ?? "http://127.0.0.1:4173/";
 const screenshotPath = process.env.CAT_GAME_INTEGRATION_SCREENSHOT ?? join(tmpdir(), "cat-game-integration.png");
+const browserEmail = `integration-${Date.now()}@example.com`;
+const browserPassword = "integration-pass-2026";
 
 await verifyProductionShellHeaders(gameUrl);
 
@@ -145,9 +147,9 @@ try {
   );
   await page.mouse.click(900, 380);
   await page.mouse.click(700, 490);
-  await page.keyboard.type(`integration-${Date.now()}@example.com`);
+  await page.keyboard.type(browserEmail);
   await page.keyboard.press("Tab");
-  await page.keyboard.type("integration-pass-2026");
+  await page.keyboard.type(browserPassword);
   await page.keyboard.press("Enter");
   await Promise.all([registrationResponse, firstSnapshotResponse]);
   await page.waitForFunction(() => document.documentElement.dataset.gameReady === "ready", undefined, {
@@ -200,6 +202,47 @@ try {
   await anonymousAfterLogout;
   await page.waitForTimeout(500);
 
+  const rejectedLoginResponse = page.waitForResponse(
+    (response) => response.url().includes("/api/v1/session/login") && response.status() === 401,
+  );
+  await page.mouse.click(700, 490);
+  await page.keyboard.type(browserEmail);
+  await page.keyboard.press("Tab");
+  await page.keyboard.type("incorrect-password");
+  await page.keyboard.press("Enter");
+  await rejectedLoginResponse;
+  await page.waitForTimeout(500);
+
+  const loginResponse = page.waitForResponse(
+    (response) => response.url().includes("/api/v1/session/login") && response.status() === 200,
+  );
+  const loginSnapshotResponse = page.waitForResponse(
+    (response) => response.url().includes("/api/v1/game/snapshot") && response.status() === 200,
+  );
+  await page.keyboard.type(browserPassword);
+  await page.keyboard.press("Enter");
+  await Promise.all([loginResponse, loginSnapshotResponse]);
+  await page.waitForFunction(() => document.documentElement.dataset.gameReady === "ready", undefined, {
+    timeout: 120_000,
+  });
+  tolerateAuth401 = false;
+
+  await page.mouse.click(90, 90);
+  await page.waitForTimeout(200);
+  await page.mouse.click(520, 738);
+  await page.waitForTimeout(150);
+  const secondLogoutResponse = page.waitForResponse(
+    (response) => response.url().includes("/api/v1/session/logout") && response.status() === 204,
+  );
+  const anonymousAfterSecondLogout = page.waitForResponse(
+    (response) => response.url().includes("/api/v1/session/me") && response.status() === 401,
+  );
+  tolerateAuth401 = true;
+  await page.mouse.click(950, 585);
+  await secondLogoutResponse;
+  await anonymousAfterSecondLogout;
+  await page.waitForTimeout(500);
+
   tolerateOfflineErrors = true;
   await page.context().setOffline(true);
   await page.reload({ waitUntil: "domcontentloaded" });
@@ -213,6 +256,7 @@ try {
 for (const path of [
   "/health",
   "/api/v1/session/register",
+  "/api/v1/session/login",
   "/api/v1/session/me",
   "/api/v1/session/logout",
   "/learning/recommendations",
@@ -231,7 +275,7 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `Integration smoke passed: production shell headers and offline PWA reload, browser registration/session/reconnect/logout, CSRF, API quiz and sandbox grading, ${backendResponses.length} browser API responses, screenshot ${screenshotPath}`,
+  `Integration smoke passed: production shell headers and offline PWA reload, browser registration/invalid login/login/session/reconnect/logout, CSRF, API quiz and sandbox grading, ${backendResponses.length} browser API responses, screenshot ${screenshotPath}`,
 );
 
 async function verifyProductionShellHeaders(url) {
