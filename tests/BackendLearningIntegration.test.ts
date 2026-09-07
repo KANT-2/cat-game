@@ -215,6 +215,72 @@ describe("backend learning integration", () => {
     await expect(api.getLearningRecommendations()).rejects.toThrow("Backend field");
   });
 
+  it("normalizes non-breaking spaces before submitting SQL code", async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const pathname = new URL(String(input)).pathname;
+      if (pathname === "/health") {
+        return json({ status: "ok" });
+      }
+      if (pathname === "/api/v1/session/me") {
+        return json(userPayload());
+      }
+      if (pathname === "/api/v1/learning/recommendations") {
+        return json([
+          {
+            public_id: taskId,
+            concept_public_id: "44444444-4444-4444-8444-444444444444",
+            concept_name: "SQL:select",
+            title: "[SAMPLE:SQL:BRONZE:001] 숫자 출력",
+            type: "CODE",
+            domain: "SQL",
+            difficulty: "BRONZE",
+            description: "숫자 1을 출력하세요.",
+            template_code: "",
+            options: null,
+            hint_text: null,
+            reward_coins: 30,
+            is_active: true,
+            completed: false,
+          },
+        ]);
+      }
+      if (pathname === "/api/v1/game/snapshot") {
+        return json(gameSnapshot(1_000, 0));
+      }
+      if (pathname === "/api/v1/attempts" && init?.method === "POST") {
+        expect(JSON.parse(String(init.body))).toMatchObject({
+          task_public_id: taskId,
+          submitted_code: "select 1;",
+        });
+        return json({ public_id: attemptId, status: "PENDING" }, 202);
+      }
+      if (pathname === `/api/v1/attempts/${attemptId}`) {
+        return json({
+          public_id: attemptId,
+          task_public_id: taskId,
+          context_type: "LEARNING",
+          status: "COMPLETED",
+          is_correct: false,
+          used_hint: false,
+          attempted_at: "2026-09-07T00:00:00Z",
+          result_detail: { verdict: "WRONG_ANSWER", passed: 0, total: 1 },
+          coins_awarded: 0,
+        });
+      }
+      return json({ detail: "not found" }, 404);
+    });
+    const client = await BackendLearningGameClient.create(
+      new LocalGameClient(new MemoryRepository()),
+      new BackendApiClient("http://localhost:8000", userId, fetcher),
+    );
+
+    await expect(client.submitCodeChallenge(taskId, "select\u00a01;", 0)).resolves.toMatchObject({
+      ok: true,
+      passed: false,
+      serverAuthoritative: true,
+    });
+  });
+
   it("persists a conversation memory against the owned cat asset", async () => {
     const memories: string[] = [];
     const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {

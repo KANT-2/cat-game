@@ -323,10 +323,11 @@ export class BackendLearningGameClient implements GameClient {
     if (!body.trim()) {
       return { ok: false, reason: "empty-code" };
     }
+    const submittedCode = task.domain === "SQL" ? normalizeSqlWhitespace(body) : body;
     try {
       const attempt = await this.api.grade({
         taskPublicId: challengeId,
-        submittedCode: body,
+        submittedCode,
         usedHint: hintsUsed > 0,
       });
       if (attempt.status !== "COMPLETED" || attempt.correct === null) {
@@ -570,6 +571,10 @@ export class BackendLearningGameClient implements GameClient {
       listener(snapshot);
     }
   }
+}
+
+function normalizeSqlWhitespace(source: string): string {
+  return source.replaceAll("\u00a0", " ");
 }
 
 const canonicalItemIds: Record<FurnitureKind, ShopItemId> = {
