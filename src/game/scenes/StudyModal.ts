@@ -7,8 +7,8 @@ import type {
   GameText,
   QuizAnswerResult,
   QuizView,
-  StudyTaskView,
   StudyMasteryView,
+  StudyTaskView,
 } from "../../core/GameClient";
 import type { StudyConcept, StudyDifficulty, StudyTaskType } from "../../domain/study";
 import { BackButton } from "../components/BackButton";

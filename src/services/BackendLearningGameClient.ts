@@ -22,8 +22,8 @@ import type {
   PurchaseResult,
   QuizAnswerResult,
   QuizView,
-  StudyTaskView,
   StudyMasteryView,
+  StudyTaskView,
   UseConsumableResult,
 } from "../core/GameClient";
 import {
@@ -42,8 +42,8 @@ import type { FurnitureKind, GameSettings, GameState } from "../domain/room";
 import { type ShopItemId, shopItemDefinitions } from "../domain/shop";
 import {
   type BackendApiClient,
-  type BackendConceptProficiency,
   BackendApiError,
+  type BackendConceptProficiency,
   type BackendGameSnapshot,
   type BackendLearningTask,
 } from "./BackendApiClient";
