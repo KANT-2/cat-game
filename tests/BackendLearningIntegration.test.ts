@@ -361,9 +361,14 @@ describe("backend learning integration", () => {
         return json({
           cat_asset_public_id: catAssetId,
           reply: "작은 예제로 같이 보자, 냐옹.",
-          category: "CODING",
-          memory_count: 1,
-          remembered: true,
+          memory: {
+            public_id: "22222222-2222-4222-8222-222222222222",
+            cat_asset_public_id: catAssetId,
+            context_summary: "사용자와 코딩 학습에 관해 대화했다.",
+            created_at: "2026-09-07T00:00:00Z",
+          },
+          input_tokens: 20,
+          output_tokens: 8,
         });
       }
       return json({ detail: "not found" }, 404);
