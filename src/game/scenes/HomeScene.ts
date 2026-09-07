@@ -5,6 +5,7 @@ import type { CatVariant } from "../../domain/cats";
 import type { FurnitureKind, GameState, PlacedFurniture } from "../../domain/room";
 import type { ShopItemId } from "../../domain/shop";
 import { CanvasButton } from "../components/CanvasButton";
+import { CatConversationModal } from "../components/CatConversationModal";
 import { HomeMenuButton } from "../components/HomeMenuButton";
 import { PLACEMENT_TRAY_HEIGHT, PLACEMENT_TRAY_WIDTH, PlacementTray } from "../components/PlacementTray";
 import { applySmoothTextureSampling } from "../components/smoothSprite";
@@ -14,6 +15,7 @@ import type { CatAnimationLibrary } from "../entities/CatAnimations";
 import type { BackgroundArtCollection, ForestArt, FurnitureArtCollection } from "../forest/ForestArt";
 import { ForestClearingView } from "../forest/ForestClearingView";
 import type { CodeEditorOverlayFactory } from "../ports/CodeEditorOverlay";
+import type { TextInputBridgeFactory } from "../ports/TextInputBridge";
 import { getOwnedFurnitureEntries } from "../presentation/ownedFurniture";
 import { AttendanceModal } from "./AttendanceModal";
 import { DailyQuestScene } from "./DailyQuestScene";
@@ -45,6 +47,7 @@ export class HomeScene extends Container {
   private readonly backgroundArt: BackgroundArtCollection;
   private readonly consumableArt: ForestArt["consumables"];
   private readonly codeEditorFactory: CodeEditorOverlayFactory;
+  private readonly textInputFactory: TextInputBridgeFactory;
   private readonly clearingViewport = new Container();
   private readonly clearing: ForestClearingView;
   private readonly uiLayer = new Container();
@@ -57,6 +60,7 @@ export class HomeScene extends Container {
   private readonly shopOptions = new Container();
   private profilePortrait: Sprite | null = null;
   private attendanceModal: AttendanceModal | null = null;
+  private catConversationModal: CatConversationModal | null = null;
   private studyModal: StudyModal | null = null;
   private shopScene: ShopScene | null = null;
   private dailyQuestScene: DailyQuestScene | null = null;
@@ -82,6 +86,7 @@ export class HomeScene extends Container {
     catAnimations: CatAnimationLibrary,
     forestArt: ForestArt,
     codeEditorFactory: CodeEditorOverlayFactory,
+    textInputFactory: TextInputBridgeFactory,
     onLogout: (() => Promise<boolean>) | null = null,
   ) {
     super();
@@ -92,6 +97,7 @@ export class HomeScene extends Container {
     this.backgroundArt = forestArt.backgrounds;
     this.consumableArt = forestArt.consumables;
     this.codeEditorFactory = codeEditorFactory;
+    this.textInputFactory = textInputFactory;
     this.onLogout = onLogout;
     this.state = gameClient.getSnapshot();
     this.clearing = new ForestClearingView({
@@ -112,6 +118,7 @@ export class HomeScene extends Container {
         return result;
       },
       onToast: (message) => this.notify(message),
+      onTalkToCat: (variant) => this.openCatConversation(variant),
       getHomeCats: () => this.state.homeCats,
       getActiveCat: () => this.state.activeCat,
       getActiveWallpaper: () => this.state.activeWallpaper,
@@ -134,6 +141,7 @@ export class HomeScene extends Container {
   update(deltaSeconds: number): void {
     if (
       !this.attendanceModal &&
+      !this.catConversationModal &&
       !this.studyModal &&
       !this.shopScene &&
       !this.dailyQuestScene &&
@@ -164,6 +172,7 @@ export class HomeScene extends Container {
     this.gachaScene?.layout(width, height);
     this.featurePageModal?.layout(width, height);
     this.attendanceModal?.layout(width, height);
+    this.catConversationModal?.layout(width, height);
     this.placementPanel?.position.set(width / 2, height - 92);
     this.layoutRoomEditPanel();
     this.purchaseChoicePanel?.position.set(width / 2, height / 2);
@@ -192,10 +201,7 @@ export class HomeScene extends Container {
     this.fitProfilePortrait();
     const portraitMask = new Graphics().roundRect(40, 36, 76, 68, 16).fill(0xffffff);
     portrait.mask = portraitMask;
-    const level = new Text({ text: message("home.level", { level: 10 }), style: textStyle(12, 0x3d2b22, "800") });
-    level.anchor.set(0.5);
-    level.position.set(78, 119);
-    this.profilePanel.addChild(frame, portrait, portraitMask, level);
+    this.profilePanel.addChild(frame, portrait, portraitMask);
     this.profilePanel.hitArea = new Rectangle(0, 0, profileSize, profileSize);
     this.profilePanel.eventMode = "static";
     this.profilePanel.cursor = "pointer";
@@ -331,6 +337,37 @@ export class HomeScene extends Container {
     this.attendanceModal = null;
   }
 
+  private openCatConversation(variant: CatVariant): void {
+    if (this.catConversationModal || !this.state.homeCats.includes(variant)) {
+      return;
+    }
+    this.hideMenuOptions();
+    this.catConversationModal = new CatConversationModal({
+      variant,
+      animations: this.catAnimations[variant],
+      memoryCount: this.state.catMemories[variant]?.length ?? 0,
+      onTalk: (topic) => this.gameClient.talkToCat(variant, topic),
+      onFreeTalk: (userMessage) => this.gameClient.chatWithCat(variant, userMessage),
+      textInputFactory: this.textInputFactory,
+      onReaction: (action) => {
+        this.clearing.playConversationReaction(action, variant);
+      },
+      onClose: () => this.closeCatConversation(),
+    });
+    this.addChild(this.catConversationModal);
+    this.catConversationModal.layout(this.screenWidth, this.screenHeight);
+  }
+
+  private closeCatConversation(): void {
+    if (!this.catConversationModal) {
+      return;
+    }
+    this.removeChild(this.catConversationModal);
+    this.catConversationModal.disposeInput();
+    this.catConversationModal.destroy({ children: true });
+    this.catConversationModal = null;
+  }
+
   private openShop(): void {
     if (this.shopScene) {
       return;
@@ -445,7 +482,7 @@ export class HomeScene extends Container {
         }
         return (await this.gameClient.applyRoomTheme(itemId)).ok;
       },
-      onUseConsumable: (itemId) => this.useConsumable(itemId),
+      onUseConsumable: (itemId, catVariant) => this.useConsumable(itemId, catVariant),
       onEnterRoomEdit: () => {
         this.closeFeaturePage();
         this.enterRoomEditMode();
@@ -523,14 +560,14 @@ export class HomeScene extends Container {
     this.showPurchaseChoice(result.itemId, result.furnitureKind);
   }
 
-  private async useConsumable(itemId: ShopItemId): Promise<boolean> {
-    const result = await this.gameClient.useConsumable(itemId, this.state.activeCat);
+  private async useConsumable(itemId: ShopItemId, catVariant: CatVariant): Promise<boolean> {
+    const result = await this.gameClient.useConsumable(itemId, catVariant);
     if (!result.ok) {
       this.notify(message(result.reason === "not-owned" ? "consumable.empty" : "shop.purchaseComingSoon"));
       return false;
     }
     this.closeFeaturePage();
-    this.clearing.playConsumableEffect(result.effect);
+    this.clearing.playConsumableEffect(result.effect, catVariant);
     this.notify(message(`consumable.used.${result.effect}`));
     return true;
   }

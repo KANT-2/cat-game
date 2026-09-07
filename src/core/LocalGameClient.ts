@@ -4,6 +4,12 @@ import {
   attendanceStreakBonus,
   nextAttendanceStreak,
 } from "../domain/attendance";
+import {
+  type CatConversationTopic,
+  catConversationMemorySummary,
+  catFreeConversationMemorySummary,
+  classifyLocalCatChat,
+} from "../domain/catConversation";
 import type { CatVariant } from "../domain/cats";
 import { type DailyQuestId, dailyQuestDefinitions, dailyQuestProgress } from "../domain/dailyQuest";
 import { drawGachaRewards, GACHA_DUPLICATE_CAT_COINS, type GachaDrawCount, gachaCost } from "../domain/gacha";
@@ -22,6 +28,8 @@ import type {
   ApplyRoomThemeResult,
   AttendanceClaimResult,
   AttendanceView,
+  CatConversationResult,
+  CatFreeConversationResult,
   CatHomeResult,
   CatMemoryClearResult,
   CatSelectionResult,
@@ -580,6 +588,59 @@ export class LocalGameClient implements GameClient {
     this.state = { ...this.state, catMemories: {} };
     this.commit();
     return { ok: true, removed };
+  }
+
+  talkToCat(catVariant: CatVariant, topic: CatConversationTopic): CatConversationResult {
+    if (!this.state.ownedCats.includes(catVariant)) {
+      return { ok: false, reason: "cat-not-owned" };
+    }
+    const memories = [...(this.state.catMemories[catVariant] ?? []), catConversationMemorySummary(topic)];
+    this.state = {
+      ...this.state,
+      catMemories: { ...this.state.catMemories, [catVariant]: memories },
+    };
+    this.commit();
+    return { ok: true, catVariant, topic, memoryCount: memories.length };
+  }
+
+  chatWithCat(catVariant: CatVariant, userMessage: string): CatFreeConversationResult {
+    if (!this.state.ownedCats.includes(catVariant)) {
+      return { ok: false, reason: "cat-not-owned" };
+    }
+    if (!userMessage.trim()) {
+      return { ok: false, reason: "empty-message" };
+    }
+    const category = classifyLocalCatChat(userMessage);
+    let replyMessage:
+      | "cat.conversation.localCodingReply"
+      | "cat.conversation.localCompanionReply"
+      | "cat.conversation.promptGuardReply"
+      | "cat.conversation.unknownReply";
+    if (category === "CODING") {
+      replyMessage = "cat.conversation.localCodingReply";
+    } else if (category === "COMPANION") {
+      replyMessage = "cat.conversation.localCompanionReply";
+    } else if (category === "PROMPT_INJECTION") {
+      replyMessage = "cat.conversation.promptGuardReply";
+    } else {
+      replyMessage = "cat.conversation.unknownReply";
+    }
+    const remembered = category === "CODING" || category === "COMPANION";
+    let memoryCount = this.state.catMemories[catVariant]?.length ?? 0;
+    if (remembered) {
+      const memories = [...(this.state.catMemories[catVariant] ?? []), catFreeConversationMemorySummary(category)];
+      this.state = { ...this.state, catMemories: { ...this.state.catMemories, [catVariant]: memories } };
+      memoryCount = memories.length;
+      this.commit();
+    }
+    return {
+      ok: true,
+      catVariant,
+      reply: { messageId: replyMessage },
+      category,
+      memoryCount,
+      remembered,
+    };
   }
 
   updateSettings(patch: Partial<GameSettings>): GameSettings {

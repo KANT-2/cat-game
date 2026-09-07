@@ -1,4 +1,5 @@
 import type { MessageId } from "../content/messages";
+import type { CatChatCategory, CatConversationTopic } from "../domain/catConversation";
 import type { CatVariant } from "../domain/cats";
 import type { DailyQuestId } from "../domain/dailyQuest";
 import type { GachaDrawCount, GachaRewardId } from "../domain/gacha";
@@ -179,6 +180,21 @@ export type LearningResetResult = { ok: true } | { ok: false; reason: "server-un
 
 export type CatMemoryClearResult = { ok: true; removed: number } | { ok: false; reason: "server-unavailable" };
 
+export type CatConversationResult =
+  | { ok: true; catVariant: CatVariant; topic: CatConversationTopic; memoryCount: number }
+  | { ok: false; reason: "cat-not-owned" | "server-unavailable" };
+
+export type CatFreeConversationResult =
+  | {
+      ok: true;
+      catVariant: CatVariant;
+      reply: GameText;
+      category: CatChatCategory;
+      memoryCount: number;
+      remembered: boolean;
+    }
+  | { ok: false; reason: "empty-message" | "cat-not-owned" | "server-unavailable" };
+
 /** 상태가 커밋될 때 복제된 스냅샷을 받는 구독 함수다. */
 export type GameStateListener = (snapshot: GameState) => void;
 
@@ -347,6 +363,26 @@ export interface GameClient {
 
   /** 세션 간 저장된 모든 고양이 기억 문장을 삭제하고 처리 결과를 반환한다. */
   clearCatMemories(): Awaitable<CatMemoryClearResult>;
+
+  /**
+   * 보유 고양이와 선택한 주제로 대화한 사실을 해당 고양이의 기억에 남긴다.
+   *
+   * @param catVariant - 대화할 보유 고양이 종류.
+   * @param topic - UI가 제시한 안전한 대화 주제.
+   * @returns 성공 시 갱신된 고양이별 기억 개수, 실패 시 처리 가능한 이유.
+   * @remarks 답변 문구와 화면 동작은 UI가 페르소나 표현 규칙으로 결정하며 이 명령은 기억 상태만 변경한다.
+   */
+  talkToCat(catVariant: CatVariant, topic: CatConversationTopic): Awaitable<CatConversationResult>;
+
+  /**
+   * 보유 고양이에게 자유 문장을 보내고 검증된 짧은 답변을 받는다.
+   *
+   * @param catVariant - 대화할 보유 고양이 종류.
+   * @param userMessage - 한글 IME 입력을 포함할 수 있는 최대 240자의 사용자 문장.
+   * @returns 답변과 서버 분류, 기억 저장 여부 또는 처리 가능한 실패 이유.
+   * @remarks 원격 구현은 사용자 원문을 기억에 저장하지 않으며 프롬프트 제어 시도를 생성 모델에 전달하지 않는다.
+   */
+  chatWithCat(catVariant: CatVariant, userMessage: string): Awaitable<CatFreeConversationResult>;
 
   /** 사운드와 접근성 환경설정을 저장하고 최신 설정을 반환한다. */
   updateSettings(patch: Partial<GameSettings>): Awaitable<GameSettings>;

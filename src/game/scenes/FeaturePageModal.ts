@@ -31,7 +31,7 @@ type Options = {
   onSelectCat: (variant: CatVariant) => Awaitable<boolean>;
   onSetCatHome: (variant: CatVariant, visible: boolean) => Awaitable<boolean>;
   onApplyTheme: (itemId: ShopItemId) => Awaitable<boolean>;
-  onUseConsumable: (itemId: ShopItemId) => Awaitable<boolean>;
+  onUseConsumable: (itemId: ShopItemId, catVariant: CatVariant) => Awaitable<boolean>;
   onEnterRoomEdit: () => void;
   onOpenAttendance: () => void;
   onUpdateSettings: (patch: Partial<GameSettings>) => Awaitable<GameSettings>;
@@ -54,6 +54,8 @@ export class FeaturePageModal extends Container {
   private readonly requested = new Set<number>();
   private ownedCategory: "cats" | "furniture" | "consumable" | "wallpaper" = "cats";
   private ownedThemePage = 0;
+  private pendingConsumableId: ShopItemId | null = null;
+  private consumableUsePending = false;
 
   constructor(options: Options) {
     super();
@@ -98,11 +100,8 @@ export class FeaturePageModal extends Container {
     }
     const portrait = catPortrait(0);
     portrait.scale.set(0.72);
-    portrait.position.set(165, 205);
-    const level = new Text({ text: message("page.profileLevel"), style: textStyle(17, 0x493022, "800") });
-    level.anchor.set(0.5);
-    level.position.set(165, 270);
-    this.page.addChild(portrait, level);
+    portrait.position.set(165, 225);
+    this.page.addChild(portrait);
     const entries =
       this.options.kind === "addFriend" || this.options.kind === "visitGarden"
         ? (["addFriend", "visitGarden"] as const)
@@ -192,6 +191,9 @@ export class FeaturePageModal extends Container {
     }
     if (this.ownedCategory === "consumable") {
       this.renderOwnedConsumables(state);
+      if (this.pendingConsumableId) {
+        this.renderConsumableCatPicker(state, this.pendingConsumableId);
+      }
       return;
     }
     const entries = getOwnedFurnitureEntries(state);
@@ -256,6 +258,7 @@ export class FeaturePageModal extends Container {
         onPress: () => {
           this.ownedCategory = category;
           this.ownedThemePage = 0;
+          this.pendingConsumableId = null;
           this.render();
           if (category === "wallpaper") {
             this.preloadOwnedBackgrounds();
@@ -303,13 +306,93 @@ export class FeaturePageModal extends Container {
         width: 145,
         height: 46,
         color: 0x91aa82,
-        onPress: async () => {
-          await this.options.onUseConsumable(itemId);
+        onPress: () => {
+          this.pendingConsumableId = itemId;
+          this.render();
         },
       });
       use.position.set(x + 170, y + 125);
       this.content.addChild(card, art, name, count, use);
     });
+  }
+
+  private renderConsumableCatPicker(state: GameState, itemId: ShopItemId): void {
+    const overlay = new Container({ label: "consumable-cat-picker" });
+    const blocker = new Graphics().rect(0, 0, 1_600, 900).fill({ color: 0x2f211b, alpha: 0.62 });
+    blocker.eventMode = "static";
+    const panel = createCozyPanel(170, 185, 1_260, 540, { fill: 0xfff3dc, border: 0x68442f, radius: 32 });
+    const title = new Text({
+      text: message("consumable.chooseCatTitle", { item: message(shopItemNameMessages[itemId]) }),
+      style: textStyle(31, 0x3d2b22, "800"),
+    });
+    title.anchor.set(0.5);
+    title.position.set(800, 235);
+    const guide = new Text({ text: message("consumable.chooseCatGuide"), style: textStyle(17, 0x76533c, "700") });
+    guide.anchor.set(0.5);
+    guide.position.set(800, 282);
+    const cancel = new CanvasButton({
+      label: message("shop.cancel"),
+      width: 130,
+      height: 46,
+      color: 0xc7aa91,
+      onPress: () => {
+        this.pendingConsumableId = null;
+        this.render();
+      },
+    });
+    cancel.position.set(1_245, 210);
+    overlay.addChild(blocker, panel, title, guide, cancel);
+
+    if (state.homeCats.length === 0) {
+      const empty = new Text({ text: message("consumable.noHomeCats"), style: textStyle(22, 0x76533c, "700") });
+      empty.anchor.set(0.5);
+      empty.position.set(800, 475);
+      overlay.addChild(empty);
+      this.content.addChild(overlay);
+      return;
+    }
+
+    const cardWidth = 250;
+    const gap = 28;
+    const totalWidth = state.homeCats.length * cardWidth + (state.homeCats.length - 1) * gap;
+    const startX = 800 - totalWidth / 2;
+    state.homeCats.forEach((variant, index) => {
+      const x = startX + index * (cardWidth + gap);
+      const y = 330;
+      const card = createCozyPanel(x, y, cardWidth, 320, { fill: 0xfff9eb, border: 0xb77a4f, radius: 24 });
+      const animations = this.options.catAnimations[variant];
+      const portrait = new Sprite(animations.idle.textures[0]);
+      portrait.anchor.set(animations.idle.anchor.x, animations.idle.anchor.y);
+      portrait.scale.set(0.38);
+      portrait.position.set(x + cardWidth / 2, y + 205);
+      const name = new Text({ text: message(catNameMessages[variant]), style: textStyle(20, 0x493022, "800") });
+      name.anchor.set(0.5);
+      name.position.set(x + cardWidth / 2, y + 38);
+      const feed = new CanvasButton({
+        label: message("consumable.feedSelected"),
+        width: 170,
+        height: 48,
+        color: 0x91aa82,
+        onPress: async () => {
+          if (this.consumableUsePending) {
+            return;
+          }
+          this.consumableUsePending = true;
+          const used = await this.options.onUseConsumable(itemId, variant);
+          if (this.destroyed) {
+            return;
+          }
+          this.consumableUsePending = false;
+          if (used) {
+            this.pendingConsumableId = null;
+          }
+          this.render();
+        },
+      });
+      feed.position.set(x + 40, y + 250);
+      overlay.addChild(card, portrait, name, feed);
+    });
+    this.content.addChild(overlay);
   }
 
   private renderOwnedThemes(state: GameState): void {
@@ -531,7 +614,7 @@ export class FeaturePageModal extends Container {
     const name = new Text({ text: message(nameId), style: textStyle(24, 0x493022, "800") });
     name.position.set(x + 140, y + 30);
     const info = new Text({
-      text: message("friends.profile", { level: 12 + index * 4 }),
+      text: message("friends.profile"),
       style: textStyle(16, 0x76533c, "600"),
     });
     info.position.set(x + 140, y + 78);
@@ -571,7 +654,7 @@ export class FeaturePageModal extends Container {
       const name = new Text({ text: message(nameId), style: textStyle(23, 0x493022, "800") });
       name.position.set(x + 115, y + 25);
       const detail = new Text({
-        text: message("garden.detail", { level: 12 + index * 4, likes: 28 + index * 17 }),
+        text: message("garden.detail", { likes: 28 + index * 17 }),
         style: textStyle(16, 0x76533c, "600"),
       });
       detail.position.set(x + 105, y + 65);

@@ -10,6 +10,7 @@ import { type AuthMode, AuthScene, type AuthSubmitResult } from "../game/scenes/
 import { HomeScene } from "../game/scenes/HomeScene";
 import { LoadingScene } from "../game/scenes/LoadingScene";
 import { BackendApiError } from "../services/BackendApiClient";
+import { BrowserTextInputBridgeFactory } from "./BrowserTextInputBridge";
 import { CodeMirrorEditorOverlayFactory } from "./CodeMirrorEditorOverlay";
 import { createGameClient, type GameSession, type ReadyGameClient } from "./createGameClient";
 import { loadCatAnimations } from "./loadCatAnimations";
@@ -155,12 +156,14 @@ export class GameApp {
     };
     await Assets.load(Object.values(iconSources));
     const codeEditorFactory = new CodeMirrorEditorOverlayFactory(mount);
+    const textInputFactory = new BrowserTextInputBridgeFactory(mount);
     const home = new HomeScene(
       gameClient,
       iconSources,
       catAnimations,
       forestArt,
       codeEditorFactory,
+      textInputFactory,
       gameSession
         ? async () => {
             try {

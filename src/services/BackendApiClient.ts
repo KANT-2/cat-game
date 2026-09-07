@@ -49,7 +49,11 @@ export type BackendGradingResult = {
 };
 
 export type BackendGameCat = {
+  publicId: string;
+  assetPublicId: string | null;
   catalogKey: string;
+  name: string;
+  persona: string;
   owned: boolean;
   isHome: boolean;
   memories: string[];
@@ -105,6 +109,14 @@ export type BackendGameSnapshot = {
 export type BackendGameMutation = {
   snapshot: BackendGameSnapshot;
   result: Record<string, unknown>;
+};
+
+export type BackendCatChat = {
+  catAssetPublicId: string;
+  reply: string;
+  category: "COMPANION" | "CODING" | "UNKNOWN" | "PROMPT_INJECTION" | "SAFETY" | "PROFESSIONAL";
+  memoryCount: number;
+  remembered: boolean;
 };
 
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
@@ -331,6 +343,40 @@ export class BackendApiClient {
     return parseGameMutation(await this.request("/api/v1/game/cat-memories", { method: "DELETE" }));
   }
 
+  /** 보유 고양이 자산에 대화 상황 요약을 새 기억으로 누적한다. */
+  async addCatMemory(catAssetPublicId: string, contextSummary: string): Promise<void> {
+    await this.request(`/api/v1/cats/${encodeURIComponent(catAssetPublicId)}/memories`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ context_summary: contextSummary }),
+    });
+  }
+
+  /** 자유 문장을 서버의 입력·출력 가드를 거쳐 보유 고양이에게 전달한다. */
+  async chatWithCat(catAssetPublicId: string, message: string): Promise<BackendCatChat> {
+    const record = asRecord(
+      await this.request(`/api/v1/cats/${encodeURIComponent(catAssetPublicId)}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      }),
+    );
+    return {
+      catAssetPublicId: readString(record, "cat_asset_public_id"),
+      reply: readString(record, "reply"),
+      category: readEnum(record, "category", [
+        "COMPANION",
+        "CODING",
+        "UNKNOWN",
+        "PROMPT_INJECTION",
+        "SAFETY",
+        "PROFESSIONAL",
+      ] as const),
+      memoryCount: readNumber(record, "memory_count"),
+      remembered: readBoolean(record, "remembered"),
+    };
+  }
+
   /** 학습 답안을 서버 채점 큐에 제출하고 완료 또는 실패 상태까지 폴링한다. */
   async grade(submission: BackendAttemptSubmission, waitTimeoutMs = 20_000): Promise<BackendAttempt> {
     const payload = {
@@ -539,7 +585,11 @@ function parseGameSnapshot(value: unknown): BackendGameSnapshot {
   const cats = readArray(record, "cats").map((entry) => {
     const cat = asRecord(entry);
     return {
+      publicId: readString(cat, "public_id"),
+      assetPublicId: readNullableString(cat, "cat_asset_public_id"),
       catalogKey: readString(cat, "catalog_key"),
+      name: readString(cat, "name"),
+      persona: readString(cat, "persona"),
       owned: readBoolean(cat, "owned"),
       isHome: readBoolean(cat, "is_home"),
       memories: readStringArray(cat, "memories"),

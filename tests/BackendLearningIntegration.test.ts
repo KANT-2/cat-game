@@ -20,6 +20,8 @@ class MemoryRepository implements GameStateRepository {
 const userId = "11111111-1111-4111-8111-111111111111";
 const taskId = "22222222-2222-4222-8222-222222222222";
 const attemptId = "33333333-3333-4333-8333-333333333333";
+const catId = "55555555-5555-4555-8555-555555555555";
+const catAssetId = "66666666-6666-4666-8666-666666666666";
 
 describe("backend learning integration", () => {
   it("calls the browser fetch implementation with its required global receiver", async () => {
@@ -213,6 +215,88 @@ describe("backend learning integration", () => {
     await expect(api.getLearningRecommendations()).rejects.toThrow("Backend field");
   });
 
+  it("persists a conversation memory against the owned cat asset", async () => {
+    const memories: string[] = [];
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const pathname = new URL(String(input)).pathname;
+      if (pathname === "/health") {
+        return json({ status: "ok" });
+      }
+      if (pathname === "/api/v1/session/me") {
+        return json(userPayload());
+      }
+      if (pathname === "/api/v1/learning/recommendations") {
+        return json([]);
+      }
+      if (pathname === "/api/v1/game/snapshot") {
+        return json(gameSnapshot(1_000, 0, { memories }));
+      }
+      if (pathname === `/api/v1/cats/${catAssetId}/memories` && init?.method === "POST") {
+        const body = JSON.parse(String(init.body)) as { context_summary: string };
+        expect(body.context_summary).toContain("오늘의 기분");
+        memories.push(body.context_summary);
+        return json({ public_id: crypto.randomUUID(), cat_asset_public_id: catAssetId, ...body }, 201);
+      }
+      return json({ detail: "not found" }, 404);
+    });
+    const client = await BackendLearningGameClient.create(
+      new LocalGameClient(new MemoryRepository()),
+      new BackendApiClient("http://localhost:8000", userId, fetcher),
+    );
+
+    await expect(client.talkToCat("fluffy", "feelings")).resolves.toEqual({
+      ok: true,
+      catVariant: "fluffy",
+      topic: "feelings",
+      memoryCount: 1,
+    });
+    expect(client.getSnapshot().catMemories.fluffy).toHaveLength(1);
+  });
+
+  it("returns guarded server free-chat text and refreshes only remembered conversation", async () => {
+    let snapshotReads = 0;
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const pathname = new URL(String(input)).pathname;
+      if (pathname === "/health") {
+        return json({ status: "ok" });
+      }
+      if (pathname === "/api/v1/session/me") {
+        return json(userPayload());
+      }
+      if (pathname === "/api/v1/learning/recommendations") {
+        return json([]);
+      }
+      if (pathname === "/api/v1/game/snapshot") {
+        snapshotReads += 1;
+        return json(gameSnapshot(1_000, snapshotReads, { memories: snapshotReads > 1 ? ["코딩 대화"] : [] }));
+      }
+      if (pathname === `/api/v1/cats/${catAssetId}/chat` && init?.method === "POST") {
+        expect(JSON.parse(String(init.body))).toEqual({ message: "파이썬 함수가 어려워" });
+        return json({
+          cat_asset_public_id: catAssetId,
+          reply: "작은 예제로 같이 보자, 냐옹.",
+          category: "CODING",
+          memory_count: 1,
+          remembered: true,
+        });
+      }
+      return json({ detail: "not found" }, 404);
+    });
+    const client = await BackendLearningGameClient.create(
+      new LocalGameClient(new MemoryRepository()),
+      new BackendApiClient("http://localhost:8000", userId, fetcher),
+    );
+
+    await expect(client.chatWithCat("fluffy", "파이썬 함수가 어려워")).resolves.toMatchObject({
+      ok: true,
+      reply: { text: "작은 예제로 같이 보자, 냐옹." },
+      category: "CODING",
+      remembered: true,
+    });
+    expect(snapshotReads).toBe(2);
+    expect(client.getSnapshot().catMemories.fluffy).toEqual(["코딩 대화"]);
+  });
+
   it("uses browser cookies and CSRF protection without exposing the development user header", async () => {
     const requests: Array<{ init: RequestInit | undefined; pathname: string }> = [];
     const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -374,7 +458,18 @@ function gameSnapshot(
       effects_volume: 80,
       reduced_motion: false,
     },
-    cats: [{ catalog_key: "fluffy", owned: true, is_home: true, memories: daily.memories ?? [] }],
+    cats: [
+      {
+        public_id: catId,
+        cat_asset_public_id: catAssetId,
+        catalog_key: "fluffy",
+        name: "포근이",
+        persona: "느긋하고 다정한 친구",
+        owned: true,
+        is_home: true,
+        memories: daily.memories ?? [],
+      },
+    ],
     items: [
       {
         catalog_key: "furniture.sofa",

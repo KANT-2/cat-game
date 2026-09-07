@@ -14,14 +14,14 @@ type RankingSceneOptions = {
   backIcon: string;
   coinIcon: string;
 };
-const players: Array<{ name: MessageId; level: number; score: string; color: number; status: MessageId }> = [
-  { name: "ranking.meowCoder", level: 10, score: "7,650", color: 0x333333, status: "ranking.statusStreak10" },
-  { name: "ranking.helloPaws", level: 9, score: "6,980", color: 0xe69a50, status: "ranking.statusQuiz" },
-  { name: "ranking.studyCat", level: 9, score: "6,120", color: 0xb2865e, status: "ranking.statusStreak7" },
-  { name: "ranking.dataKitty", level: 8, score: "5,430", color: 0x777777, status: "ranking.statusPython" },
-  { name: "ranking.codeCat", level: 8, score: "4,870", color: 0xf3eee2, status: "ranking.statusWeekly" },
-  { name: "ranking.catLogic", level: 8, score: "4,320", color: 0xe8a04b, status: "ranking.statusStreak5" },
-  { name: "ranking.player", level: 10, score: "4,050", color: 0xd99a5d, status: "ranking.statusStreak7" },
+const players: Array<{ name: MessageId; score: string; color: number; status: MessageId }> = [
+  { name: "ranking.meowCoder", score: "7,650", color: 0x333333, status: "ranking.statusStreak10" },
+  { name: "ranking.helloPaws", score: "6,980", color: 0xe69a50, status: "ranking.statusQuiz" },
+  { name: "ranking.studyCat", score: "6,120", color: 0xb2865e, status: "ranking.statusStreak7" },
+  { name: "ranking.dataKitty", score: "5,430", color: 0x777777, status: "ranking.statusPython" },
+  { name: "ranking.codeCat", score: "4,870", color: 0xf3eee2, status: "ranking.statusWeekly" },
+  { name: "ranking.catLogic", score: "4,320", color: 0xe8a04b, status: "ranking.statusStreak5" },
+  { name: "ranking.player", score: "4,050", color: 0xd99a5d, status: "ranking.statusStreak7" },
 ];
 
 export class RankingScene extends Container {
@@ -58,9 +58,7 @@ export class RankingScene extends Container {
     cat.position.set(82, 158);
     const name = new Text({ text: message("ranking.player"), style: textStyle(20, 0x3d2b22, "800") });
     name.position.set(145, 125);
-    const level = new Text({ text: message("home.level", { level: 10 }), style: textStyle(17, 0x4b3021, "700") });
-    level.position.set(145, 174);
-    this.content.addChild(profile, cat, name, level);
+    this.content.addChild(profile, cat, name);
     const menu: MessageId[] = ["ranking.all", "ranking.friends", "ranking.weekly"];
     menu.forEach((id, index) => {
       const button = new CanvasButton({
@@ -128,16 +126,11 @@ export class RankingScene extends Container {
       avatar.position.set(540, y + 27);
       const name = new Text({ text: message(player.name), style: textStyle(18, 0x3d2b22, "700") });
       name.position.set(585, y + 14);
-      const level = new Text({
-        text: message("home.level", { level: player.level }),
-        style: textStyle(17, 0x4b3021, "600"),
-      });
-      level.position.set(900, y + 14);
       const score = new Text({ text: `● ${player.score}`, style: textStyle(18, 0xa56a15, "800") });
-      score.position.set(1110, y + 14);
+      score.position.set(990, y + 14);
       const status = new Text({ text: message(player.status), style: textStyle(15, 0x55713d, "700") });
-      status.position.set(1340, y + 15);
-      this.content.addChild(row, rank, avatar, name, level, score, status);
+      status.position.set(1270, y + 15);
+      this.content.addChild(row, rank, avatar, name, score, status);
     });
   }
 

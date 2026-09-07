@@ -2,6 +2,8 @@ import type {
   ApplyRoomThemeResult,
   AttendanceClaimResult,
   AttendanceView,
+  CatConversationResult,
+  CatFreeConversationResult,
   CatHomeResult,
   CatMemoryClearResult,
   CatSelectionResult,
@@ -29,6 +31,7 @@ import {
   attendanceStreakBonus,
   nextAttendanceStreak,
 } from "../domain/attendance";
+import { type CatConversationTopic, catConversationMemorySummary } from "../domain/catConversation";
 import type { CatVariant } from "../domain/cats";
 import { catVariants } from "../domain/cats";
 import { type DailyQuestId, dailyQuestDefinitions } from "../domain/dailyQuest";
@@ -51,6 +54,7 @@ export class BackendLearningGameClient implements GameClient {
   private dailyHasCodeCompletion: boolean;
   private stateVersion: number;
   private snapshotGeneration = 0;
+  private readonly catAssetPublicIds = new Map<CatVariant, string>();
 
   private constructor(
     local: GameClient,
@@ -64,6 +68,7 @@ export class BackendLearningGameClient implements GameClient {
     this.state = mergeTaskProgress(mergeServerSnapshot(local.getSnapshot(), snapshot), this.tasks.values());
     this.dailyHasCodeCompletion = snapshot.dailyHasCodeCompletion;
     this.stateVersion = snapshot.stateVersion;
+    this.syncCatAssetPublicIds(snapshot);
   }
 
   /** 서버 연결과 추천 과제 초기화를 마친 원격 학습 클라이언트를 만든다. */
@@ -467,6 +472,59 @@ export class BackendLearningGameClient implements GameClient {
     }
   }
 
+  async talkToCat(catVariant: CatVariant, topic: CatConversationTopic): Promise<CatConversationResult> {
+    const catAssetPublicId = this.catAssetPublicIds.get(catVariant);
+    if (!catAssetPublicId) {
+      return { ok: false, reason: "cat-not-owned" };
+    }
+    try {
+      await this.api.addCatMemory(catAssetPublicId, catConversationMemorySummary(topic));
+      this.applyServerSnapshot(await this.api.getGameSnapshot());
+      return {
+        ok: true,
+        catVariant,
+        topic,
+        memoryCount: this.state.catMemories[catVariant]?.length ?? 0,
+      };
+    } catch (error) {
+      if (error instanceof BackendApiError && error.status === 404) {
+        return { ok: false, reason: "cat-not-owned" };
+      }
+      console.warn("Backend cat conversation memory failed", error);
+      return { ok: false, reason: "server-unavailable" };
+    }
+  }
+
+  async chatWithCat(catVariant: CatVariant, userMessage: string): Promise<CatFreeConversationResult> {
+    if (!userMessage.trim()) {
+      return { ok: false, reason: "empty-message" };
+    }
+    const catAssetPublicId = this.catAssetPublicIds.get(catVariant);
+    if (!catAssetPublicId) {
+      return { ok: false, reason: "cat-not-owned" };
+    }
+    try {
+      const chat = await this.api.chatWithCat(catAssetPublicId, userMessage.slice(0, 240));
+      if (chat.remembered) {
+        this.applyServerSnapshot(await this.api.getGameSnapshot());
+      }
+      return {
+        ok: true,
+        catVariant,
+        reply: { text: chat.reply },
+        category: chat.category,
+        memoryCount: chat.memoryCount,
+        remembered: chat.remembered,
+      };
+    } catch (error) {
+      if (error instanceof BackendApiError && error.status === 404) {
+        return { ok: false, reason: "cat-not-owned" };
+      }
+      console.warn("Backend cat chat failed", error);
+      return { ok: false, reason: "server-unavailable" };
+    }
+  }
+
   async updateSettings(patch: Partial<GameSettings>): Promise<GameSettings> {
     try {
       const mutation = await this.api.updateGameSettings(patch);
@@ -484,8 +542,18 @@ export class BackendLearningGameClient implements GameClient {
     this.state = mergeTaskProgress(mergeServerSnapshot(this.state, snapshot), this.tasks.values());
     this.dailyHasCodeCompletion = snapshot.dailyHasCodeCompletion;
     this.stateVersion = snapshot.stateVersion;
+    this.syncCatAssetPublicIds(snapshot);
     this.snapshotGeneration += 1;
     this.emit();
+  }
+
+  private syncCatAssetPublicIds(snapshot: BackendGameSnapshot): void {
+    this.catAssetPublicIds.clear();
+    for (const cat of snapshot.cats) {
+      if (cat.owned && cat.assetPublicId && isCatVariant(cat.catalogKey)) {
+        this.catAssetPublicIds.set(cat.catalogKey, cat.assetPublicId);
+      }
+    }
   }
 
   private async refreshSnapshotAfterConflict(): Promise<void> {
