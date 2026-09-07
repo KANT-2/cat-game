@@ -181,6 +181,7 @@ try {
     timeout: 120_000,
   });
   await verifyBrowserCatChat(page);
+  await verifyBrowserSqlGrading(page);
   await page.evaluate(() => navigator.serviceWorker.ready);
   const attendanceResponse = page.waitForResponse(
     (response) => response.url().includes("/api/v1/game/attendance/claims") && response.status() === 200,
@@ -289,6 +290,7 @@ for (const path of [
   "/api/v1/game/snapshot",
   "/api/v1/game/attendance/claims",
   "/api/v1/cats/",
+  "/api/v1/attempts",
 ]) {
   const succeeded = backendResponses.some(
     (entry) => entry.url.includes(path) && entry.status >= 200 && entry.status < 300,
@@ -373,10 +375,61 @@ async function verifyBrowserCatChat(page) {
   });
 }
 
+async function verifyBrowserSqlGrading(page) {
+  await page.evaluate(async () => {
+    const requestJson = async (path, init = {}) => {
+      const response = await fetch(path, init);
+      if (!response.ok) {
+        throw new Error(`${path} returned ${response.status}`);
+      }
+      return response.json();
+    };
+    const csrfToken = document.cookie
+      .split(";")
+      .map((cookie) => cookie.trim())
+      .find((cookie) => cookie.startsWith("nyang_csrf="))
+      ?.slice("nyang_csrf=".length);
+    if (!csrfToken) {
+      throw new Error("browser CSRF cookie is missing");
+    }
+    const tasks = await requestJson("/api/v1/learning/tasks?limit=50&domain=SQL");
+    const sqlTask = tasks.find((task) => task.type === "CODE" && task.title.includes("[SAMPLE:SQL:BRONZE:001]"));
+    if (!sqlTask) {
+      throw new Error("browser SQL query task is missing");
+    }
+    const accepted = await requestJson("/api/v1/attempts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": decodeURIComponent(csrfToken) },
+      body: JSON.stringify({
+        task_public_id: sqlTask.public_id,
+        submitted_code: "SELECT 1",
+        context_type: "LEARNING",
+        used_hint: false,
+      }),
+    });
+    for (let poll = 0; poll < 40; poll += 1) {
+      const attempt = await requestJson(`/api/v1/attempts/${encodeURIComponent(accepted.public_id)}`);
+      if (attempt.status === "COMPLETED") {
+        if (attempt.is_correct !== true) {
+          throw new Error("browser SQL answer was graded incorrectly");
+        }
+        return;
+      }
+      if (attempt.status === "FAILED") {
+        throw new Error("browser SQL grading failed");
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    throw new Error("browser SQL grading timed out");
+  });
+}
+
 async function findTask(headers, predicate, description, domain) {
-  const domainQuery = domain ? `&domain=${encodeURIComponent(domain)}` : "";
+  const taskPath = domain
+    ? `/api/v1/learning/tasks?limit=50&domain=${encodeURIComponent(domain)}`
+    : "/api/v1/learning/recommendations?limit=50";
   for (let attempt = 0; attempt < 20; attempt += 1) {
-    const tasks = await requestJson(`${apiUrl}/api/v1/learning/recommendations?limit=50${domainQuery}`, { headers });
+    const tasks = await requestJson(`${apiUrl}${taskPath}`, { headers });
     if (!Array.isArray(tasks)) {
       throw new Error("recommendations response is not an array");
     }
