@@ -25,14 +25,6 @@ export class CodeMirrorEditorRuntime implements CodeEditorOverlay {
     this.root.dataset.language = options.language;
     this.root.style.visibility = "hidden";
 
-    if (options.signature.trim().length > 0) {
-      const signature = document.createElement("div");
-      signature.className = "nyang-code-editor-signature";
-      signature.textContent = options.signature;
-      this.root.classList.add("nyang-code-editor-has-signature");
-      this.root.append(signature);
-    }
-
     const editorHost = document.createElement("div");
     editorHost.className = "nyang-code-editor-host";
     this.root.append(editorHost);

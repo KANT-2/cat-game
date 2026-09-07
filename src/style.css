@@ -64,21 +64,6 @@ canvas {
     0 calc(8px * var(--nyang-editor-scale)) calc(18px * var(--nyang-editor-scale)) rgb(39 27 20 / 22%);
 }
 
-.nyang-code-editor-signature {
-  flex: 0 0 calc(61px * var(--nyang-editor-scale));
-  padding: calc(17px * var(--nyang-editor-scale)) calc(20px * var(--nyang-editor-scale))
-    calc(12px * var(--nyang-editor-scale)) calc(74px * var(--nyang-editor-scale));
-  overflow: hidden;
-  color: #83c9e8;
-  background: #1a2029;
-  border-bottom: calc(1px * var(--nyang-editor-scale)) solid #3b4653;
-  font-family: Consolas, "SFMono-Regular", monospace;
-  font-size: calc(19px * var(--nyang-editor-scale));
-  font-weight: 700;
-  line-height: 1.45;
-  white-space: pre;
-}
-
 .nyang-code-editor-host {
   flex: 1 1 auto;
   min-height: 0;

@@ -28,7 +28,7 @@ type StudyModalOptions = {
   getQuiz: (quizId: string) => QuizView | null;
   getCodeChallenge: (challengeId: string) => CodeChallengeView | null;
   onAnswer: (quizId: string, choiceId: string) => Awaitable<QuizAnswerResult>;
-  onSubmitCode: (challengeId: string, body: string, hintsUsed: number) => Awaitable<CodeSubmissionResult>;
+  onSubmitCode: (challengeId: string, code: string, hintsUsed: number) => Awaitable<CodeSubmissionResult>;
   onClose: () => void;
   backIcon: string;
   coinIcon: string;
@@ -530,7 +530,7 @@ export class StudyModal extends Container {
 
   private renderCode(
     challenge: CodeChallengeView,
-    draftBody = challenge.starterBody,
+    draftCode = challenge.starterCode,
     initialHintsUsed = 0,
     restored = false,
   ): void {
@@ -605,8 +605,7 @@ export class StudyModal extends Container {
     editorStatus.position.set(625, 708);
     this.codeEditor = this.options.codeEditorFactory.create({
       language: challenge.language,
-      signature: challenge.signature,
-      initialValue: draftBody,
+      initialValue: draftCode,
       ariaLabel: message("study.codeEditorAriaLabel"),
       onFocusChange: (focused) => {
         if (!editorStatus.destroyed) {
@@ -627,7 +626,7 @@ export class StudyModal extends Container {
       fontSize: 14,
       color: 0xd9c5aa,
       onPress: () => {
-        this.codeEditor?.setValue(challenge.starterBody);
+        this.codeEditor?.setValue(challenge.starterCode);
         this.codeEditor?.focus();
         editorStatus.text = message("study.codeReset");
       },
@@ -696,16 +695,16 @@ export class StudyModal extends Container {
     if (this.submissionPending) {
       return;
     }
-    const body = this.codeEditor?.getValue() ?? "";
+    const code = this.codeEditor?.getValue() ?? "";
     this.submissionPending = true;
     status.text = message("study.gradingInProgress");
     let result: CodeSubmissionResult;
     try {
-      result = await this.options.onSubmitCode(challenge.id, body, this.hintsUsed);
+      result = await this.options.onSubmitCode(challenge.id, code, this.hintsUsed);
     } catch (error) {
       console.error("Code submission failed", error);
       this.showFeedback(false, message("study.serverGradingUnavailable"), [], () =>
-        this.renderCode(challenge, body, this.hintsUsed, true),
+        this.renderCode(challenge, code, this.hintsUsed, true),
       );
       return;
     } finally {
@@ -716,7 +715,7 @@ export class StudyModal extends Container {
     }
     if (!result.ok) {
       const feedback = result.reason === "empty-code" ? "study.emptyCode" : "study.serverGradingUnavailable";
-      this.showFeedback(false, message(feedback), [], () => this.renderCode(challenge, body, this.hintsUsed, true));
+      this.showFeedback(false, message(feedback), [], () => this.renderCode(challenge, code, this.hintsUsed, true));
       return;
     }
     let detail = message("study.gradingFailed");
@@ -741,7 +740,7 @@ export class StudyModal extends Container {
         this.renderDashboard();
         return;
       }
-      this.renderCode(challenge, body, this.hintsUsed, true);
+      this.renderCode(challenge, code, this.hintsUsed, true);
     });
   }
 

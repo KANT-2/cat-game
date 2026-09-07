@@ -10,7 +10,6 @@ export type CodeEditorOverlayBounds = {
 
 export type CodeEditorOverlayOptions = {
   language: CodeEditorLanguage;
-  signature: string;
   initialValue: string;
   ariaLabel: string;
   onFocusChange: (focused: boolean) => void;
@@ -18,7 +17,7 @@ export type CodeEditorOverlayOptions = {
 };
 
 export interface CodeEditorOverlay {
-  /** 현재 편집 중인 함수 본문 또는 SQL 답안을 반환한다. */
+  /** 현재 편집 중인 전체 코드 답안을 반환한다. */
   getValue(): string;
 
   /** 기존 내용을 새 값으로 교체하고 커서를 문서 끝으로 이동한다. */
