@@ -515,7 +515,7 @@
   "study.conceptFunctions": "함수",
   "study.conceptOther": "응용",
   "study.masteryValue": "{value}%",
-  "study.masteryNotice": "완료한 서로 다른 과제를 기준으로 계산됩니다.",
+  "study.masteryNotice": "최근 완료한 채점 결과를 기준으로 서버에 저장됩니다.",
   "study.recommendedTitle": "오늘의 추천 과제",
   "study.recommendedBadge": "학습 이력 맞춤",
   "study.progressBadge": "{completed}/{total} 완료",

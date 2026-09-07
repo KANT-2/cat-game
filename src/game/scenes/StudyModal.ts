@@ -8,6 +8,7 @@ import type {
   QuizAnswerResult,
   QuizView,
   StudyTaskView,
+  StudyMasteryView,
 } from "../../core/GameClient";
 import type { StudyConcept, StudyDifficulty, StudyTaskType } from "../../domain/study";
 import { BackButton } from "../components/BackButton";
@@ -25,6 +26,7 @@ type FeedbackTest = { label: string; passed: boolean };
 
 type StudyModalOptions = {
   tasks: StudyTaskView[];
+  getMastery: () => StudyMasteryView;
   getQuiz: (quizId: string) => QuizView | null;
   getCodeChallenge: (challengeId: string) => CodeChallengeView | null;
   onAnswer: (quizId: string, choiceId: string) => Awaitable<QuizAnswerResult>;
@@ -115,10 +117,9 @@ export class StudyModal extends Container {
     const title = new Text({ text: message("study.masteryTitle"), style: textStyle(21, 0x493022, "800") });
     title.position.set(78, 142);
     this.body.addChild(panel, title);
+    const masteryByConcept = this.options.getMastery();
     (["variables", "conditionals", "loops", "functions", "other"] as const).forEach((concept, index) => {
-      const related = this.tasks.filter((task) => task.concept === concept);
-      const completed = related.filter((task) => task.completed).length;
-      const mastery = related.length === 0 ? 0 : Math.round((completed / related.length) * 100);
+      const mastery = masteryByConcept[concept];
       const y = 180 + index * 32;
       const label = new Text({ text: message(conceptMessages[concept]), style: textStyle(15, 0x4a3023, "700") });
       label.position.set(78, y - 4);

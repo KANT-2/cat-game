@@ -19,6 +19,12 @@ export type BackendLearningTask = {
   completed: boolean;
 };
 
+export type BackendConceptProficiency = {
+  conceptName: string;
+  attempts: number;
+  proficiencyLevel: number;
+};
+
 export type BackendAttemptSubmission = {
   taskPublicId: string;
   submittedCode?: string;
@@ -216,6 +222,15 @@ export class BackendApiClient {
       throw new Error("Backend recommendations response is invalid");
     }
     return payload.map(parseTask);
+  }
+
+  /** 최근 완료 채점 기록으로 계산한 개념별 숙련도를 조회한다. */
+  async getLearningProficiencies(): Promise<BackendConceptProficiency[]> {
+    const payload = await this.request("/api/v1/learning/proficiencies");
+    if (!Array.isArray(payload)) {
+      throw new Error("Backend proficiencies response is invalid");
+    }
+    return payload.map(parseConceptProficiency);
   }
 
   /** 서버가 권위 있게 보관한 재화·고양이·인벤토리·배치 상태를 조회한다. */
@@ -536,6 +551,15 @@ function parseTask(value: unknown): BackendLearningTask {
     hintText: readNullableString(record, "hint_text"),
     rewardCoins: readNumber(record, "reward_coins"),
     completed: readBoolean(record, "completed"),
+  };
+}
+
+function parseConceptProficiency(value: unknown): BackendConceptProficiency {
+  const record = asRecord(value);
+  return {
+    conceptName: readString(record, "name"),
+    attempts: readNumber(record, "attempts"),
+    proficiencyLevel: readNumber(record, "proficiency_level"),
   };
 }
 
