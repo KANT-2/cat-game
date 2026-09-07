@@ -211,6 +211,7 @@ try {
   await page.keyboard.type("incorrect-password");
   await page.keyboard.press("Enter");
   await rejectedLoginResponse;
+  await page.waitForTimeout(500);
 
   const loginResponse = page.waitForResponse(
     (response) => response.url().includes("/api/v1/session/login") && response.status() === 200,
