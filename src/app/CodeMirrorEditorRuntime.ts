@@ -12,6 +12,7 @@ import type {
 } from "../game/ports/CodeEditorOverlay";
 
 const MAX_EDITOR_CHARACTERS = 8_000;
+const CSP_NONCE_PLACEHOLDER = "__CSP_NONCE__";
 
 export class CodeMirrorEditorRuntime implements CodeEditorOverlay {
   private readonly root: HTMLDivElement;
@@ -32,6 +33,8 @@ export class CodeMirrorEditorRuntime implements CodeEditorOverlay {
     mount.append(this.root);
 
     const language = options.language === "sql" ? sql() : python();
+    const cspNonce = document.querySelector<HTMLMetaElement>('meta[name="csp-nonce"]')?.content.trim();
+    const cspExtension = cspNonce && cspNonce !== CSP_NONCE_PLACEHOLDER ? [EditorView.cspNonce.of(cspNonce)] : [];
     const characterLimit = EditorState.changeFilter.of((transaction) => {
       return transaction.newDoc.length <= MAX_EDITOR_CHARACTERS || !transaction.docChanged;
     });
@@ -43,6 +46,7 @@ export class CodeMirrorEditorRuntime implements CodeEditorOverlay {
         basicSetup,
         language,
         oneDark,
+        ...cspExtension,
         keymap.of([indentWithTab]),
         EditorView.lineWrapping,
         characterLimit,
