@@ -14,6 +14,8 @@ type SettingsPageOptions = {
   mode: SettingsPageMode;
   onStatus: (id: MessageId) => void;
   onOpenAttendance: () => void;
+  onOpenProfileImage: () => void;
+  onOpenCatCollection: () => void;
   getState: () => GameState;
   onUpdateSettings: (patch: Partial<GameSettings>) => Awaitable<GameSettings>;
   onResetLearning: () => Awaitable<LearningResetResult>;
@@ -122,12 +124,14 @@ export class SettingsPage extends Container {
     this.addCard(70, 225, 710, 125);
     this.addLabel("settings.profileImage", 100, 245, 20);
     this.addDetail("settings.profileImageDescription", 100, 280);
-    this.addActionButton("settings.change", 590, 253, 160, () => this.notify("settings.accountActionReady"));
+    this.addActionButton("settings.change", 590, 253, 160, this.options.onOpenProfileImage);
 
     this.addCard(810, 225, 710, 125);
     this.addLabel("settings.nickname", 840, 245, 20);
     this.addDetail("settings.nicknameValue", 840, 280);
     this.addActionButton("settings.change", 1330, 253, 160, () => this.notify("settings.accountActionReady"));
+
+    this.addActionButton("settings.catCollection", 360, 253, 210, this.options.onOpenCatCollection, 0x91aa82);
 
     this.addCard(70, 370, 1450, 125);
     this.addLabel("settings.accountLink", 100, 390, 20);

@@ -1,7 +1,7 @@
 import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
 import type { Awaitable, LearningResetResult } from "../../core/GameClient";
-import type { CatVariant } from "../../domain/cats";
+import { catVariants, type CatVariant } from "../../domain/cats";
 import type { FurnitureKind, GameSettings, GameState } from "../../domain/room";
 import { type ShopItemId, shopItemDefinitions } from "../../domain/shop";
 import { BackButton } from "../components/BackButton";
@@ -20,7 +20,7 @@ import { getOwnedFurnitureEntries } from "../presentation/ownedFurniture";
 import { shopItemNameMessages } from "../shopItemPresentation";
 import { SettingsPage } from "./SettingsPage";
 
-export type FeaturePageKind = "profile" | "settings" | "owned" | "addFriend" | "visitGarden";
+export type FeaturePageKind = "profile" | "settings" | "owned" | "collection" | "addFriend" | "visitGarden";
 
 type Options = {
   kind: FeaturePageKind;
@@ -30,7 +30,7 @@ type Options = {
   onPlaceOwned: (itemId: ShopItemId | undefined, kind: FurnitureKind) => void;
   onSelectCat: (variant: CatVariant) => Awaitable<boolean>;
   onSetCatHome: (variant: CatVariant, visible: boolean) => Awaitable<boolean>;
-  onApplyTheme: (itemId: ShopItemId) => Awaitable<boolean>;
+  onApplyTheme: (itemId: ShopItemId | null) => Awaitable<boolean>;
   onUseConsumable: (itemId: ShopItemId, catVariant: CatVariant) => Awaitable<boolean>;
   onEnterRoomEdit: () => void;
   onOpenAttendance: () => void;
@@ -90,7 +90,7 @@ export class FeaturePageModal extends Container {
   }
 
   private buildSidebar(): void {
-    if (this.options.kind === "owned" || this.options.kind === "profile") {
+    if (this.options.kind === "owned" || this.options.kind === "profile" || this.options.kind === "collection") {
       return;
     }
     const panel = new Graphics().roundRect(28, 125, 275, 710, 28).fill(0xf2d7b5).stroke({ color: 0x9a633e, width: 4 });
@@ -134,6 +134,8 @@ export class FeaturePageModal extends Container {
       this.renderSettings("settings");
     } else if (this.options.kind === "owned") {
       this.renderOwned();
+    } else if (this.options.kind === "collection") {
+      this.renderCatCollection();
     } else if (this.options.kind === "addFriend") {
       this.renderAddFriend();
     } else {
@@ -147,12 +149,51 @@ export class FeaturePageModal extends Container {
         mode,
         onStatus: (id) => this.show(id),
         onOpenAttendance: this.options.onOpenAttendance,
+        onOpenProfileImage: () => this.options.onNavigate("owned"),
+        onOpenCatCollection: () => this.options.onNavigate("collection"),
         getState: this.options.getState,
         onUpdateSettings: (patch) => this.options.onUpdateSettings(patch),
         onResetLearning: this.options.onResetLearning,
         onLogout: this.options.onLogout,
       }),
     );
+  }
+
+  private renderCatCollection(): void {
+    const state = this.options.getState();
+    const progress = new Text({
+      text: message("gacha.collectionProgress", { owned: state.ownedCats.length, total: catVariants.length }),
+      style: textStyle(21, 0x604637, "700"),
+    });
+    progress.position.set(115, 145);
+    this.content.addChild(progress);
+    catVariants.forEach((variant, index) => {
+      const owned = state.ownedCats.includes(variant);
+      const x = 125 + index * 365;
+      const card = createCozyPanel(x, 250, 315, 430, {
+        fill: owned ? 0xfff5df : 0xd8d0c5,
+        border: owned ? 0x91aa82 : 0x8c8176,
+        radius: 26,
+      });
+      const portrait = new Sprite(this.options.catAnimations[variant].idle.textures[0]);
+      portrait.anchor.set(0.5);
+      portrait.scale.set(0.58);
+      portrait.position.set(x + 158, 445);
+      portrait.alpha = owned ? 1 : 0.22;
+      const name = new Text({
+        text: owned ? message(catNameMessages[variant]) : "? ? ?",
+        style: textStyle(23, 0x493022, "800"),
+      });
+      name.anchor.set(0.5);
+      name.position.set(x + 158, 300);
+      const status = new Text({
+        text: message(owned ? "gacha.collectionOwned" : "gacha.collectionMissing"),
+        style: textStyle(17, owned ? 0x537145 : 0x766f68, "700"),
+      });
+      status.anchor.set(0.5);
+      status.position.set(x + 158, 625);
+      this.content.addChild(card, portrait, name, status);
+    });
   }
 
   private renderOwned(): void {
@@ -396,23 +437,19 @@ export class FeaturePageModal extends Container {
   }
 
   private renderOwnedThemes(state: GameState): void {
-    const entries = (Object.keys(shopItemDefinitions) as ShopItemId[]).filter((itemId) => {
-      const item = shopItemDefinitions[itemId];
-      return item.kind === "wallpaper" && (state.shopInventory[itemId] ?? 0) > 0;
-    });
-    if (entries.length === 0) {
-      const empty = new Text({ text: message("owned.noThemes"), style: textStyle(21, 0x76533c, "700") });
-      empty.anchor.set(0.5);
-      empty.position.set(800, 480);
-      this.content.addChild(empty);
-      return;
-    }
+    const entries: Array<ShopItemId | null> = [
+      null,
+      ...(Object.keys(shopItemDefinitions) as ShopItemId[]).filter((itemId) => {
+        const item = shopItemDefinitions[itemId];
+        return item.kind === "wallpaper" && (state.shopInventory[itemId] ?? 0) > 0;
+      }),
+    ];
     const pageCount = Math.ceil(entries.length / OWNED_THEMES_PER_PAGE);
     this.ownedThemePage = Math.min(this.ownedThemePage, Math.max(0, pageCount - 1));
     const start = this.ownedThemePage * OWNED_THEMES_PER_PAGE;
     entries.slice(start, start + OWNED_THEMES_PER_PAGE).forEach((itemId, index) => {
-      const definition = shopItemDefinitions[itemId];
-      if (definition.kind !== "wallpaper") {
+      const definition = itemId === null ? null : shopItemDefinitions[itemId];
+      if (definition && definition.kind !== "wallpaper") {
         return;
       }
       const x = 180 + (index % 3) * 420;
@@ -425,10 +462,16 @@ export class FeaturePageModal extends Container {
       });
       const preview = createBackgroundPreview(this.options.backgroundArt, itemId, 125, 76);
       preview.position.set(x + 90, y + 93);
-      const name = new Text({ text: message(shopItemNameMessages[itemId]), style: textStyle(19, 0x493022, "800") });
+      const name = new Text({
+        text: itemId === null ? message("owned.defaultBackground") : message(shopItemNameMessages[itemId]),
+        style: textStyle(19, 0x493022, "800"),
+      });
       name.position.set(x + 175, y + 37);
       const count = new Text({
-        text: message("owned.count", { count: state.shopInventory[itemId] ?? 0 }),
+        text:
+          itemId === null
+            ? message("owned.defaultBackgroundDescription")
+            : message("owned.count", { count: state.shopInventory[itemId] ?? 0 }),
         style: textStyle(15, 0x76533c, "700"),
       });
       count.position.set(x + 175, y + 76);

@@ -232,7 +232,12 @@ export class LocalGameClient implements GameClient {
     return { ok: true, itemId, effect: item.effect, remainingQuantity };
   }
 
-  applyRoomTheme(itemId: ShopItemId): ApplyRoomThemeResult {
+  applyRoomTheme(itemId: ShopItemId | null): ApplyRoomThemeResult {
+    if (itemId === null) {
+      this.state = { ...this.state, activeWallpaper: null };
+      this.commit();
+      return { ok: true, itemId: null, itemType: "wallpaper" };
+    }
     const item = shopItemDefinitions[itemId];
     if (!item) {
       return { ok: false, reason: "item-not-found" };

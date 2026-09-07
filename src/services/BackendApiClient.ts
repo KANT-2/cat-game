@@ -297,7 +297,7 @@ export class BackendApiClient {
   }
 
   /** 보유한 벽지 또는 바닥 테마를 서버 상태에 적용한다. */
-  async applyGameTheme(itemCatalogKey: string): Promise<BackendGameMutation> {
+  async applyGameTheme(itemCatalogKey: string | null): Promise<BackendGameMutation> {
     return this.gameMutation("/api/v1/game/themes", "POST", { item_catalog_key: itemCatalogKey });
   }
 
@@ -366,23 +366,23 @@ export class BackendApiClient {
   }
 
   /** 자유 문장을 서버의 입력·출력 가드를 거쳐 보유 고양이에게 전달한다. */
-  async chatWithCat(catAssetPublicId: string, message: string): Promise<BackendCatChat> {
+  async chatWithCat(
+    catAssetPublicId: string,
+    message: string,
+    recentMessages: readonly { role: "user" | "assistant"; text: string }[] = [],
+  ): Promise<BackendCatChat> {
     const record = asRecord(
       await this.request(`/api/v1/cats/${encodeURIComponent(catAssetPublicId)}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, recent_messages: recentMessages.slice(-10) }),
       }),
     );
-    const memory = record.memory;
-    if (memory !== null) {
-      const memoryRecord = asRecord(memory);
-      readString(memoryRecord, "context_summary");
-    }
+    const remembered = typeof record.remembered === "boolean" ? record.remembered : record.memory != null;
     return {
       catAssetPublicId: readString(record, "cat_asset_public_id"),
       reply: readString(record, "reply"),
-      remembered: memory !== null,
+      remembered,
     };
   }
 

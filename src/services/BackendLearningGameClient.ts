@@ -207,7 +207,16 @@ export class BackendLearningGameClient implements GameClient {
     }
   }
 
-  async applyRoomTheme(itemId: ShopItemId): Promise<ApplyRoomThemeResult> {
+  async applyRoomTheme(itemId: ShopItemId | null): Promise<ApplyRoomThemeResult> {
+    if (itemId === null) {
+      try {
+        const mutation = await this.api.applyGameTheme(null);
+        this.applyServerSnapshot(mutation.snapshot);
+        return { ok: true, itemId: null, itemType: "wallpaper" };
+      } catch {
+        return { ok: false, reason: "server-unavailable" };
+      }
+    }
     const item = shopItemDefinitions[itemId];
     if (item.kind !== "wallpaper" && item.kind !== "floor") {
       return { ok: false, reason: "not-theme" };
@@ -531,7 +540,11 @@ export class BackendLearningGameClient implements GameClient {
     }
   }
 
-  async chatWithCat(catVariant: CatVariant, userMessage: string): Promise<CatFreeConversationResult> {
+  async chatWithCat(
+    catVariant: CatVariant,
+    userMessage: string,
+    recentMessages = [] as readonly import("../core/GameClient").CatChatMessage[],
+  ): Promise<CatFreeConversationResult> {
     if (!userMessage.trim()) {
       return { ok: false, reason: "empty-message" };
     }
@@ -540,7 +553,7 @@ export class BackendLearningGameClient implements GameClient {
       return { ok: false, reason: "cat-not-owned" };
     }
     try {
-      const chat = await this.api.chatWithCat(catAssetPublicId, userMessage.slice(0, 240));
+      const chat = await this.api.chatWithCat(catAssetPublicId, userMessage.slice(0, 240), recentMessages);
       if (chat.remembered) {
         this.applyServerSnapshot(await this.api.getGameSnapshot());
       }

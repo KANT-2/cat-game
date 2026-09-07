@@ -252,7 +252,15 @@ await page.waitForTimeout(200);
 await page.mouse.click(900, 218);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-owned-wallpaper.png") });
+await page.mouse.click(850, 423);
+await page.waitForTimeout(150);
 await page.mouse.click(432, 423);
+await page.waitForTimeout(150);
+const defaultBackgroundState = JSON.parse(await page.evaluate(() => localStorage.getItem("cozy-code-cat-room-v1")));
+if (defaultBackgroundState.activeWallpaper !== null) {
+  throw new Error("default background did not clear the active wallpaper");
+}
+await page.mouse.click(850, 423);
 await page.waitForTimeout(150);
 await page.mouse.click(285, 218);
 await page.waitForTimeout(200);

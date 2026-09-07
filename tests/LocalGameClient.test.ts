@@ -409,6 +409,8 @@ describe("LocalGameClient", () => {
       itemType: "wallpaper",
     });
     expect(client.getSnapshot().activeWallpaper).toBe("wallpaper.cream");
+    expect(client.applyRoomTheme(null)).toEqual({ ok: true, itemId: null, itemType: "wallpaper" });
+    expect(client.getSnapshot().activeWallpaper).toBeNull();
   });
 
   it("persists sound settings and clears only cat memories", () => {

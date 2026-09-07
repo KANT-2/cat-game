@@ -40,7 +40,7 @@ export type PurchaseResult =
   | { ok: false; reason: "item-not-found" | "insufficient-coins" | "already-owned" | "server-unavailable" };
 
 export type ApplyRoomThemeResult =
-  | { ok: true; itemId: ShopItemId; itemType: "wallpaper" | "floor" }
+  | { ok: true; itemId: ShopItemId | null; itemType: "wallpaper" | "floor" }
   | { ok: false; reason: "item-not-found" | "not-owned" | "not-theme" | "server-unavailable" };
 
 export type UseConsumableResult =
@@ -67,6 +67,8 @@ export type CatSelectionResult =
 export type CatHomeResult =
   | { ok: true; homeCats: CatVariant[] }
   | { ok: false; reason: "cat-not-owned" | "server-unavailable" };
+
+export type CatChatMessage = { role: "user" | "assistant"; text: string };
 
 /** 로컬 메시지 키 또는 서버가 검증해 내려준 동적 학습 문구다. */
 export type GameText = { messageId: MessageId } | { text: string };
@@ -295,7 +297,7 @@ export interface GameClient {
   useConsumable(itemId: ShopItemId, catVariant: CatVariant): Awaitable<UseConsumableResult>;
 
   /** 보유한 벽지 또는 바닥재를 현재 방 테마로 적용한다. */
-  applyRoomTheme(itemId: ShopItemId): Awaitable<ApplyRoomThemeResult>;
+  applyRoomTheme(itemId: ShopItemId | null): Awaitable<ApplyRoomThemeResult>;
 
   /** 코인을 차감하고 가중치에 따라 고양이 또는 가구 보상을 지급한다. */
   drawGacha(count: GachaDrawCount): Awaitable<GachaDrawResult>;
@@ -386,7 +388,11 @@ export interface GameClient {
    * @returns 답변과 서버 분류, 기억 저장 여부 또는 처리 가능한 실패 이유.
    * @remarks 원격 구현은 사용자 원문을 기억에 저장하지 않으며 프롬프트 제어 시도를 생성 모델에 전달하지 않는다.
    */
-  chatWithCat(catVariant: CatVariant, userMessage: string): Awaitable<CatFreeConversationResult>;
+  chatWithCat(
+    catVariant: CatVariant,
+    userMessage: string,
+    recentMessages?: readonly CatChatMessage[],
+  ): Awaitable<CatFreeConversationResult>;
 
   /** 사운드와 접근성 환경설정을 저장하고 최신 설정을 반환한다. */
   updateSettings(patch: Partial<GameSettings>): Awaitable<GameSettings>;

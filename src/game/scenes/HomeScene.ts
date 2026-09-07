@@ -348,7 +348,7 @@ export class HomeScene extends Container {
       animations: this.catAnimations[variant],
       memoryCount: this.state.catMemories[variant]?.length ?? 0,
       onTalk: (topic) => this.gameClient.talkToCat(variant, topic),
-      onFreeTalk: (userMessage) => this.gameClient.chatWithCat(variant, userMessage),
+      onFreeTalk: (userMessage, recentMessages) => this.gameClient.chatWithCat(variant, userMessage, recentMessages),
       textInputFactory: this.textInputFactory,
       onReaction: (action) => {
         this.clearing.playConversationReaction(action, variant);
@@ -475,6 +475,9 @@ export class HomeScene extends Container {
       onSetCatHome: async (variant, visible) => (await this.gameClient.setCatHome(variant, visible)).ok,
       onApplyTheme: async (itemId) => {
         try {
+          if (itemId === null) {
+            return (await this.gameClient.applyRoomTheme(null)).ok;
+          }
           await this.backgroundArt.load([itemId]);
         } catch (error) {
           console.warn("Selected background could not be loaded", error);

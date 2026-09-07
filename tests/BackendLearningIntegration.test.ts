@@ -357,18 +357,13 @@ describe("backend learning integration", () => {
         return json(gameSnapshot(1_000, snapshotReads, { memories: snapshotReads > 1 ? ["코딩 대화"] : [] }));
       }
       if (pathname === `/api/v1/cats/${catAssetId}/chat` && init?.method === "POST") {
-        expect(JSON.parse(String(init.body))).toEqual({ message: "파이썬 함수가 어려워" });
+        expect(JSON.parse(String(init.body))).toEqual({ message: "파이썬 함수가 어려워", recent_messages: [] });
         return json({
           cat_asset_public_id: catAssetId,
           reply: "작은 예제로 같이 보자, 냐옹.",
-          memory: {
-            public_id: "22222222-2222-4222-8222-222222222222",
-            cat_asset_public_id: catAssetId,
-            context_summary: "사용자와 코딩 학습에 관해 대화했다.",
-            created_at: "2026-09-07T00:00:00Z",
-          },
-          input_tokens: 20,
-          output_tokens: 8,
+          category: "CODING",
+          memory_count: 1,
+          remembered: true,
         });
       }
       return json({ detail: "not found" }, 404);

@@ -15,7 +15,7 @@ import { resolveBackgroundArt } from "./ForestArt";
  */
 export function createBackgroundPreview(
   art: BackgroundArtCollection,
-  itemId: ShopItemId,
+  itemId: ShopItemId | null,
   width: number,
   height: number,
 ): Sprite {

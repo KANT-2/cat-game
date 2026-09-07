@@ -1,6 +1,12 @@
 import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { message } from "../../content/messages";
-import type { Awaitable, CatConversationResult, CatFreeConversationResult, GameText } from "../../core/GameClient";
+import type {
+  Awaitable,
+  CatChatMessage,
+  CatConversationResult,
+  CatFreeConversationResult,
+  GameText,
+} from "../../core/GameClient";
 import { CAT_CONVERSATION_TOPICS, type CatConversationTopic } from "../../domain/catConversation";
 import type { CatVariant } from "../../domain/cats";
 import { textStyle } from "../config";
@@ -20,7 +26,7 @@ type CatConversationModalOptions = {
   animations: CatAnimationSet;
   memoryCount: number;
   onTalk: (topic: CatConversationTopic) => Awaitable<CatConversationResult>;
-  onFreeTalk: (userMessage: string) => Awaitable<CatFreeConversationResult>;
+  onFreeTalk: (userMessage: string, recentMessages: readonly CatChatMessage[]) => Awaitable<CatFreeConversationResult>;
   textInputFactory: TextInputBridgeFactory;
   onReaction: (action: ReturnType<typeof resolveCatConversationReply>["action"]) => void;
   onClose: () => void;
@@ -34,6 +40,7 @@ export class CatConversationModal extends Container {
   private replyText: string | null = null;
   private pending = false;
   private draft = "";
+  private readonly recentMessages: CatChatMessage[] = [];
   private readonly inputBridge: TextInputBridge;
 
   constructor(private readonly options: CatConversationModalOptions) {
@@ -151,13 +158,20 @@ export class CatConversationModal extends Container {
       .circle(1295, 349, 6)
       .circle(1309, 352, 6)
       .fill({ color: accentColor, alpha: 0.22 });
+    const visibleReply = clampConversationText(
+      this.pending ? message("cat.conversation.pending") : (this.replyText ?? message("cat.conversation.prompt")),
+    );
     const text = new Text({
-      text: this.pending ? message("cat.conversation.pending") : (this.replyText ?? message("cat.conversation.prompt")),
+      text: visibleReply,
       style: {
-        ...textStyle(this.replyText ? 22 : 20, 0x482b20, this.replyText ? "700" : "600"),
+        ...textStyle(
+          visibleReply.length > 95 ? 17 : this.replyText ? 21 : 20,
+          0x482b20,
+          this.replyText ? "700" : "600",
+        ),
         wordWrap: true,
         wordWrapWidth: 665,
-        lineHeight: 32,
+        lineHeight: visibleReply.length > 95 ? 23 : 30,
         align: "left",
       },
     });
@@ -187,14 +201,12 @@ export class CatConversationModal extends Container {
     inputBox.eventMode = "static";
     inputBox.cursor = "text";
     inputBox.on("pointertap", () => this.inputBridge.focus());
-    const inputValue = this.draft.trim() ? this.draft.slice(-72) : message("cat.conversation.freePlaceholder");
+    const inputValue = this.draft.trim() ? compactInput(this.draft) : message("cat.conversation.freePlaceholder");
     const inputText = new Text({
       text: inputValue,
       style: {
         ...textStyle(16, this.draft.trim() ? 0x482b20 : 0xa48775, this.draft.trim() ? "600" : "500"),
-        wordWrap: true,
-        wordWrapWidth: 555,
-        lineHeight: 21,
+        wordWrap: false,
       },
     });
     inputText.position.set(592, 655);
@@ -248,7 +260,7 @@ export class CatConversationModal extends Container {
     }
     this.pending = true;
     this.render();
-    const result = await this.options.onFreeTalk(userMessage);
+    const result = await this.options.onFreeTalk(userMessage, this.recentMessages);
     this.pending = false;
     if (!result.ok) {
       this.replyText = message("cat.conversation.unavailable");
@@ -257,6 +269,10 @@ export class CatConversationModal extends Container {
     }
     this.memoryCount = result.memoryCount;
     this.replyText = resolveGameText(result.reply);
+    this.recentMessages.push({ role: "user", text: userMessage }, { role: "assistant", text: this.replyText });
+    if (this.recentMessages.length > 10) {
+      this.recentMessages.splice(0, this.recentMessages.length - 10);
+    }
     this.draft = "";
     this.inputBridge.setValue("");
     if (result.category === "CODING") {
@@ -272,4 +288,14 @@ export class CatConversationModal extends Container {
 
 function resolveGameText(value: GameText): string {
   return "text" in value ? value.text : message(value.messageId);
+}
+
+export function clampConversationText(value: string, maxLength = 190): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  return normalized.length <= maxLength ? normalized : `${normalized.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+function compactInput(value: string): string {
+  const normalized = value.replace(/\s+/g, " ");
+  return normalized.length <= 32 ? normalized : `…${normalized.slice(-31)}`;
 }
