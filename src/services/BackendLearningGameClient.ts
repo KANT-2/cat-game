@@ -307,26 +307,25 @@ export class BackendLearningGameClient implements GameClient {
       type: "code",
       language: task.domain === "SQL" ? "sql" : "python",
       prompt: { text: task.description },
-      signature: "",
-      starterBody: task.templateCode,
+      starterCode: task.templateCode,
       examples: { messageId: "study.serverExamples" },
       hints: task.hintText ? [{ text: task.hintText }] : [],
       bonusCoins: 0,
     };
   }
 
-  async submitCodeChallenge(challengeId: string, body: string, hintsUsed: number): Promise<CodeSubmissionResult> {
+  async submitCodeChallenge(challengeId: string, code: string, hintsUsed: number): Promise<CodeSubmissionResult> {
     const task = this.tasks.get(challengeId);
     if (task?.type !== "CODE") {
       return { ok: false, reason: "challenge-not-found" };
     }
-    if (!body.trim()) {
+    if (!code.trim()) {
       return { ok: false, reason: "empty-code" };
     }
     try {
       const attempt = await this.api.grade({
         taskPublicId: challengeId,
-        submittedCode: body,
+        submittedCode: code,
         usedHint: hintsUsed > 0,
       });
       if (attempt.status !== "COMPLETED" || attempt.correct === null) {

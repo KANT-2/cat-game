@@ -34,8 +34,7 @@ export type CodeChallengeDefinition = {
   titleMessage: MessageId;
   summaryMessage: MessageId;
   promptMessage: MessageId;
-  signature: string;
-  starterBody: string;
+  starterCode: string;
   examplesMessage: MessageId;
   hintMessages: readonly MessageId[];
   rewardCoins: number;
@@ -110,8 +109,7 @@ export const codeChallengeDefinitions: Record<string, CodeChallengeDefinition> =
     titleMessage: "study.sumTitle",
     summaryMessage: "study.sumSummary",
     promptMessage: "study.sumPrompt",
-    signature: "def sum_to(n):",
-    starterBody: "    total = 0\n    ",
+    starterCode: "def sum_to(n):\n    total = 0\n    ",
     examplesMessage: "study.sumExamples",
     hintMessages: ["study.sumHintOne", "study.sumHintTwo", "study.sumHintThree"],
     rewardCoins: 40,
@@ -131,14 +129,14 @@ export type CodeTestResult = { input: number; expected: number; actual: number |
 /**
  * 브라우저에서 임의 Python을 실행하지 않고 합계 과제에 허용된 두 풀이 형태를 판정한다.
  *
- * @param body - 고정된 함수 선언 아래에서 사용자가 편집한 함수 본문.
+ * @param code - 함수 선언과 본문을 모두 포함한 사용자의 전체 답안 코드.
  * @returns 공개·비공개 입력별 통과 여부와 전체 성공 여부.
  *
  * @remarks 반복문 누적 풀이와 정수 나눗셈 공식 풀이만 허용한다. 서버 채점기가 연결되기 전에도
  * 동일한 테스트 결과 계약을 유지하면서 코드 실행 공격면을 만들지 않기 위한 로컬 어댑터다.
  */
-export function gradeSumChallenge(body: string): { passed: boolean; tests: CodeTestResult[] } {
-  const normalized = body
+export function gradeSumChallenge(code: string): { passed: boolean; tests: CodeTestResult[] } {
+  const normalized = code
     .replace(/\r/g, "")
     .split("\n")
     .map((line) => line.trim())
@@ -151,7 +149,8 @@ export function gradeSumChallenge(body: string): { passed: boolean; tests: CodeT
   const returnIndex = normalized.search(/return\s+total/);
   const loopSolution = totalIndex >= 0 && loopIndex > totalIndex && addIndex > loopIndex && returnIndex > addIndex;
   const formulaSolution = /return\s+n\s*\*\s*\(\s*n\s*\+\s*1\s*\)\s*\/\/\s*2/.test(normalized);
-  const valid = loopSolution || formulaSolution;
+  const expectedFunction = /def\s+sum_to\s*\(\s*n\s*\)\s*:/.test(normalized);
+  const valid = expectedFunction && (loopSolution || formulaSolution);
   const tests = [1, 5, 12].map((input) => {
     const expected = (input * (input + 1)) / 2;
     return { input, expected, actual: valid ? expected : null, passed: valid };

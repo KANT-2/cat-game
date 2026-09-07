@@ -111,8 +111,7 @@ export type CodeChallengeView = StudyTaskView & {
   type: "code";
   language: "python" | "sql";
   prompt: GameText;
-  signature: string;
-  starterBody: string;
+  starterCode: string;
   examples: GameText;
   hints: readonly GameText[];
   bonusCoins: number;
@@ -337,11 +336,11 @@ export interface GameClient {
   /** 학습 홈에 표시할 과제 목록과 완료 상태를 반환한다. */
   getStudyTasks(): StudyTaskView[];
 
-  /** 함수 선언을 제외한 본문만 편집하는 코드 과제를 조회한다. */
+  /** 전체 시작 코드를 자유롭게 편집할 수 있는 코드 과제를 조회한다. */
   getCodeChallenge(challengeId: string): CodeChallengeView | null;
 
   /** 안전한 로컬 채점기를 통해 코드 과제를 채점하고 최초 완료 보상을 반영한다. */
-  submitCodeChallenge(challengeId: string, body: string, hintsUsed: number): Awaitable<CodeSubmissionResult>;
+  submitCodeChallenge(challengeId: string, code: string, hintsUsed: number): Awaitable<CodeSubmissionResult>;
 
   /** 오늘의 학습 기록에서 계산한 퀘스트 진행도와 수령 상태를 반환한다. */
   getDailyQuests(): DailyQuestView[];
