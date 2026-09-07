@@ -299,6 +299,12 @@ async function verifyProductionShellHeaders(url) {
       throw new Error(`frontend shell header ${name} is missing ${expected}`);
     }
   }
+  const contentSecurityPolicy = response.headers.get("content-security-policy") ?? "";
+  const html = await response.text();
+  const nonce = html.match(/<meta name="csp-nonce" content="([^"]+)"/u)?.[1];
+  if (!nonce || nonce === "__CSP_NONCE__" || !contentSecurityPolicy.includes(`style-src 'self' 'nonce-${nonce}'`)) {
+    throw new Error("frontend shell must give CodeMirror runtime styles a matching CSP nonce");
+  }
 }
 
 async function findTask(headers, predicate, description) {
