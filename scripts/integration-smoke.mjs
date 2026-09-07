@@ -334,6 +334,15 @@ async function verifyProductionShellHeaders(url) {
   if (!nonce || nonce === "__CSP_NONCE__" || !contentSecurityPolicy.includes(`style-src 'self' 'nonce-${nonce}'`)) {
     throw new Error("frontend shell must give CodeMirror runtime styles a matching CSP nonce");
   }
+  const catalogResponse = await fetch(new URL("/assets/catalog.json", url));
+  if (!catalogResponse.ok || !catalogResponse.headers.get("cache-control")?.includes("no-store")) {
+    throw new Error("asset catalog must be served without an immutable browser cache");
+  }
+  const catalog = await catalogResponse.json();
+  const catalogEntries = Object.values(catalog.bundles ?? {}).flat();
+  if (!catalogEntries.some((entry) => entry.id === "furniture.hideout.forest-log.01")) {
+    throw new Error("production asset catalog is missing required forest furniture");
+  }
 }
 
 async function verifyBrowserCatChat(page) {
