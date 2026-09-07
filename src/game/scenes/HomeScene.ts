@@ -201,10 +201,7 @@ export class HomeScene extends Container {
     this.fitProfilePortrait();
     const portraitMask = new Graphics().roundRect(40, 36, 76, 68, 16).fill(0xffffff);
     portrait.mask = portraitMask;
-    const level = new Text({ text: message("home.level", { level: 10 }), style: textStyle(12, 0x3d2b22, "800") });
-    level.anchor.set(0.5);
-    level.position.set(78, 119);
-    this.profilePanel.addChild(frame, portrait, portraitMask, level);
+    this.profilePanel.addChild(frame, portrait, portraitMask);
     this.profilePanel.hitArea = new Rectangle(0, 0, profileSize, profileSize);
     this.profilePanel.eventMode = "static";
     this.profilePanel.cursor = "pointer";

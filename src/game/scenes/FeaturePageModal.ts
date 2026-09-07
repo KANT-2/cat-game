@@ -100,11 +100,8 @@ export class FeaturePageModal extends Container {
     }
     const portrait = catPortrait(0);
     portrait.scale.set(0.72);
-    portrait.position.set(165, 205);
-    const level = new Text({ text: message("page.profileLevel"), style: textStyle(17, 0x493022, "800") });
-    level.anchor.set(0.5);
-    level.position.set(165, 270);
-    this.page.addChild(portrait, level);
+    portrait.position.set(165, 225);
+    this.page.addChild(portrait);
     const entries =
       this.options.kind === "addFriend" || this.options.kind === "visitGarden"
         ? (["addFriend", "visitGarden"] as const)
@@ -617,7 +614,7 @@ export class FeaturePageModal extends Container {
     const name = new Text({ text: message(nameId), style: textStyle(24, 0x493022, "800") });
     name.position.set(x + 140, y + 30);
     const info = new Text({
-      text: message("friends.profile", { level: 12 + index * 4 }),
+      text: message("friends.profile"),
       style: textStyle(16, 0x76533c, "600"),
     });
     info.position.set(x + 140, y + 78);
@@ -657,7 +654,7 @@ export class FeaturePageModal extends Container {
       const name = new Text({ text: message(nameId), style: textStyle(23, 0x493022, "800") });
       name.position.set(x + 115, y + 25);
       const detail = new Text({
-        text: message("garden.detail", { level: 12 + index * 4, likes: 28 + index * 17 }),
+        text: message("garden.detail", { likes: 28 + index * 17 }),
         style: textStyle(16, 0x76533c, "600"),
       });
       detail.position.set(x + 105, y + 65);
