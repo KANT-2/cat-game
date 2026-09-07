@@ -101,6 +101,31 @@ if (codeAttempt.status !== "COMPLETED" || codeAttempt.is_correct !== true) {
   throw new Error(`sandbox grading did not complete correctly: ${JSON.stringify(codeAttempt)}`);
 }
 
+const sqlTask = await findTask(
+  authHeaders,
+  (task) =>
+    task.type === "CODE" &&
+    task.domain === "SQL" &&
+    typeof task.title === "string" &&
+    task.title.includes("[SAMPLE:SQL:BRONZE:001]"),
+  "SQL query task",
+  "SQL",
+);
+const sqlAccepted = await requestJson(`${apiUrl}/api/v1/attempts`, {
+  method: "POST",
+  headers: { ...authHeaders, "Content-Type": "application/json" },
+  body: JSON.stringify({
+    task_public_id: readString(sqlTask, "public_id"),
+    submitted_code: "SELECT 1",
+    context_type: "LEARNING",
+    used_hint: false,
+  }),
+});
+const sqlAttempt = await waitForAttempt(readString(sqlAccepted, "public_id"), authHeaders);
+if (sqlAttempt.status !== "COMPLETED" || sqlAttempt.is_correct !== true) {
+  throw new Error(`SQL grading did not complete correctly: ${JSON.stringify(sqlAttempt)}`);
+}
+
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
 const errors = [];
@@ -277,7 +302,7 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `Integration smoke passed: production shell headers and offline PWA reload, browser registration/invalid login/login/session/reconnect/logout, CSRF, API quiz and sandbox grading, ${backendResponses.length} browser API responses, screenshot ${screenshotPath}`,
+  `Integration smoke passed: production shell headers and offline PWA reload, browser registration/invalid login/login/session/reconnect/logout, CSRF, API quiz and Python/SQL sandbox grading, ${backendResponses.length} browser API responses, screenshot ${screenshotPath}`,
 );
 
 async function verifyProductionShellHeaders(url) {
@@ -348,9 +373,10 @@ async function verifyBrowserCatChat(page) {
   });
 }
 
-async function findTask(headers, predicate, description) {
+async function findTask(headers, predicate, description, domain) {
+  const domainQuery = domain ? `&domain=${encodeURIComponent(domain)}` : "";
   for (let attempt = 0; attempt < 20; attempt += 1) {
-    const tasks = await requestJson(`${apiUrl}/api/v1/learning/recommendations?limit=50`, { headers });
+    const tasks = await requestJson(`${apiUrl}/api/v1/learning/recommendations?limit=50${domainQuery}`, { headers });
     if (!Array.isArray(tasks)) {
       throw new Error("recommendations response is not an array");
     }
