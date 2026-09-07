@@ -112,8 +112,20 @@ await page.mouse.click(1200, 535);
 await page.mouse.click(680, 665);
 await page.waitForTimeout(150);
 await page.screenshot({ path: screenshotPath("cat-game-study-task.png") });
-await page.mouse.click(800, 524);
-await page.waitForTimeout(200);
+for (let attempt = 0; attempt < 4; attempt += 1) {
+  await page.mouse.click(800, 524);
+  await page.waitForTimeout(250);
+  const quizCompleted = await page.evaluate(() => {
+    const saved = localStorage.getItem("cozy-code-cat-room-v1");
+    return saved ? JSON.parse(saved).completedQuizIds?.length > 0 : false;
+  });
+  if (quizCompleted) {
+    break;
+  }
+  if (attempt === 3) {
+    throw new Error("quiz answer did not reach the game client");
+  }
+}
 await page.screenshot({ path: screenshotPath("cat-game-study-feedback.png") });
 await page.mouse.click(800, 510);
 await page.waitForTimeout(150);
