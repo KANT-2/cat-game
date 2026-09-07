@@ -20,7 +20,7 @@ export interface CodeEditorOverlay {
   /** 현재 편집 중인 전체 코드 답안을 반환한다. */
   getValue(): string;
 
-  /** 기존 내용을 새 값으로 교체하고 커서를 문서 끝으로 이동한다. */
+  /** 기존 내용을 새 값으로 교체하고 첫 줄부터 다시 편집할 수 있게 한다. */
   setValue(value: string): void;
 
   /** 현재 선택 영역에 텍스트를 삽입하고 편집기로 포커스를 옮긴다. */

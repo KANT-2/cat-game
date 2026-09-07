@@ -18,6 +18,7 @@ export class CodeMirrorEditorRuntime implements CodeEditorOverlay {
   private readonly view: EditorView;
   private visible = true;
   private positioned = false;
+  private initialLayoutFrame: number | null = null;
 
   constructor(mount: HTMLElement, options: CodeEditorOverlayOptions) {
     this.root = document.createElement("div");
@@ -37,6 +38,7 @@ export class CodeMirrorEditorRuntime implements CodeEditorOverlay {
     this.view = new EditorView({
       parent: editorHost,
       doc: options.initialValue.slice(0, MAX_EDITOR_CHARACTERS),
+      selection: EditorSelection.cursor(0),
       extensions: [
         basicSetup,
         language,
@@ -63,7 +65,8 @@ export class CodeMirrorEditorRuntime implements CodeEditorOverlay {
     const nextValue = value.slice(0, MAX_EDITOR_CHARACTERS);
     this.view.dispatch({
       changes: { from: 0, to: this.view.state.doc.length, insert: nextValue },
-      selection: EditorSelection.cursor(nextValue.length),
+      selection: EditorSelection.cursor(0),
+      effects: EditorView.scrollIntoView(0, { y: "start" }),
     });
   }
 
@@ -79,6 +82,7 @@ export class CodeMirrorEditorRuntime implements CodeEditorOverlay {
   }
 
   setBounds(bounds: CodeEditorOverlayBounds): void {
+    const isInitialLayout = !this.positioned;
     this.root.style.left = `${bounds.left}px`;
     this.root.style.top = `${bounds.top}px`;
     this.root.style.width = `${bounds.width}px`;
@@ -87,6 +91,9 @@ export class CodeMirrorEditorRuntime implements CodeEditorOverlay {
     this.positioned = true;
     this.updateVisibility();
     this.view.requestMeasure();
+    if (isInitialLayout) {
+      this.measureVisibleEditorFromStart();
+    }
   }
 
   setVisible(visible: boolean): void {
@@ -99,8 +106,26 @@ export class CodeMirrorEditorRuntime implements CodeEditorOverlay {
   }
 
   destroy(): void {
+    if (this.initialLayoutFrame !== null) {
+      cancelAnimationFrame(this.initialLayoutFrame);
+    }
     this.view.destroy();
     this.root.remove();
+  }
+
+  private measureVisibleEditorFromStart(): void {
+    if (this.initialLayoutFrame !== null) {
+      cancelAnimationFrame(this.initialLayoutFrame);
+    }
+    this.initialLayoutFrame = requestAnimationFrame(() => {
+      this.initialLayoutFrame = null;
+      if (!this.root.isConnected) {
+        return;
+      }
+      this.view.requestMeasure();
+      this.view.scrollDOM.scrollTop = 0;
+      this.view.dispatch({ effects: EditorView.scrollIntoView(0, { y: "start" }) });
+    });
   }
 
   private updateVisibility(): void {

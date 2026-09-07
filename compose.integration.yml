@@ -44,6 +44,9 @@ services:
   backend:
     build:
       context: ${CAT_GAME_BACKEND_PATH:-../cat-game-backend}
+    env_file:
+      - path: ${CAT_GAME_BACKEND_PATH:-../cat-game-backend}/.env
+        required: false
     command:
       - sh
       - -c

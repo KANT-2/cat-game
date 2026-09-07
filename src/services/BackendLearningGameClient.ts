@@ -32,7 +32,11 @@ import {
   attendanceStreakBonus,
   nextAttendanceStreak,
 } from "../domain/attendance";
-import { type CatConversationTopic, catConversationMemorySummary } from "../domain/catConversation";
+import {
+  type CatConversationTopic,
+  catConversationMemorySummary,
+  classifyLocalCatChat,
+} from "../domain/catConversation";
 import type { CatVariant } from "../domain/cats";
 import { catVariants } from "../domain/cats";
 import { type DailyQuestId, dailyQuestDefinitions } from "../domain/dailyQuest";
@@ -544,8 +548,8 @@ export class BackendLearningGameClient implements GameClient {
         ok: true,
         catVariant,
         reply: { text: chat.reply },
-        category: chat.category,
-        memoryCount: chat.memoryCount,
+        category: classifyLocalCatChat(userMessage),
+        memoryCount: this.state.catMemories[catVariant]?.length ?? 0,
         remembered: chat.remembered,
       };
     } catch (error) {

@@ -120,8 +120,6 @@ export type BackendGameMutation = {
 export type BackendCatChat = {
   catAssetPublicId: string;
   reply: string;
-  category: "COMPANION" | "CODING" | "UNKNOWN" | "PROMPT_INJECTION" | "SAFETY" | "PROFESSIONAL";
-  memoryCount: number;
   remembered: boolean;
 };
 
@@ -376,19 +374,15 @@ export class BackendApiClient {
         body: JSON.stringify({ message }),
       }),
     );
+    const memory = record.memory;
+    if (memory !== null) {
+      const memoryRecord = asRecord(memory);
+      readString(memoryRecord, "context_summary");
+    }
     return {
       catAssetPublicId: readString(record, "cat_asset_public_id"),
       reply: readString(record, "reply"),
-      category: readEnum(record, "category", [
-        "COMPANION",
-        "CODING",
-        "UNKNOWN",
-        "PROMPT_INJECTION",
-        "SAFETY",
-        "PROFESSIONAL",
-      ] as const),
-      memoryCount: readNumber(record, "memory_count"),
-      remembered: readBoolean(record, "remembered"),
+      remembered: memory !== null,
     };
   }
 
