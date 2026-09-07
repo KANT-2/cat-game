@@ -115,11 +115,11 @@ export class StudyModal extends Container {
     const title = new Text({ text: message("study.masteryTitle"), style: textStyle(21, 0x493022, "800") });
     title.position.set(78, 142);
     this.body.addChild(panel, title);
-    (["variables", "conditionals", "loops", "functions"] as const).forEach((concept, index) => {
+    (["variables", "conditionals", "loops", "functions", "other"] as const).forEach((concept, index) => {
       const related = this.tasks.filter((task) => task.concept === concept);
       const completed = related.filter((task) => task.completed).length;
       const mastery = related.length === 0 ? 0 : Math.round((completed / related.length) * 100);
-      const y = 185 + index * 38;
+      const y = 180 + index * 32;
       const label = new Text({ text: message(conceptMessages[concept]), style: textStyle(15, 0x4a3023, "700") });
       label.position.set(78, y - 4);
       const track = new Graphics().roundRect(205, y, 188, 14, 7).fill(0xe4ccb0);
@@ -139,7 +139,7 @@ export class StudyModal extends Container {
       text: message("study.masteryNotice"),
       style: textStyle(12, 0x85634d, "600"),
     });
-    notice.position.set(78, 335);
+    notice.position.set(78, 340);
     this.body.addChild(notice);
   }
 
