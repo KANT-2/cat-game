@@ -15,6 +15,22 @@ services:
     volumes:
       - cat_game_integration_data:/var/lib/postgresql/data
 
+  sql-grader-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: sql_grader
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: local-bootstrap-only
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grader_admin -d sql_grader"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+    tmpfs:
+      - /var/lib/postgresql/data
+    volumes:
+      - ${CAT_GAME_BACKEND_PATH:-../cat-game-backend}/infra/compose/sql-grader-init.sql:/docker-entrypoint-initdb.d/sql-grader-init.sql:ro
+
   grader-image:
     build:
       context: ${CAT_GAME_BACKEND_PATH:-../cat-game-backend}/infra/docker/grader
@@ -32,6 +48,7 @@ services:
         python -m alembic -c alembic.ini.example upgrade head &&
         python scripts/seed_game_catalog.py &&
         python scripts/seed_learning_tasks.py &&
+        python scripts/seed_sql_tasks.py &&
         exec uvicorn app.main:app --host 0.0.0.0 --port 8000
     environment:
       APP_ENV: local
@@ -62,11 +79,14 @@ services:
       APP_ENV: local
       DATABASE_URL: postgresql+psycopg://cat_game:cat_game@db:5432/cat_game
       GRADING_IMAGE: cat-game-python-grader:3.12
+      SQL_GRADING_DATABASE_URL: postgresql://grader_admin:local-grader-only@sql-grader-db:5432/sql_grader
     depends_on:
       backend:
         condition: service_healthy
       grader-image:
         condition: service_completed_successfully
+      sql-grader-db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-m", "app.modules.grading.health"]
       interval: 5s
