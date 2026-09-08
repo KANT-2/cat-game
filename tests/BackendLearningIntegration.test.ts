@@ -226,6 +226,49 @@ describe("backend learning integration", () => {
     await expect(api.getLearningRecommendations()).rejects.toThrow("Backend field");
   });
 
+  it("loads Part 2 tasks with the backend's public selection filters", async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      expect(url.pathname).toBe("/api/v1/learning/tasks");
+      expect(Object.fromEntries(url.searchParams)).toEqual({
+        type: "MULTIPLE_CHOICE",
+        domain: "PYTHON",
+        concept_public_id: "44444444-4444-4444-8444-444444444444",
+        difficulty: "BRONZE",
+        limit: "50",
+      });
+      return json([
+        {
+          public_id: taskId,
+          concept_public_id: "44444444-4444-4444-8444-444444444444",
+          concept_name: "PYTHON:variables",
+          title: "[SAMPLE:PYTHON:BRONZE:001] 야옹이 간식 세기",
+          type: "MULTIPLE_CHOICE",
+          domain: "PYTHON",
+          difficulty: "BRONZE",
+          description: "야옹이의 간식 개수를 골라 주세요.",
+          template_code: "",
+          options: { A: "야옹~ 3개", B: "야옹~ 5개" },
+          hint_text: null,
+          reward_coins: 30,
+          is_active: true,
+          completed: false,
+        },
+      ]);
+    });
+    const api = new BackendApiClient("http://localhost:8000", userId, fetcher);
+
+    await expect(
+      api.getLearningTasks({
+        type: "MULTIPLE_CHOICE",
+        domain: "PYTHON",
+        conceptPublicId: "44444444-4444-4444-8444-444444444444",
+        difficulty: "BRONZE",
+        limit: 100,
+      }),
+    ).resolves.toMatchObject([{ publicId: taskId, title: "[SAMPLE:PYTHON:BRONZE:001] 야옹이 간식 세기" }]);
+  });
+
   it("normalizes non-breaking spaces before submitting SQL code", async () => {
     const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const pathname = new URL(String(input)).pathname;

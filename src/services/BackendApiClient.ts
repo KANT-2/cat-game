@@ -19,6 +19,14 @@ export type BackendLearningTask = {
   completed: boolean;
 };
 
+export type BackendLearningTaskQuery = {
+  type?: "CODE" | "MULTIPLE_CHOICE";
+  domain?: "PYTHON" | "SQL";
+  conceptPublicId?: string;
+  difficulty?: "BRONZE" | "SILVER" | "GOLD";
+  limit?: number;
+};
+
 export type BackendConceptProficiency = {
   conceptName: string;
   attempts: number;
@@ -218,6 +226,30 @@ export class BackendApiClient {
     const payload = await this.request(`/api/v1/learning/recommendations?limit=${safeLimit}`);
     if (!Array.isArray(payload)) {
       throw new Error("Backend recommendations response is invalid");
+    }
+    return payload.map(parseTask);
+  }
+
+  /** 공개 필터 계약으로 활성 학습 과제를 조회한다. */
+  async getLearningTasks(query: BackendLearningTaskQuery = {}): Promise<BackendLearningTask[]> {
+    const parameters = new URLSearchParams();
+    if (query.type) {
+      parameters.set("type", query.type);
+    }
+    if (query.domain) {
+      parameters.set("domain", query.domain);
+    }
+    if (query.conceptPublicId) {
+      parameters.set("concept_public_id", query.conceptPublicId);
+    }
+    if (query.difficulty) {
+      parameters.set("difficulty", query.difficulty);
+    }
+    parameters.set("limit", String(Math.max(1, Math.min(50, Math.trunc(query.limit ?? 20)))));
+
+    const payload = await this.request(`/api/v1/learning/tasks?${parameters.toString()}`);
+    if (!Array.isArray(payload)) {
+      throw new Error("Backend learning tasks response is invalid");
     }
     return payload.map(parseTask);
   }
