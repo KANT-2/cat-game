@@ -1,3 +1,15 @@
+import {
+  ATTENDANCE_DAILY_COINS,
+  attendanceRewardForCycleDay,
+  attendanceStreakBonus,
+  nextAttendanceStreak,
+} from "../domain/attendance";
+import {
+  type CatConversationTopic,
+  catConversationMemorySummary,
+  catFreeConversationMemorySummary,
+  classifyLocalCatChat,
+} from "../domain/catConversation";
 import type { CatVariant } from "../domain/cats";
 import { type DailyQuestId, dailyQuestDefinitions, dailyQuestProgress } from "../domain/dailyQuest";
 import { drawGachaRewards, GACHA_DUPLICATE_CAT_COINS, type GachaDrawCount, gachaCost } from "../domain/gacha";
@@ -14,6 +26,10 @@ import { type ShopItemId, shopItemDefinitions } from "../domain/shop";
 import { codeChallengeDefinitions, gradeSumChallenge, quizDefinitions, studyTaskDefinitions } from "../domain/study";
 import type {
   ApplyRoomThemeResult,
+  AttendanceClaimResult,
+  AttendanceView,
+  CatConversationResult,
+  CatFreeConversationResult,
   CatHomeResult,
   CatMemoryClearResult,
   CatSelectionResult,
@@ -25,6 +41,7 @@ import type {
   GameClient,
   GameStateListener,
   GameStateRepository,
+  LearningResetResult,
   MoveFurnitureCommand,
   PlacementCommand,
   PlacementResult,
@@ -32,6 +49,7 @@ import type {
   QuizAnswerResult,
   QuizView,
   StudyTaskView,
+  UseConsumableResult,
 } from "./GameClient";
 
 export class LocalGameClient implements GameClient {
@@ -158,6 +176,9 @@ export class LocalGameClient implements GameClient {
     if (!item) {
       return { ok: false, reason: "item-not-found" };
     }
+    if (item.kind === "wallpaper" && (this.state.shopInventory[itemId] ?? 0) > 0) {
+      return { ok: false, reason: "already-owned" };
+    }
     if (this.state.coins < item.price) {
       return { ok: false, reason: "insufficient-coins" };
     }
@@ -187,12 +208,41 @@ export class LocalGameClient implements GameClient {
     return { ok: true, itemId, itemType: item.kind, remainingCoins: this.state.coins };
   }
 
-  applyRoomTheme(itemId: ShopItemId): ApplyRoomThemeResult {
+  useConsumable(itemId: ShopItemId, catVariant: CatVariant): UseConsumableResult {
     const item = shopItemDefinitions[itemId];
     if (!item) {
       return { ok: false, reason: "item-not-found" };
     }
-    if (item.kind === "furniture") {
+    if (item.kind !== "consumable") {
+      return { ok: false, reason: "not-consumable" };
+    }
+    if (!this.state.ownedCats.includes(catVariant)) {
+      return { ok: false, reason: "cat-not-owned" };
+    }
+    const owned = this.state.shopInventory[itemId] ?? 0;
+    if (owned <= 0) {
+      return { ok: false, reason: "not-owned" };
+    }
+    const remainingQuantity = owned - 1;
+    this.state = {
+      ...this.state,
+      shopInventory: { ...this.state.shopInventory, [itemId]: remainingQuantity },
+    };
+    this.commit();
+    return { ok: true, itemId, effect: item.effect, remainingQuantity };
+  }
+
+  applyRoomTheme(itemId: ShopItemId | null): ApplyRoomThemeResult {
+    if (itemId === null) {
+      this.state = { ...this.state, activeWallpaper: null };
+      this.commit();
+      return { ok: true, itemId: null, itemType: "wallpaper" };
+    }
+    const item = shopItemDefinitions[itemId];
+    if (!item) {
+      return { ok: false, reason: "item-not-found" };
+    }
+    if (item.kind !== "wallpaper" && item.kind !== "floor") {
       return { ok: false, reason: "not-theme" };
     }
     if ((this.state.shopInventory[itemId] ?? 0) <= 0) {
@@ -290,10 +340,10 @@ export class LocalGameClient implements GameClient {
     }
     return {
       id: quiz.id,
-      titleMessage: quiz.titleMessage,
-      summaryMessage: quiz.summaryMessage,
-      promptMessage: quiz.promptMessage,
-      choices: quiz.choices.map((choice) => ({ ...choice })),
+      title: { messageId: quiz.titleMessage },
+      summary: { messageId: quiz.summaryMessage },
+      prompt: { messageId: quiz.promptMessage },
+      choices: quiz.choices.map((choice) => ({ id: choice.id, label: { messageId: choice.labelMessage } })),
       rewardCoins: quiz.rewardCoins,
       completed: this.state.completedQuizIds.includes(quizId),
     };
@@ -357,14 +407,25 @@ export class LocalGameClient implements GameClient {
       type: task.type,
       concept: task.concept,
       difficulty: task.difficulty,
-      titleMessage: task.titleMessage,
-      summaryMessage: task.summaryMessage,
+      title: { messageId: task.titleMessage },
+      summary: { messageId: task.summaryMessage },
       rewardCoins: task.rewardCoins,
       completed:
         task.type === "quiz"
           ? this.state.completedQuizIds.includes(task.id)
           : this.state.completedCodeChallengeIds.includes(task.id),
     }));
+  }
+
+  getStudyMastery(): import("./GameClient").StudyMasteryView {
+    const tasks = this.getStudyTasks();
+    return Object.fromEntries(
+      (["variables", "conditionals", "loops", "functions", "other"] as const).map((concept) => {
+        const related = tasks.filter((task) => task.concept === concept);
+        const completed = related.filter((task) => task.completed).length;
+        return [concept, related.length === 0 ? 0 : Math.round((completed / related.length) * 100)];
+      }),
+    ) as import("./GameClient").StudyMasteryView;
   }
 
   getCodeChallenge(challengeId: string): CodeChallengeView | null {
@@ -375,31 +436,31 @@ export class LocalGameClient implements GameClient {
     return {
       id: challenge.id,
       type: challenge.type,
+      language: "python",
       concept: challenge.concept,
       difficulty: challenge.difficulty,
-      titleMessage: challenge.titleMessage,
-      summaryMessage: challenge.summaryMessage,
-      promptMessage: challenge.promptMessage,
+      title: { messageId: challenge.titleMessage },
+      summary: { messageId: challenge.summaryMessage },
+      prompt: { messageId: challenge.promptMessage },
       rewardCoins: challenge.rewardCoins,
       completed: this.state.completedCodeChallengeIds.includes(challengeId),
-      signature: challenge.signature,
-      starterBody: challenge.starterBody,
-      examplesMessage: challenge.examplesMessage,
-      hintMessages: challenge.hintMessages,
+      starterCode: challenge.starterCode,
+      examples: { messageId: challenge.examplesMessage },
+      hints: challenge.hintMessages.map((messageId) => ({ messageId })),
       bonusCoins: challenge.bonusCoins,
     };
   }
 
-  submitCodeChallenge(challengeId: string, body: string, hintsUsed: number): CodeSubmissionResult {
+  submitCodeChallenge(challengeId: string, code: string, hintsUsed: number): CodeSubmissionResult {
     this.ensureDailyState();
     const challenge = codeChallengeDefinitions[challengeId];
     if (!challenge) {
       return { ok: false, reason: "challenge-not-found" };
     }
-    if (body.trim().length === 0) {
+    if (code.trim().length === 0) {
       return { ok: false, reason: "empty-code" };
     }
-    const grade = gradeSumChallenge(body);
+    const grade = gradeSumChallenge(code);
     if (!grade.passed) {
       return { ok: true, passed: false, tests: grade.tests, firstCompletion: false, coinsAwarded: 0 };
     }
@@ -474,7 +535,56 @@ export class LocalGameClient implements GameClient {
     return { ok: true, coinsAwarded: 310 };
   }
 
-  resetLearningProgress(): void {
+  getAttendance(): AttendanceView {
+    const today = this.localDateStamp();
+    const canClaim = this.state.attendanceLastClaimDate !== today;
+    const nextStreak = nextAttendanceStreak(this.state.attendanceLastClaimDate, this.state.attendanceStreak, today);
+    const streakBonus = canClaim ? attendanceStreakBonus(nextStreak) : 0;
+    return {
+      today,
+      canClaim,
+      currentStreak: this.state.attendanceStreak,
+      nextStreak,
+      longestStreak: this.state.attendanceLongestStreak,
+      claimedDates: [...this.state.attendanceClaimedDates],
+      dailyCoins: ATTENDANCE_DAILY_COINS,
+      streakBonus,
+      totalCoins: canClaim ? ATTENDANCE_DAILY_COINS + streakBonus : 0,
+      cycleRewards: Array.from({ length: 7 }, (_, index) => attendanceRewardForCycleDay(index + 1)),
+    };
+  }
+
+  claimAttendance(): AttendanceClaimResult {
+    const attendance = this.getAttendance();
+    if (!attendance.canClaim) {
+      return { ok: false, reason: "already-claimed" };
+    }
+    const currentStreak = attendance.nextStreak;
+    const coinsAwarded = attendance.dailyCoins + attendance.streakBonus;
+    const claimedDates = [
+      ...this.state.attendanceClaimedDates.filter((date) => date !== attendance.today),
+      attendance.today,
+    ];
+    this.state = {
+      ...this.state,
+      coins: this.state.coins + coinsAwarded,
+      attendanceLastClaimDate: attendance.today,
+      attendanceStreak: currentStreak,
+      attendanceLongestStreak: Math.max(this.state.attendanceLongestStreak, currentStreak),
+      attendanceClaimedDates: claimedDates.slice(-62),
+    };
+    this.commit();
+    return {
+      ok: true,
+      claimedDate: attendance.today,
+      currentStreak,
+      dailyCoins: attendance.dailyCoins,
+      streakBonus: attendance.streakBonus,
+      coinsAwarded,
+    };
+  }
+
+  resetLearningProgress(): LearningResetResult {
     this.ensureDailyState();
     this.state = {
       ...this.state,
@@ -485,6 +595,7 @@ export class LocalGameClient implements GameClient {
       dailyBonusClaimed: false,
     };
     this.commit();
+    return { ok: true };
   }
 
   clearCatMemories(): CatMemoryClearResult {
@@ -492,6 +603,59 @@ export class LocalGameClient implements GameClient {
     this.state = { ...this.state, catMemories: {} };
     this.commit();
     return { ok: true, removed };
+  }
+
+  talkToCat(catVariant: CatVariant, topic: CatConversationTopic): CatConversationResult {
+    if (!this.state.ownedCats.includes(catVariant)) {
+      return { ok: false, reason: "cat-not-owned" };
+    }
+    const memories = [...(this.state.catMemories[catVariant] ?? []), catConversationMemorySummary(topic)];
+    this.state = {
+      ...this.state,
+      catMemories: { ...this.state.catMemories, [catVariant]: memories },
+    };
+    this.commit();
+    return { ok: true, catVariant, topic, memoryCount: memories.length };
+  }
+
+  chatWithCat(catVariant: CatVariant, userMessage: string): CatFreeConversationResult {
+    if (!this.state.ownedCats.includes(catVariant)) {
+      return { ok: false, reason: "cat-not-owned" };
+    }
+    if (!userMessage.trim()) {
+      return { ok: false, reason: "empty-message" };
+    }
+    const category = classifyLocalCatChat(userMessage);
+    let replyMessage:
+      | "cat.conversation.localCodingReply"
+      | "cat.conversation.localCompanionReply"
+      | "cat.conversation.promptGuardReply"
+      | "cat.conversation.unknownReply";
+    if (category === "CODING") {
+      replyMessage = "cat.conversation.localCodingReply";
+    } else if (category === "COMPANION") {
+      replyMessage = "cat.conversation.localCompanionReply";
+    } else if (category === "PROMPT_INJECTION") {
+      replyMessage = "cat.conversation.promptGuardReply";
+    } else {
+      replyMessage = "cat.conversation.unknownReply";
+    }
+    const remembered = category === "CODING" || category === "COMPANION";
+    let memoryCount = this.state.catMemories[catVariant]?.length ?? 0;
+    if (remembered) {
+      const memories = [...(this.state.catMemories[catVariant] ?? []), catFreeConversationMemorySummary(category)];
+      this.state = { ...this.state, catMemories: { ...this.state.catMemories, [catVariant]: memories } };
+      memoryCount = memories.length;
+      this.commit();
+    }
+    return {
+      ok: true,
+      catVariant,
+      reply: { messageId: replyMessage },
+      category,
+      memoryCount,
+      remembered,
+    };
   }
 
   updateSettings(patch: Partial<GameSettings>): GameSettings {
@@ -545,6 +709,7 @@ function cloneState(state: GameState): GameState {
     completedCodeChallengeIds: [...state.completedCodeChallengeIds],
     dailyCompletedTaskIds: [...state.dailyCompletedTaskIds],
     claimedDailyQuestIds: [...state.claimedDailyQuestIds],
+    attendanceClaimedDates: [...state.attendanceClaimedDates],
     catMemories: Object.fromEntries(
       Object.entries(state.catMemories).map(([variant, memories]) => [variant, memories ? [...memories] : memories]),
     ),

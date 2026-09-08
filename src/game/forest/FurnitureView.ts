@@ -1,18 +1,66 @@
-import { Container, type FederatedPointerEvent, Graphics, type Point } from "pixi.js";
-import { furnitureDefinitions, type PlacedFurniture, rotatedSize } from "../../domain/room";
-import { furniturePresentation } from "../presentation/furniturePresentation";
+import { Container, type FederatedPointerEvent, type Point, Sprite } from "pixi.js";
+import { type FurnitureKind, furnitureDefinitions, type PlacedFurniture, rotatedSize } from "../../domain/room";
+import type { ShopItemId } from "../../domain/shop";
+import type { BeltGrid } from "../belt";
+import { resolveFurnitureShadow } from "../presentation/furnitureShadow";
+import type { AnchoredTexture } from "./ForestArt";
 
 type FurnitureViewOptions = {
   item: PlacedFurniture;
+  art: AnchoredTexture;
+  grid: BeltGrid;
   project: (x: number, y: number) => Point;
   onTap: (item: PlacedFurniture) => void;
 };
 
+const FURNITURE_DISPLAY_SIZE: Record<FurnitureKind, { width: number; height: number }> = {
+  sofa: { width: 270, height: 66 },
+  desk: { width: 235, height: 75 },
+  plant: { width: 180, height: 113 },
+  catTree: { width: 160, height: 202 },
+  bed: { width: 260, height: 76 },
+  rug: { width: 285, height: 92 },
+  hideout: { width: 270, height: 165 },
+  scratcher: { width: 190, height: 180 },
+  litterBox: { width: 270, height: 150 },
+};
+
+const SHOP_FURNITURE_DISPLAY_SIZE: Partial<Record<ShopItemId, { width: number; height: number }>> = {
+  "furniture.sofa": { width: 320, height: 212 },
+  "furniture.table": { width: 235, height: 75 },
+  "furniture.catTower": { width: 160, height: 240 },
+  "furniture.bed": { width: 260, height: 76 },
+  "furniture.desk": { width: 270, height: 156 },
+  "furniture.premiumTower": { width: 215, height: 323 },
+  "furniture.forest.bench-2": { width: 320, height: 213 },
+  "decor.plant": { width: 180, height: 113 },
+  "decor.reed-clump": { width: 185, height: 140 },
+  "decor.rock-angular": { width: 115, height: 172 },
+  "decor.rock-round": { width: 210, height: 112 },
+  "decor.fallen-log": { width: 300, height: 131 },
+  "decor.cardboard-box": { width: 150, height: 136 },
+  "decor.trash-bag": { width: 120, height: 128 },
+  "decor.sealed-box": { width: 130, height: 124 },
+  "decor.plastic-crate": { width: 140, height: 109 },
+  "decor.alley-food-bowl": { width: 120, height: 80 },
+  "decor.alley-water-bowl": { width: 120, height: 82 },
+  "decor.crushed-can": { width: 75, height: 58 },
+  "decor.old-brick": { width: 90, height: 67 },
+  "decor.paper-ball": { width: 50, height: 50 },
+  "decor.plastic-bottle": { width: 80, height: 66 },
+  "decor.newspaper-stack": { width: 100, height: 70 },
+  "decor.litter-scoop": { width: 80, height: 79 },
+  "decor.yarn-ball": { width: 65, height: 44 },
+  "decor.teaser-set": { width: 140, height: 96 },
+  "decor.fur-pile": { width: 90, height: 77 },
+  "decor.room-water-bowl": { width: 120, height: 76 },
+  "decor.room-food-bowl": { width: 120, height: 78 },
+};
+
 export class FurnitureView extends Container {
-  constructor({ item, project, onTap }: FurnitureViewOptions) {
+  constructor({ item, art, grid, project, onTap }: FurnitureViewOptions) {
     super({ label: `furniture:${item.id}` });
     const definition = furnitureDefinitions[item.kind];
-    const presentation = furniturePresentation[item.kind];
     const size = rotatedSize(definition, item.rotation);
     const groundPoint = project(item.x + size.width / 2, item.y + size.height);
     this.position.set(groundPoint.x, groundPoint.y - 17);
@@ -20,90 +68,43 @@ export class FurnitureView extends Container {
     this.eventMode = "static";
     this.cursor = "pointer";
 
-    const shadowWidth = Math.max(42, size.width * 38);
-    this.addChild(new Graphics().ellipse(0, 17, shadowWidth, 17).fill({ color: 0x284326, alpha: 0.22 }));
+    const explicitDisplaySize = item.shopItemId ? SHOP_FURNITURE_DISPLAY_SIZE[item.shopItemId] : undefined;
+    const displaySize = explicitDisplaySize ?? FURNITURE_DISPLAY_SIZE[item.kind];
+    const depth = Math.max(0, Math.min(1, (groundPoint.y - grid.farY) / (grid.nearY - grid.farY)));
+    const perspectiveScale = 0.78 + depth * 0.22;
+    const fitScale = explicitDisplaySize
+      ? 1
+      : Math.min(displaySize.width / art.texture.width, displaySize.height / art.texture.height);
+    const displayWidth = (explicitDisplaySize ? displaySize.width : art.texture.width * fitScale) * perspectiveScale;
+    const displayHeight = (explicitDisplaySize ? displaySize.height : art.texture.height * fitScale) * perspectiveScale;
+    const shadow = resolveFurnitureShadow(item);
+    if (shadow) {
+      const shadowSprite = new Sprite(art.texture);
+      shadowSprite.anchor.set(art.anchor.x, art.anchor.y);
+      shadowSprite.width = displayWidth * shadow.scaleX;
+      shadowSprite.height = displayHeight * shadow.scaleY;
+      shadowSprite.position.set(0, shadow.offsetY);
+      shadowSprite.tint = 0x182d1d;
+      shadowSprite.alpha = shadow.alpha;
+      shadowSprite.eventMode = "none";
+      if (item.rotation === 1) {
+        shadowSprite.scale.x *= -1;
+      }
+      this.addChild(shadowSprite);
+    }
 
-    if (item.kind === "plant") {
-      this.addChild(drawPlant(presentation.color, presentation.accent));
+    const sprite = new Sprite(art.texture);
+    sprite.anchor.set(art.anchor.x, art.anchor.y);
+    sprite.width = displayWidth;
+    sprite.height = displayHeight;
+    if (item.rotation === 1) {
+      sprite.scale.x *= -1;
     }
-    if (item.kind === "catTree") {
-      this.addChild(drawCatTree(presentation.color, presentation.accent));
-    }
-    if (item.kind === "bed") {
-      this.addChild(drawBed(presentation.color, presentation.accent));
-    }
-    if (item.kind === "desk") {
-      this.addChild(drawDesk(presentation.color, presentation.accent));
-    }
-    if (item.kind === "sofa") {
-      this.addChild(drawSofa(presentation.color, presentation.accent));
-    }
+    this.addChild(sprite);
 
     this.on("pointertap", (event: FederatedPointerEvent) => {
       event.stopPropagation();
       onTap(item);
     });
   }
-}
-
-function drawPlant(color: number, accent: number): Graphics {
-  return new Graphics()
-    .poly([-17, -4, 17, -4, 11, 28, -11, 28])
-    .fill(accent)
-    .stroke({ color: 0x513725, width: 3 })
-    .ellipse(-9, -20, 12, 25)
-    .ellipse(10, -25, 13, 30)
-    .ellipse(0, -39, 12, 27)
-    .fill(color)
-    .stroke({ color: 0x36573a, width: 2 });
-}
-
-function drawCatTree(color: number, accent: number): Graphics {
-  return new Graphics()
-    .rect(-35, -75, 12, 89)
-    .rect(25, -112, 12, 126)
-    .fill(color)
-    .ellipse(-29, -75, 44, 13)
-    .ellipse(31, -112, 46, 14)
-    .fill(accent)
-    .stroke({ color: 0x68452e, width: 3 });
-}
-
-function drawBed(color: number, accent: number): Graphics {
-  return new Graphics()
-    .roundRect(-105, -43, 210, 75, 14)
-    .fill(color)
-    .stroke({ color: 0x68452e, width: 4 })
-    .roundRect(-86, -34, 65, 32, 12)
-    .fill(0xf8ead1)
-    .roundRect(-12, -30, 98, 51, 12)
-    .fill(accent);
-}
-
-function drawDesk(color: number, accent: number): Graphics {
-  return new Graphics()
-    .roundRect(-74, -51, 148, 38, 7)
-    .fill(accent)
-    .stroke({ color: 0x5d3b28, width: 4 })
-    .rect(-62, -15, 10, 45)
-    .rect(52, -15, 10, 45)
-    .fill(color)
-    .roundRect(-24, -90, 51, 36, 5)
-    .fill(0x50656a)
-    .stroke({ color: 0x3d3028, width: 4 });
-}
-
-function drawSofa(color: number, accent: number): Graphics {
-  return new Graphics()
-    .roundRect(-100, -52, 200, 76, 18)
-    .fill(color)
-    .stroke({ color: 0x5d3b28, width: 4 })
-    .roundRect(-94, -83, 188, 49, 18)
-    .fill(accent)
-    .stroke({ color: 0x5d3b28, width: 4 })
-    .moveTo(-30, -48)
-    .lineTo(-30, 18)
-    .moveTo(35, -48)
-    .lineTo(35, 18)
-    .stroke({ color: 0x705039, width: 3, alpha: 0.7 });
 }

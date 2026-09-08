@@ -48,7 +48,7 @@ if (appManifest.errors?.length) {
 await context.setOffline(true);
 await page.reload({ waitUntil: "domcontentloaded" });
 await page.locator("canvas").waitFor({ state: "visible" });
-await page.waitForTimeout(600);
+await page.waitForTimeout(6000);
 await page.screenshot({ path: screenshotPath });
 
 await browser.close();

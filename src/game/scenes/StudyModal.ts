@@ -1,42 +1,48 @@
-import { Container, Graphics, Sprite, Text } from "pixi.js";
+import { Container, Graphics, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
 import type {
+  Awaitable,
   CodeChallengeView,
   CodeSubmissionResult,
+  GameText,
   QuizAnswerResult,
   QuizView,
+  StudyMasteryView,
   StudyTaskView,
 } from "../../core/GameClient";
 import type { StudyConcept, StudyDifficulty, StudyTaskType } from "../../domain/study";
 import { BackButton } from "../components/BackButton";
 import { CanvasButton } from "../components/CanvasButton";
 import { createCozyPageBackground, createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
+import { createCoinAmount } from "../components/CurrencyBar";
 import { layoutToFillViewport } from "../components/fullscreenLayout";
-import { applySmoothTextureSampling } from "../components/smoothSprite";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
+import type { CodeEditorOverlay, CodeEditorOverlayFactory } from "../ports/CodeEditorOverlay";
+import { formatStudyDetails, summarizeStudyText } from "../presentation/studyPresentation";
 
 type FilterValue<T extends string> = "all" | T;
 type FilterSelectId = "type" | "concept" | "difficulty";
+type FeedbackTest = { label: string; passed: boolean };
 
 type StudyModalOptions = {
   tasks: StudyTaskView[];
+  getMastery: () => StudyMasteryView;
   getQuiz: (quizId: string) => QuizView | null;
   getCodeChallenge: (challengeId: string) => CodeChallengeView | null;
-  onAnswer: (quizId: string, choiceId: string) => QuizAnswerResult;
-  onSubmitCode: (challengeId: string, body: string, hintsUsed: number) => CodeSubmissionResult;
+  onAnswer: (quizId: string, choiceId: string) => Awaitable<QuizAnswerResult>;
+  onSubmitCode: (challengeId: string, code: string, hintsUsed: number) => Awaitable<CodeSubmissionResult>;
   onClose: () => void;
   backIcon: string;
   coinIcon: string;
+  codeEditorFactory: CodeEditorOverlayFactory;
 };
 
-const conceptMessages: Record<
-  StudyConcept,
-  "study.conceptVariables" | "study.conceptConditionals" | "study.conceptLoops" | "study.conceptFunctions"
-> = {
+const conceptMessages: Record<StudyConcept, MessageId> = {
   variables: "study.conceptVariables",
   conditionals: "study.conceptConditionals",
   loops: "study.conceptLoops",
   functions: "study.conceptFunctions",
+  other: "study.conceptOther",
 };
 
 const difficultyMessages: Record<
@@ -53,6 +59,7 @@ export class StudyModal extends Container {
   private readonly background = new Graphics();
   private readonly page = new Container();
   private readonly body = new Container();
+  private readonly feedbackLayer = new Container();
   private readonly options: StudyModalOptions;
   private tasks: StudyTaskView[];
   private typeFilter: FilterValue<StudyTaskType> = "all";
@@ -60,8 +67,9 @@ export class StudyModal extends Container {
   private difficultyFilter: FilterValue<StudyDifficulty> = "all";
   private openFilterSelect: FilterSelectId | null = null;
   private taskPage = 0;
-  private codeEditor: CanvasCodeEditor | null = null;
+  private codeEditor: CodeEditorOverlay | null = null;
   private hintsUsed = 0;
+  private submissionPending = false;
 
   constructor(options: StudyModalOptions) {
     super();
@@ -70,13 +78,14 @@ export class StudyModal extends Container {
     this.background.eventMode = "static";
     this.body.sortableChildren = true;
     this.addChild(this.background, this.page);
-    this.page.addChild(this.body);
+    this.page.addChild(this.body, this.feedbackLayer);
     this.renderDashboard();
   }
 
   layout(width: number, height: number): void {
     this.background.clear().rect(0, 0, width, height).fill(0xf2d7aa);
     layoutToFillViewport(this.page, width, height);
+    this.layoutCodeEditor();
   }
 
   private renderDashboard(): void {
@@ -89,12 +98,15 @@ export class StudyModal extends Container {
   }
 
   private drawBaseHeader(titleValue: string, subtitleValue: string, onBack: () => void): void {
-    this.body.addChild(createCozyPageBackground(BASE_WIDTH, BASE_HEIGHT, 790));
+    this.body.addChild(createCozyPageBackground(BASE_WIDTH, BASE_HEIGHT));
     const back = new BackButton({ iconSrc: this.options.backIcon, size: 72, onPress: onBack });
     back.position.set(28, 24);
-    const title = new Text({ text: titleValue, style: textStyle(34, 0x3f281c, "800") });
+    const title = new Text({ text: summarizeStudyText(titleValue, 44), style: textStyle(34, 0x3f281c, "800") });
     title.position.set(124, 24);
-    const subtitle = new Text({ text: subtitleValue, style: textStyle(17, 0x74523d, "600") });
+    const subtitle = new Text({
+      text: summarizeStudyText(subtitleValue, 78),
+      style: textStyle(17, 0x74523d, "600"),
+    });
     subtitle.position.set(126, 66);
     const ornament = createTitleOrnament(126, 93, 190);
     this.body.addChild(back, title, subtitle, ornament);
@@ -105,11 +117,10 @@ export class StudyModal extends Container {
     const title = new Text({ text: message("study.masteryTitle"), style: textStyle(21, 0x493022, "800") });
     title.position.set(78, 142);
     this.body.addChild(panel, title);
-    (["variables", "conditionals", "loops", "functions"] as const).forEach((concept, index) => {
-      const related = this.tasks.filter((task) => task.concept === concept);
-      const completed = related.filter((task) => task.completed).length;
-      const mastery = related.length === 0 ? 0 : Math.round((completed / related.length) * 100);
-      const y = 185 + index * 38;
+    const masteryByConcept = this.options.getMastery();
+    (["variables", "conditionals", "loops", "functions", "other"] as const).forEach((concept, index) => {
+      const mastery = masteryByConcept[concept];
+      const y = 180 + index * 32;
       const label = new Text({ text: message(conceptMessages[concept]), style: textStyle(15, 0x4a3023, "700") });
       label.position.set(78, y - 4);
       const track = new Graphics().roundRect(205, y, 188, 14, 7).fill(0xe4ccb0);
@@ -125,6 +136,12 @@ export class StudyModal extends Container {
       value.position.set(438, y - 3);
       this.body.addChild(label, track, value);
     });
+    const notice = new Text({
+      text: message("study.masteryNotice"),
+      style: textStyle(12, 0x85634d, "600"),
+    });
+    notice.position.set(78, 340);
+    this.body.addChild(notice);
   }
 
   private buildRecommendation(): void {
@@ -136,36 +153,56 @@ export class StudyModal extends Container {
     const heading = new Text({ text: message("study.recommendedTitle"), style: textStyle(20, 0x5a3725, "800") });
     heading.position.set(540, 143);
     const badge = new Graphics().roundRect(775, 140, 150, 30, 11).fill(0xd9783c);
-    const badgeText = new Text({ text: message("study.recommendedBadge"), style: textStyle(12, 0xffffff, "800") });
+    const completedCount = this.tasks.filter((task) => task.completed).length;
+    const badgeText = new Text({
+      text: message("study.progressBadge", { completed: completedCount, total: this.tasks.length }),
+      style: textStyle(12, 0xffffff, "800"),
+    });
     badgeText.anchor.set(0.5);
     badgeText.position.set(850, 155);
-    const title = new Text({ text: message(recommended.titleMessage), style: textStyle(27, 0x3f281c, "800") });
+    const title = new Text({
+      text: summarizeStudyText(resolveGameText(recommended.title), 36),
+      style: textStyle(25, 0x3f281c, "800"),
+    });
     title.position.set(540, 192);
-    const summary = new Text({ text: message(recommended.summaryMessage), style: textStyle(16, 0x6e4e3a, "600") });
+    const summary = new Text({
+      text: summarizeStudyText(resolveGameText(recommended.summary), 72),
+      style: { ...textStyle(16, 0x6e4e3a, "600"), wordWrap: true, wordWrapWidth: 690, lineHeight: 23 },
+    });
     summary.position.set(540, 235);
     const metadata = new Text({
       text: `${message(conceptMessages[recommended.concept])}  ·  ${message(difficultyMessages[recommended.difficulty])}`,
       style: textStyle(15, 0x7b5336, "700"),
     });
     metadata.position.set(540, 290);
-    const reward = this.createCoinReward(recommended.rewardCoins, 15);
-    reward.position.set(540 + metadata.width + 18, 287);
+    const reward = recommended.rewardCoins > 0 ? this.createCoinReward(recommended.rewardCoins, 15) : null;
+    reward?.position.set(540 + metadata.width + 18, 299);
     const start = new CanvasButton({
-      label: message("study.quickStart"),
+      label: message(recommended.completed ? "study.reviewTask" : "study.quickStart"),
       width: 210,
       height: 56,
       color: 0xe99b45,
       onPress: () => this.openTask(recommended),
     });
     start.position.set(1290, 270);
-    this.body.addChild(panel, heading, badge, badgeText, title, summary, metadata, reward, start);
+    this.body.addChild(panel, heading, badge, badgeText, title, summary, metadata);
+    if (reward) {
+      this.body.addChild(reward);
+    }
+    this.body.addChild(start);
   }
 
   private buildFilters(): void {
     const panel = createCozyPanel(45, 390, 1510, 112, { fill: 0xfff6e5, border: 0xb68a61, radius: 18 });
     const title = new Text({ text: message("study.filterTitle"), style: textStyle(20, 0x493022, "800") });
     title.position.set(72, 425);
-    this.body.addChild(panel, title);
+    const resultCount = new Text({
+      text: message("study.filteredCount", { count: this.filteredTasks().length }),
+      style: textStyle(15, 0x76533c, "800"),
+    });
+    resultCount.anchor.set(1, 0.5);
+    resultCount.position.set(1515, 457);
+    this.body.addChild(panel, title, resultCount);
     this.addFilterSelect(
       "type",
       230,
@@ -195,6 +232,7 @@ export class StudyModal extends Container {
         ["conditionals", "study.filterConditionals"],
         ["loops", "study.filterLoops"],
         ["functions", "study.filterFunctions"],
+        ["other", "study.conceptOther"],
       ],
       this.conceptFilter,
       (value) => {
@@ -280,12 +318,7 @@ export class StudyModal extends Container {
   }
 
   private buildTaskList(): void {
-    const filtered = this.tasks.filter(
-      (task) =>
-        (this.typeFilter === "all" || task.type === this.typeFilter) &&
-        (this.conceptFilter === "all" || task.concept === this.conceptFilter) &&
-        (this.difficultyFilter === "all" || task.difficulty === this.difficultyFilter),
-    );
+    const filtered = this.filteredTasks();
     const pageSize = 2;
     const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
     this.taskPage = Math.min(this.taskPage, pageCount - 1);
@@ -307,26 +340,36 @@ export class StudyModal extends Container {
       });
       type.anchor.set(0.5);
       type.position.set(x + 76, y + 37);
-      const title = new Text({ text: message(task.titleMessage), style: textStyle(22, 0x493022, "800") });
+      const title = new Text({
+        text: summarizeStudyText(resolveGameText(task.title), 34),
+        style: textStyle(21, 0x493022, "800"),
+      });
       title.position.set(x + 150, y + 19);
-      const summary = new Text({ text: message(task.summaryMessage), style: textStyle(15, 0x76533c, "600") });
+      const summary = new Text({
+        text: summarizeStudyText(resolveGameText(task.summary), 68),
+        style: { ...textStyle(15, 0x76533c, "600"), wordWrap: true, wordWrapWidth: 650, lineHeight: 21 },
+      });
       summary.position.set(x + 24, y + 67);
       const meta = new Text({
         text: `${message(conceptMessages[task.concept])} · ${message(difficultyMessages[task.difficulty])}`,
         style: textStyle(14, 0x876147, "700"),
       });
       meta.position.set(x + 24, y + 118);
-      const reward = this.createCoinReward(task.rewardCoins, 14);
-      reward.position.set(x + 24 + meta.width + 16, y + 115);
+      const reward = task.rewardCoins > 0 ? this.createCoinReward(task.rewardCoins, 14) : null;
+      reward?.position.set(x + 24 + meta.width + 16, y + 127);
       const start = new CanvasButton({
-        label: message(task.completed ? "study.taskCompleted" : "study.taskStart"),
+        label: message(task.completed ? "study.reviewTask" : "study.taskStart"),
         width: 145,
         height: 44,
         color: task.completed ? 0xa9b699 : 0xe8a451,
         onPress: () => this.openTask(task),
       });
       start.position.set(x + 560, y + 112);
-      this.body.addChild(card, typeBadge, type, title, summary, meta, reward, start);
+      this.body.addChild(card, typeBadge, type, title, summary, meta);
+      if (reward) {
+        this.body.addChild(reward);
+      }
+      this.body.addChild(start);
     });
     if (filtered.length === 0) {
       const empty = new Text({ text: message("study.noTasks"), style: textStyle(19, 0x76533c, "700") });
@@ -371,6 +414,15 @@ export class StudyModal extends Container {
     this.body.addChild(previous, page, next);
   }
 
+  private filteredTasks(): StudyTaskView[] {
+    return this.tasks.filter(
+      (task) =>
+        (this.typeFilter === "all" || task.type === this.typeFilter) &&
+        (this.conceptFilter === "all" || task.concept === this.conceptFilter) &&
+        (this.difficultyFilter === "all" || task.difficulty === this.difficultyFilter),
+    );
+  }
+
   private openTask(task: StudyTaskView): void {
     if (task.type === "quiz") {
       const quiz = this.options.getQuiz(task.id);
@@ -387,52 +439,77 @@ export class StudyModal extends Container {
 
   private renderQuiz(quiz: QuizView): void {
     this.clearBody();
-    this.drawBaseHeader(message(quiz.titleMessage), message(quiz.summaryMessage), () => this.renderDashboard());
-    const problem = createCozyPanel(70, 125, 1460, 700, { fill: 0xfff9ec, border: 0xb77a4f, radius: 28 });
-    const promptValue = message(quiz.promptMessage);
-    const [firstLine, ...codeLines] = promptValue.split("\n");
+    this.drawBaseHeader(resolveGameText(quiz.title), resolveGameText(quiz.summary), () => this.renderDashboard());
+    const problem = createCozyPanel(70, 115, 1460, 750, { fill: 0xfff9ec, border: 0xb77a4f, radius: 28 });
+    const promptValue = resolveGameText(quiz.prompt);
+    const [firstLine, ...codeLines] = promptValue.split(/\r?\n/);
     const prompt = new Text({ text: firstLine, style: textStyle(23, 0x493022, "800") });
-    prompt.position.set(115, 175);
+    prompt.position.set(115, 160);
     const codeBox = new Graphics()
-      .roundRect(115, 235, 1370, 175, 16)
+      .roundRect(115, 220, 1370, 180, 16)
       .fill(0x252b35)
       .stroke({ color: 0x5c6674, width: 2 });
     const code = new Text({
       text: codeLines.join("\n").trim(),
-      style: { ...textStyle(21, 0xdce99a, "600"), fontFamily: "Consolas, monospace", lineHeight: 31 },
+      style: {
+        ...textStyle(20, 0xdce99a, "600"),
+        fontFamily: "Consolas, monospace",
+        lineHeight: 30,
+        wordWrap: true,
+        wordWrapWidth: 1310,
+      },
     });
-    code.position.set(145, 260);
+    code.position.set(145, 245);
     const choicesTitle = new Text({ text: message("study.choicesTitle"), style: textStyle(20, 0x493022, "800") });
-    choicesTitle.position.set(115, 445);
-    const reward = new Graphics()
-      .roundRect(1320, 165, 125, 54, 16)
-      .fill(0xfff0cc)
-      .stroke({ color: 0xd39a55, width: 2 });
-    const rewardIndicator = this.createCoinReward(quiz.rewardCoins, 17);
-    rewardIndicator.position.set(1320 + (125 - rewardIndicator.width) / 2, 180);
-    this.body.addChild(problem, prompt, codeBox, code, choicesTitle, reward, rewardIndicator);
+    choicesTitle.position.set(115, 425);
+    this.body.addChild(problem, prompt, codeBox, code, choicesTitle);
+    if (quiz.rewardCoins > 0) {
+      const reward = this.createCoinRewardBadge(quiz.rewardCoins, 125);
+      reward.position.set(1320, 145);
+      this.body.addChild(reward);
+    }
+    const choiceGap = 12;
+    const choiceAreaHeight = 370;
+    const choiceCount = Math.max(1, quiz.choices.length);
+    const choiceHeight = Math.min(68, Math.floor((choiceAreaHeight - choiceGap * (choiceCount - 1)) / choiceCount));
     quiz.choices.forEach((choice, index) => {
       const button = new CanvasButton({
-        label: `${String.fromCharCode(65 + index)}   ${message(choice.labelMessage)}`,
+        label: `${String.fromCharCode(65 + index)}   ${resolveGameText(choice.label)}`,
         width: 1370,
-        height: 68,
+        height: choiceHeight,
+        fontSize: 16,
         color: 0xffefd2,
         borderColor: 0xc18a5b,
         onPress: () => this.answerQuiz(quiz, choice.id),
       });
-      button.position.set(115, 490 + index * 88);
+      button.position.set(115, 465 + index * (choiceHeight + choiceGap));
       this.body.addChild(button);
     });
   }
 
-  private answerQuiz(quiz: QuizView, choiceId: string): void {
-    const result = this.options.onAnswer(quiz.id, choiceId);
+  private async answerQuiz(quiz: QuizView, choiceId: string): Promise<void> {
+    if (this.submissionPending) {
+      return;
+    }
+    this.submissionPending = true;
+    let result: QuizAnswerResult;
+    try {
+      result = await this.options.onAnswer(quiz.id, choiceId);
+    } catch (error) {
+      console.error("Quiz submission failed", error);
+      this.showFeedback(false, message("study.answerFailed"), [], () => this.renderQuiz(quiz));
+      return;
+    } finally {
+      this.submissionPending = false;
+    }
     if (!result.ok) {
       this.showFeedback(false, message("study.answerFailed"), [], () => this.renderQuiz(quiz));
       return;
     }
     let detail = message(result.feedbackMessage);
-    if (result.correct && result.firstCompletion) {
+    if (result.correct && result.serverAuthoritative) {
+      detail = message("study.serverGradingComplete", { feedback: message(result.feedbackMessage) });
+    } else if (result.correct && result.firstCompletion) {
       detail = message("study.rewardAwarded", {
         feedback: message(result.feedbackMessage),
         amount: result.coinsAwarded,
@@ -452,10 +529,15 @@ export class StudyModal extends Container {
     });
   }
 
-  private renderCode(challenge: CodeChallengeView): void {
+  private renderCode(
+    challenge: CodeChallengeView,
+    draftCode = challenge.starterCode,
+    initialHintsUsed = 0,
+    restored = false,
+  ): void {
     this.clearBody();
-    this.hintsUsed = 0;
-    this.drawBaseHeader(message(challenge.titleMessage), message(challenge.summaryMessage), () =>
+    this.hintsUsed = initialHintsUsed;
+    this.drawBaseHeader(resolveGameText(challenge.title), resolveGameText(challenge.summary), () =>
       this.renderDashboard(),
     );
     const problemPanel = createCozyPanel(55, 120, 500, 720, { fill: 0xfff8e9, border: 0xb77a4f, radius: 28 });
@@ -463,65 +545,111 @@ export class StudyModal extends Container {
     const problemTitle = new Text({ text: message("study.problemTitle"), style: textStyle(24, 0x493022, "800") });
     problemTitle.position.set(92, 155);
     const prompt = new Text({
-      text: message(challenge.promptMessage),
-      style: { ...textStyle(18, 0x5f4434, "600"), wordWrap: true, wordWrapWidth: 420, lineHeight: 29 },
+      text: formatStudyDetails(resolveGameText(challenge.prompt)),
+      style: { ...textStyle(16, 0x5f4434, "600"), wordWrap: true, wordWrapWidth: 420, lineHeight: 23 },
     });
-    prompt.position.set(92, 205);
+    prompt.position.set(92, 198);
+    const examplesTitleY = Math.max(350, prompt.y + prompt.height + 18);
     const examplesTitle = new Text({ text: message("study.examplesTitle"), style: textStyle(20, 0x493022, "800") });
-    examplesTitle.position.set(92, 315);
-    const examplesBox = new Graphics().roundRect(92, 355, 425, 120, 16).fill(0xefe2ce);
+    examplesTitle.position.set(92, examplesTitleY);
+    const examplesBoxY = examplesTitleY + 38;
+    const examplesBox = new Graphics().roundRect(92, examplesBoxY, 425, 92, 16).fill(0xefe2ce);
     const examples = new Text({
-      text: message(challenge.examplesMessage),
-      style: { ...textStyle(17, 0x52382a, "700"), lineHeight: 36 },
+      text: resolveGameText(challenge.examples),
+      style: { ...textStyle(16, 0x52382a, "700"), lineHeight: 27, wordWrap: true, wordWrapWidth: 365 },
     });
-    examples.position.set(118, 377);
+    examples.position.set(118, examplesBoxY + 22);
+    const hintNoticeY = examplesBoxY + 112;
     const hintNotice = new Text({
       text: message("study.hintRewardNotice"),
       style: { ...textStyle(15, 0x77523d, "600"), wordWrap: true, wordWrapWidth: 420, lineHeight: 23 },
     });
-    hintNotice.position.set(92, 510);
+    hintNotice.position.set(92, hintNoticeY);
     const hintText = new Text({
-      text: "",
+      text: this.formatRevealedHints(challenge, initialHintsUsed),
       style: { ...textStyle(16, 0x4f663d, "700"), wordWrap: true, wordWrapWidth: 420, lineHeight: 25 },
     });
-    hintText.position.set(92, 650);
-    const revealedHints = new Set<number>();
-    const hintButtons = challenge.hintMessages.map((hintMessage, index) => {
+    const hintButtonY = hintNoticeY + 67;
+    hintText.position.set(92, hintButtonY + 70);
+    const revealedHints = new Set<number>(Array.from({ length: initialHintsUsed }, (_, index) => index));
+    const hintButtons = challenge.hints.map((_, index) => {
       const hintButton = new CanvasButton({
-        label: message("study.showHint", { step: index + 1, total: challenge.hintMessages.length }),
+        label: message("study.showHint", { step: index + 1, total: challenge.hints.length }),
         width: 125,
         height: 52,
         color: 0xa8bb84,
         onPress: () => {
-          revealedHints.add(index);
+          for (let hintIndex = 0; hintIndex <= index; hintIndex += 1) {
+            revealedHints.add(hintIndex);
+          }
           this.hintsUsed = revealedHints.size;
-          hintText.text = `${message("study.showHint", {
-            step: index + 1,
-            total: challenge.hintMessages.length,
-          })}\n${message(hintMessage)}`;
+          hintText.text = this.formatRevealedHints(challenge, this.hintsUsed);
         },
       });
-      hintButton.position.set(92 + index * 140, 575);
+      hintButton.position.set(92 + index * 140, hintButtonY);
       return hintButton;
     });
-    const editorTitle = new Text({ text: message("study.editorTitle"), style: textStyle(24, 0x493022, "800") });
+    const editorTitle = new Text({
+      text: message(challenge.language === "sql" ? "study.sqlEditorTitle" : "study.editorTitle"),
+      style: textStyle(24, 0x493022, "800"),
+    });
     editorTitle.position.set(625, 155);
-    const editorHelp = new Text({ text: message("study.editorHelp"), style: textStyle(15, 0x76533c, "600") });
+    const editorHelp = new Text({
+      text: message(challenge.language === "sql" ? "study.sqlEditorHelp" : "study.editorHelp"),
+      style: { ...textStyle(15, 0x76533c, "600"), wordWrap: true, wordWrapWidth: 470 },
+    });
     editorHelp.position.set(625, 193);
-    const reward = new Graphics()
-      .roundRect(1370, 150, 130, 54, 16)
-      .fill(0xfff0cc)
-      .stroke({ color: 0xd39a55, width: 2 });
-    const rewardIndicator = this.createCoinReward(challenge.rewardCoins, 17);
-    rewardIndicator.position.set(1370 + (130 - rewardIndicator.width) / 2, 165);
-    this.codeEditor = new CanvasCodeEditor(challenge.signature, challenge.starterBody);
-    this.codeEditor.position.set(625, 235);
+    const editorStatus = new Text({
+      text: message(restored ? "study.draftRestored" : "study.editorIdle"),
+      style: textStyle(14, 0x76533c, "700"),
+    });
+    editorStatus.position.set(625, 708);
+    this.codeEditor = this.options.codeEditorFactory.create({
+      language: challenge.language,
+      initialValue: draftCode,
+      ariaLabel: message("study.codeEditorAriaLabel"),
+      onFocusChange: (focused) => {
+        if (!editorStatus.destroyed) {
+          editorStatus.text = message(focused ? "study.editorFocused" : "study.editorIdle");
+        }
+      },
+      onLoadError: () => {
+        if (!editorStatus.destroyed) {
+          editorStatus.text = message("study.editorUnavailable");
+        }
+      },
+    });
+    this.layoutCodeEditor();
+    const reset = new CanvasButton({
+      label: message("study.resetCode"),
+      width: 112,
+      height: 42,
+      fontSize: 14,
+      color: 0xd9c5aa,
+      onPress: () => {
+        this.codeEditor?.setValue(challenge.starterCode);
+        this.codeEditor?.focus();
+        editorStatus.text = message("study.codeReset");
+      },
+    });
+    reset.position.set(1115, 174);
+    const paste = new CanvasButton({
+      label: message("study.pasteCode"),
+      width: 112,
+      height: 42,
+      fontSize: 14,
+      color: 0xa8bb84,
+      onPress: () => {
+        void this.pasteIntoCodeEditor(editorStatus);
+      },
+    });
+    paste.position.set(1240, 174);
     const submit = new CanvasButton({
       label: message("study.runTests"),
       width: 210,
       height: 62,
       color: 0xe99b45,
-      onPress: () => this.submitCode(challenge),
+      onPress: () => this.submitCode(challenge, editorStatus),
     });
     submit.position.set(1275, 750);
     this.body.addChild(
@@ -537,30 +665,74 @@ export class StudyModal extends Container {
       hintText,
       editorTitle,
       editorHelp,
-      reward,
-      rewardIndicator,
-      this.codeEditor,
+      reset,
+      paste,
+      editorStatus,
       submit,
     );
+    if (challenge.rewardCoins > 0) {
+      const reward = this.createCoinRewardBadge(challenge.rewardCoins, 130);
+      reward.position.set(1370, 150);
+      this.body.addChild(reward);
+    }
   }
 
-  private submitCode(challenge: CodeChallengeView): void {
-    const body = this.codeEditor?.value ?? "";
-    const result = this.options.onSubmitCode(challenge.id, body, this.hintsUsed);
-    if (!result.ok) {
-      this.showFeedback(false, message("study.emptyCode"), [], () => this.renderCode(challenge));
+  private async pasteIntoCodeEditor(status: Text): Promise<void> {
+    try {
+      const value = await navigator.clipboard.readText();
+      if (!value) {
+        status.text = message("study.clipboardEmpty");
+        return;
+      }
+      this.codeEditor?.append(value);
+      status.text = message("study.pasteComplete");
+    } catch (error) {
+      console.warn("Study editor clipboard read failed", error);
+      status.text = message("study.clipboardUnavailable");
+    }
+  }
+
+  private async submitCode(challenge: CodeChallengeView, status: Text): Promise<void> {
+    if (this.submissionPending) {
       return;
     }
-    const detail = result.passed
-      ? `${message("study.gradingPassed")}\n${result.firstCompletion ? message("study.gradingReward", { amount: result.coinsAwarded }) : message("study.taskCompleted")}`
-      : message("study.gradingFailed");
-    const testRows = result.tests.map((test) =>
-      message("study.testCase", {
+    const code = this.codeEditor?.getValue() ?? "";
+    this.submissionPending = true;
+    status.text = message("study.gradingInProgress");
+    let result: CodeSubmissionResult;
+    try {
+      result = await this.options.onSubmitCode(challenge.id, code, this.hintsUsed);
+    } catch (error) {
+      console.error("Code submission failed", error);
+      this.showFeedback(false, message("study.serverGradingUnavailable"), [], () =>
+        this.renderCode(challenge, code, this.hintsUsed, true),
+      );
+      return;
+    } finally {
+      this.submissionPending = false;
+      if (!status.destroyed) {
+        status.text = message("study.editorIdle");
+      }
+    }
+    if (!result.ok) {
+      const feedback = result.reason === "empty-code" ? "study.emptyCode" : "study.serverGradingUnavailable";
+      this.showFeedback(false, message(feedback), [], () => this.renderCode(challenge, code, this.hintsUsed, true));
+      return;
+    }
+    let detail = message("study.gradingFailed");
+    if (result.passed && result.serverAuthoritative) {
+      detail = message("study.serverGradingPassed");
+    } else if (result.passed) {
+      detail = `${message("study.gradingPassed")}\n${result.firstCompletion ? message("study.gradingReward", { amount: result.coinsAwarded }) : message("study.taskCompleted")}`;
+    }
+    const testRows = result.tests.map((test) => ({
+      label: message("study.testCase", {
         input: test.input,
         expected: test.expected,
         actual: test.actual ?? message("study.noResult"),
       }),
-    );
+      passed: test.passed,
+    }));
     if (result.passed) {
       this.markTaskCompleted(challenge.id);
     }
@@ -569,57 +741,94 @@ export class StudyModal extends Container {
         this.renderDashboard();
         return;
       }
-      this.renderCode(challenge);
+      this.renderCode(challenge, code, this.hintsUsed, true);
     });
   }
 
-  private showFeedback(passed: boolean, detailValue: string, tests: string[], onContinue: () => void): void {
-    this.clearBody();
-    this.drawBaseHeader(
-      message("study.feedbackTitle"),
-      message(passed ? "study.feedbackSuccessSubtitle" : "study.feedbackRetrySubtitle"),
-      onContinue,
-    );
-    const panel = createCozyPanel(250, 125, 1100, 700, {
+  private formatRevealedHints(challenge: CodeChallengeView, count: number): string {
+    return challenge.hints
+      .slice(0, count)
+      .map((hint, index) =>
+        message("study.hintEntry", {
+          step: index + 1,
+          hint: resolveGameText(hint),
+        }),
+      )
+      .join("\n");
+  }
+
+  private showFeedback(passed: boolean, detailValue: string, tests: FeedbackTest[], onContinue: () => void): void {
+    this.closeFeedback();
+    this.codeEditor?.setVisible(false);
+    const blocker = new Graphics().rect(0, 0, BASE_WIDTH, BASE_HEIGHT).fill({ color: 0x2f211b, alpha: 0.58 });
+    blocker.eventMode = "static";
+    const modalTop = tests.length > 0 ? 105 : 155;
+    const testRowY = 420;
+    const closeY = tests.length > 0 ? testRowY + tests.length * 54 + 22 : 480;
+    const panelBottom = closeY + 88;
+    const panel = createCozyPanel(300, modalTop, 1000, panelBottom - modalTop, {
       fill: 0xfff8e8,
       border: passed ? 0x72945e : 0xb36554,
       radius: 30,
     });
+    const title = new Text({ text: message("study.feedbackTitle"), style: textStyle(30, 0x3f281c, "800") });
+    title.anchor.set(0.5);
+    title.position.set(800, modalTop + 42);
+    const subtitle = new Text({
+      text: message(passed ? "study.feedbackSuccessSubtitle" : "study.feedbackRetrySubtitle"),
+      style: textStyle(16, 0x74523d, "600"),
+    });
+    subtitle.anchor.set(0.5);
+    subtitle.position.set(800, modalTop + 79);
     const statusBadge = new Graphics()
-      .circle(800, 235, 48)
+      .circle(800, modalTop + 140, 36)
       .fill(passed ? 0x87a66e : 0xd78b72)
       .stroke({ color: passed ? 0x5f814f : 0xa54f42, width: 4 });
-    const status = new Text({ text: passed ? "✓" : "!", style: textStyle(48, 0xffffff, "800") });
+    const status = new Text({ text: passed ? "✓" : "!", style: textStyle(38, 0xffffff, "800") });
     status.anchor.set(0.5);
-    status.position.set(800, 232);
+    status.position.set(800, modalTop + 137);
     const detailPlate = new Graphics()
-      .roundRect(380, 315, 840, 115, 20)
+      .roundRect(350, modalTop + 195, 900, 105, 20)
       .fill(passed ? 0xe8f0dc : 0xf4dfd4)
       .stroke({ color: passed ? 0x87a66e : 0xd78b72, width: 2 });
     const detail = new Text({
       text: detailValue,
-      style: { ...textStyle(23, 0x493022, "700"), align: "center", wordWrap: true, wordWrapWidth: 760, lineHeight: 34 },
+      style: { ...textStyle(21, 0x493022, "700"), align: "center", wordWrap: true, wordWrapWidth: 820, lineHeight: 31 },
     });
     detail.anchor.set(0.5, 0);
-    detail.position.set(800, 345);
-    this.body.addChild(panel, statusBadge, status, detailPlate, detail);
+    detail.position.set(800, modalTop + 222);
+    this.feedbackLayer.addChild(blocker, panel, title, subtitle, statusBadge, status, detailPlate, detail);
     tests.forEach((test, index) => {
-      const row = new Graphics().roundRect(380, 465 + index * 62, 840, 50, 14).fill(passed ? 0xe5efd9 : 0xf4dfd4);
-      const label = new Text({ text: `${passed ? "✓" : "×"}  ${test}`, style: textStyle(15, 0x584235, "700") });
+      const row = new Graphics()
+        .roundRect(350, testRowY + index * 54, 900, 44, 14)
+        .fill(test.passed ? 0xe5efd9 : 0xf4dfd4);
+      const label = new Text({
+        text: `${test.passed ? "✓" : "×"}  ${test.label}`,
+        style: textStyle(15, 0x584235, "700"),
+      });
       label.anchor.set(0.5);
-      label.position.set(800, 490 + index * 62);
-      this.body.addChild(row, label);
+      label.position.set(800, testRowY + 22 + index * 54);
+      this.feedbackLayer.addChild(row, label);
     });
     const close = new CanvasButton({
       label: message(passed ? "study.backToTasks" : "study.retry"),
-      width: 250,
-      height: 64,
+      width: 220,
+      height: 58,
       fontSize: 20,
       color: passed ? 0x87a66e : 0xe4a05a,
-      onPress: onContinue,
+      onPress: () => {
+        this.closeFeedback();
+        onContinue();
+      },
     });
-    close.position.set(675, 720);
-    this.body.addChild(close);
+    close.position.set(690, closeY);
+    this.feedbackLayer.addChild(close);
+  }
+
+  private closeFeedback(): void {
+    this.feedbackLayer.removeChildren().forEach((child) => {
+      child.destroy({ children: true });
+    });
   }
 
   private markTaskCompleted(taskId: string): void {
@@ -627,116 +836,57 @@ export class StudyModal extends Container {
   }
 
   private createCoinReward(amount: number, fontSize: number): Container {
-    const reward = new Container();
-    const amountLabel = new Text({ text: `+${amount}`, style: textStyle(fontSize, 0x654126, "800") });
-    amountLabel.position.set(0, 1);
-    const coin = Sprite.from(this.options.coinIcon);
-    applySmoothTextureSampling(coin);
-    const iconSize = fontSize + 7;
-    coin.width = iconSize;
-    coin.height = iconSize;
-    coin.position.set(amountLabel.width + 6, 0);
-    reward.addChild(amountLabel, coin);
-    return reward;
+    return createCoinAmount(this.options.coinIcon, `+${amount}`, {
+      fontSize,
+      iconSize: fontSize + 7,
+      gap: 6,
+      order: "amount-first",
+    });
+  }
+
+  private createCoinRewardBadge(amount: number, width: number): Container {
+    const height = 54;
+    const badge = new Container();
+    const frame = new Graphics()
+      .roundRect(0, 0, width, height, 16)
+      .fill(0xfff0cc)
+      .stroke({ color: 0xd39a55, width: 2 });
+    const reward = this.createCoinReward(amount, 17);
+    reward.position.set((width - reward.width) / 2, height / 2);
+    badge.addChild(frame, reward);
+    return badge;
   }
 
   private clearBody(): void {
+    this.closeFeedback();
     this.codeEditor?.destroy();
     this.codeEditor = null;
     this.body.removeChildren().forEach((child) => {
       child.destroy({ children: true });
     });
   }
-}
-
-class CanvasCodeEditor extends Container {
-  private readonly codeText: Text;
-  private readonly focusRing: Graphics;
-  private focused = false;
-  private bodyValue: string;
-  private selectAll = false;
-  private readonly keyHandler = (event: KeyboardEvent): void => this.handleKey(event);
-
-  constructor(signature: string, starterBody: string) {
-    super();
-    this.bodyValue = starterBody;
-    const background = new Graphics()
-      .roundRect(0, 0, 860, 455, 18)
-      .fill(0x202630)
-      .stroke({ color: 0x586473, width: 3 });
-    background.eventMode = "static";
-    background.cursor = "text";
-    background.on("pointertap", () => this.setFocused(true));
-    this.focusRing = new Graphics();
-    const signatureText = new Text({
-      text: signature,
-      style: { ...textStyle(20, 0x83c9e8, "700"), fontFamily: "Consolas, monospace" },
-    });
-    signatureText.position.set(28, 25);
-    this.codeText = new Text({
-      text: "",
-      style: { ...textStyle(18, 0xe7eccf, "500"), fontFamily: "Consolas, monospace", lineHeight: 28 },
-    });
-    this.codeText.position.set(28, 68);
-    this.addChild(background, this.focusRing, signatureText, this.codeText);
-    this.refresh();
-    window.addEventListener("keydown", this.keyHandler);
-  }
-
-  get value(): string {
-    return this.bodyValue;
-  }
 
   override destroy(options?: Parameters<Container["destroy"]>[0]): void {
-    window.removeEventListener("keydown", this.keyHandler);
+    this.codeEditor?.destroy();
+    this.codeEditor = null;
     super.destroy(options);
   }
 
-  private setFocused(focused: boolean): void {
-    this.focused = focused;
-    this.refresh();
+  private layoutCodeEditor(): void {
+    if (!this.codeEditor) {
+      return;
+    }
+    const scale = this.page.scale.x;
+    this.codeEditor.setBounds({
+      left: this.page.x + 625 * scale,
+      top: this.page.y + 235 * scale,
+      width: 860 * scale,
+      height: 455 * scale,
+      scale,
+    });
   }
+}
 
-  private handleKey(event: KeyboardEvent): void {
-    if (!this.focused) {
-      return;
-    }
-    if (event.key === "Escape") {
-      this.setFocused(false);
-      return;
-    }
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a") {
-      this.selectAll = true;
-      event.preventDefault();
-      this.refresh();
-      return;
-    }
-    if (this.selectAll && event.key !== "Shift" && event.key !== "Control" && event.key !== "Meta") {
-      this.bodyValue = "";
-      this.selectAll = false;
-    }
-    if (event.key === "Backspace") {
-      this.bodyValue = this.bodyValue.slice(0, -1);
-    } else if (event.key === "Enter") {
-      const currentLine = this.bodyValue.split("\n").at(-1) ?? "";
-      const indentation = currentLine.match(/^\s*/)?.[0] ?? "";
-      this.bodyValue += `\n${indentation}${currentLine.trimEnd().endsWith(":") ? "    " : ""}`;
-    } else if (event.key === "Tab") {
-      this.bodyValue += "    ";
-    } else if (event.key.length === 1 && this.bodyValue.length < 900) {
-      this.bodyValue += event.key;
-    } else {
-      return;
-    }
-    event.preventDefault();
-    this.refresh();
-  }
-
-  private refresh(): void {
-    this.codeText.text = `${this.bodyValue}${this.focused ? "▌" : ""}`;
-    this.focusRing.clear();
-    if (this.focused) {
-      this.focusRing.roundRect(3, 3, 854, 449, 16).stroke({ color: 0xe7a854, width: 4 });
-    }
-  }
+function resolveGameText(value: GameText): string {
+  return "text" in value ? value.text : message(value.messageId);
 }

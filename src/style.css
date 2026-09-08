@@ -19,6 +19,10 @@ body,
   overflow: hidden;
 }
 
+#app {
+  position: relative;
+}
+
 body {
   background:
     radial-gradient(circle at 50% 35%, rgba(143, 94, 55, 0.86), transparent 54%),
@@ -37,4 +41,74 @@ canvas {
   height: 100%;
   touch-action: none;
   user-select: none;
+}
+
+.nyang-code-editor-overlay {
+  --nyang-editor-scale: 1;
+  position: absolute;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: #e7eccf;
+  background: #202630;
+  border: calc(3px * var(--nyang-editor-scale)) solid #586473;
+  border-radius: calc(18px * var(--nyang-editor-scale));
+  box-shadow: 0 calc(8px * var(--nyang-editor-scale)) calc(18px * var(--nyang-editor-scale)) rgb(39 27 20 / 22%);
+}
+
+.nyang-code-editor-overlay:focus-within {
+  border-color: #e5a148;
+  box-shadow:
+    0 0 0 calc(2px * var(--nyang-editor-scale)) rgb(229 161 72 / 32%),
+    0 calc(8px * var(--nyang-editor-scale)) calc(18px * var(--nyang-editor-scale)) rgb(39 27 20 / 22%);
+}
+
+.nyang-code-editor-host {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.nyang-code-editor-host .cm-editor {
+  height: 100%;
+  background: #202630;
+  font-size: calc(18px * var(--nyang-editor-scale));
+}
+
+.nyang-code-editor-host .cm-editor.cm-focused {
+  outline: none;
+}
+
+.nyang-code-editor-host .cm-scroller {
+  overflow: auto;
+  font-family: Consolas, "SFMono-Regular", monospace;
+  line-height: 1.55;
+}
+
+.nyang-code-editor-host .cm-content {
+  padding: calc(13px * var(--nyang-editor-scale)) 0;
+  caret-color: #f7e6a8;
+}
+
+.nyang-code-editor-host .cm-gutters {
+  min-width: calc(56px * var(--nyang-editor-scale));
+  color: #75808d;
+  background: #1a2029;
+  border-right: calc(1px * var(--nyang-editor-scale)) solid #303946;
+}
+
+.nyang-code-editor-host .cm-lineNumbers .cm-gutterElement {
+  min-width: calc(42px * var(--nyang-editor-scale));
+  padding: 0 calc(12px * var(--nyang-editor-scale)) 0 calc(6px * var(--nyang-editor-scale));
+}
+
+.nyang-code-editor-host .cm-activeLine,
+.nyang-code-editor-host .cm-activeLineGutter {
+  background: rgb(255 255 255 / 5%);
+}
+
+.nyang-code-editor-host .cm-selectionBackground,
+.nyang-code-editor-host .cm-content ::selection {
+  background: #4779a8aa;
 }

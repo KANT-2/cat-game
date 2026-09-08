@@ -32,6 +32,7 @@ UI 코드와 대량 리소스 export, 게임 규칙 변경을 한 브랜치에 �
 
 - export 파일과 `public/assets/catalog.json`만 함께 변경한다.
 - 앵커는 오브젝트의 바닥 접점을 기준으로 기록한다.
+- 환경 오브젝트는 `docs/ENVIRONMENT_ART_WORKFLOW.md`의 배경 합성 시안을 승인한 뒤 투명 원본으로 분리한다.
 - 텍스트를 이미지에 굽지 않는다.
 - `npm run assets:check`로 ID 중복, 경로, 앵커를 확인한다.
 

@@ -19,6 +19,7 @@ main.ts
 public/assets/            빌드에 포함되는 이미지와 카탈로그
 src/assets/               카탈로그를 읽는 기술 계약
 src/content/              메시지 ID 타입과 Canvas 런타임 문구
+src/desktop/              게임 상태와 격자를 사용하지 않는 데스크톱 전용 PixiJS 화면
 src/pwa/                  설치와 service worker 연결
 src-tauri/                후속 데스크톱 창 기능을 격리한 선택적 호스트
 ```
@@ -36,6 +37,11 @@ src-tauri/                후속 데스크톱 창 기능을 격리한 선택적 
 
 `src/game/presentation`의 색상과 라벨은 현재 절차형 프로토타입을 위한 UI 표시 데이터다. 실제 이미지 경로는 이곳에 넣지 않고 리소스 카탈로그의 안정적인 ID를 사용한다.
 
+`desktop-widget.html → desktop-main.ts → DesktopWidgetApp → src/desktop`은 게임 진입점과 별도 번들로
+구성한다. 데스크톱 화면은 `GameClient`, `GameStateStore`, `HomeScene`과 숲 격자를 사용하지 않으며,
+공유 리소스 카탈로그와 고양이 애니메이션 타입만 재사용한다. Tauri 명령 호출은 `src/app/desktopWidgetHost.ts`에
+격리한다.
+
 ## GameClient 경계
 
 `src/core/GameClient.ts`가 UI와 게임 시스템 사이의 공개 API다.
@@ -47,6 +53,34 @@ src-tauri/                후속 데스크톱 창 기능을 격리한 선택적 
 - UI는 배치 미리보기에 `domain`의 순수 충돌 규칙을 재사용할 수 있지만 성공 여부는 `placeFurniture()` 결과를 따른다.
 - 계약에는 PixiJS 타입, DOM 타입, 저장소 구현 타입을 추가하지 않는다.
 - 새 서버 API가 생기면 같은 계약을 구현하는 원격 클라이언트로 교체한다. 화면은 서버 위치를 알 필요가 없다.
+
+`VITE_CAT_GAME_API_BASE_URL`이 설정된 실행에서는 `BackendLearningGameClient`가 추천 문제 조회와 답안 채점을
+FastAPI에 위임한다. HTTP·JSON·브라우저 쿠키·CSRF 및 개발 사용자 헤더는 `BackendApiClient`가 담당하고, PixiJS 장면은 계속
+`GameClient`만 사용한다. 학습 보상, 데일리·출석 보상, 설정, 상점, 가챠, 고양이 선택과 야외 배치는
+FastAPI 명령 뒤 반환된 서버 스냅샷으로 갱신한다. 원격 명령 실패는 로컬 성공으로 대체하지 않으며,
+학습 초기화와 고양이 기억 삭제도 서버 명령으로 처리한다. `LocalGameClient`는 백엔드 URL이 없는 독립
+개발 실행에서만 권위 구현이며, 원격 클라이언트에서는 직렬화 가능한 초기 상태 형태를 만드는 데만 사용한다.
+`BackendApiClient.getLearningTasks()`는 Part 2의 전체 문제 조회 계약을 소유하며 유형, 도메인, 개념,
+난이도와 개수 필터를 백엔드의 `GET /api/v1/learning/tasks` 쿼리로 변환한다.
+
+운영 빌드는 기존 브라우저 세션을 먼저 확인하고, 세션이 없으면 `AuthScene`의 Canvas 로그인·가입 화면을
+표시한다. 로그인 뒤에도 화면 계층은 인증 구현을 알지 않고 조립 계층에서 완성된 `GameClient`만 받는다.
+운영 백엔드 연결 실패를 로컬 저장으로 대체하지 않는다. Vite 개발 모드에서만 별도 설정 없이 개발 세션을
+사용할 수 있고, 명시적인 사용자 UUID 헤더도 로컬·테스트 백엔드에 한정한다.
+
+코드 작성 과제의 입력 영역은 브라우저 표준 편집 동작과 접근성을 제공하기 위해 CodeMirror DOM 오버레이를
+사용하는 유일한 가시 UI 예외다. `game` 계층은 DOM이나 CodeMirror를 직접 import하지 않고
+`CodeEditorOverlayFactory` 계약만 사용하며, 실제 DOM 수명주기와 Canvas 좌표 동기화는 `app` 계층의
+`CodeMirrorEditorOverlayFactory`가 소유한다. 문제 설명, 버튼, 피드백 등 나머지 학습 화면은 계속 Canvas에 둔다.
+
+고양이 자유 대화는 한글 IME 조합과 모바일 키보드를 위해 `TextInputBridge` 계약을 사용한다. 화면에 보이는
+입력 상자·버튼·말풍선은 PixiJS Canvas에 유지하며, `app/BrowserTextInputBridge`의 투명 textarea는 키 입력
+전달만 담당한다. 모달이 닫히면 브리지를 즉시 폐기해 보이지 않는 입력이 포커스를 가로채지 않게 한다.
+
+브라우저 연결 상태와 로그인 세션의 수명주기는 게임 규칙 계약에 넣지 않고 `app` 조립 계층이 소유한다.
+연결 복구 시 `BackendLearningGameClient`가 권위 스냅샷과 추천 과제를 다시 읽어 기존 구독자에게 전달하며,
+로그아웃과 세션 만료는 Canvas 인증 화면으로 복귀시킨다. 따라서 `game` 장면은 쿠키나 HTTP 상태 코드를
+직접 해석하지 않는다.
 
 ## 기능 추가 순서
 

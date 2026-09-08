@@ -3,7 +3,16 @@ import type { DailyQuestId } from "./dailyQuest";
 import type { ShopItemId } from "./shop";
 
 /** 현재 프로토타입에서 배치할 수 있는 가구 원형 ID다. */
-export type FurnitureKind = "sofa" | "desk" | "plant" | "catTree" | "bed";
+export type FurnitureKind =
+  | "sofa"
+  | "desk"
+  | "plant"
+  | "catTree"
+  | "bed"
+  | "rug"
+  | "hideout"
+  | "scratcher"
+  | "litterBox";
 
 export const ROOM_GRID_WIDTH = 10;
 
@@ -36,6 +45,7 @@ export type GameSettings = {
 /** 로컬 또는 원격 저장소로 직렬화할 수 있는 게임 스냅샷이다. */
 export type GameState = {
   economyVersion: 3;
+  roomAppearanceVersion: 1;
   coins: number;
   ownedCats: CatVariant[];
   homeCats: CatVariant[];
@@ -46,6 +56,10 @@ export type GameState = {
   dailyCompletedTaskIds: string[];
   claimedDailyQuestIds: DailyQuestId[];
   dailyBonusClaimed: boolean;
+  attendanceLastClaimDate: string;
+  attendanceStreak: number;
+  attendanceLongestStreak: number;
+  attendanceClaimedDates: string[];
   gachaPityCount: number;
   catMemories: Partial<Record<CatVariant, string[]>>;
   settings: GameSettings;
@@ -62,13 +76,17 @@ export const furnitureDefinitions: Record<FurnitureKind, FurnitureDefinition> = 
   plant: { width: 1, height: 1 },
   catTree: { width: 2, height: 1 },
   bed: { width: 3, height: 2 },
+  rug: { width: 3, height: 1 },
+  hideout: { width: 2, height: 1 },
+  scratcher: { width: 2, height: 1 },
+  litterBox: { width: 2, height: 1 },
 };
 
 export const defaultFurniture: PlacedFurniture[] = [
   { id: "desk-1", kind: "desk", x: 1, y: 1, rotation: 0 },
   { id: "sofa-1", kind: "sofa", x: 5, y: 1, rotation: 0 },
   { id: "plant-1", kind: "plant", x: 8, y: 2, rotation: 0 },
-  { id: "tree-1", kind: "catTree", x: 1, y: 5, rotation: 0 },
+  { id: "tree-1", kind: "catTree", x: 0, y: 5, rotation: 0 },
   { id: "bed-1", kind: "bed", x: 6, y: 5, rotation: 0 },
 ];
 
@@ -84,6 +102,7 @@ export const defaultFurniture: PlacedFurniture[] = [
 export function createDefaultState(): GameState {
   return {
     economyVersion: 3,
+    roomAppearanceVersion: 1,
     coins: 1_100_000,
     ownedCats: [DEFAULT_CAT_VARIANT, "siamese"],
     homeCats: [DEFAULT_CAT_VARIANT],
@@ -94,6 +113,10 @@ export function createDefaultState(): GameState {
     dailyCompletedTaskIds: [],
     claimedDailyQuestIds: [],
     dailyBonusClaimed: false,
+    attendanceLastClaimDate: "",
+    attendanceStreak: 0,
+    attendanceLongestStreak: 0,
+    attendanceClaimedDates: [],
     gachaPityCount: 0,
     catMemories: {},
     settings: {
@@ -104,7 +127,17 @@ export function createDefaultState(): GameState {
       reducedMotion: false,
     },
     furniture: defaultFurniture.map((item) => ({ ...item })),
-    inventory: { sofa: 0, desk: 0, plant: 1, catTree: 0, bed: 0 },
+    inventory: {
+      sofa: 0,
+      desk: 0,
+      plant: 1,
+      catTree: 0,
+      bed: 0,
+      rug: 0,
+      hideout: 0,
+      scratcher: 0,
+      litterBox: 0,
+    },
     shopInventory: {},
     activeWallpaper: null,
     activeFloor: null,

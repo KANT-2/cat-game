@@ -2,7 +2,13 @@ import type { CatVariant } from "./cats";
 import type { ShopItemId } from "./shop";
 
 export type GachaDrawCount = 1 | 11;
-export type GachaRewardId = "cat.ink" | "furniture.desk" | "furniture.catTower" | "decor.plant" | "furniture.sofa";
+export type GachaRewardId =
+  | "cat.ink"
+  | "cat.tabby"
+  | "furniture.desk"
+  | "furniture.catTower"
+  | "decor.plant"
+  | "furniture.sofa";
 
 export type GachaRewardDefinition = {
   id: GachaRewardId;

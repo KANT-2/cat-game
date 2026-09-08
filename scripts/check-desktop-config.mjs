@@ -20,8 +20,8 @@ if (!widget) {
 if (!windowsWidget) {
   errors.push("Windows desktop widget window is missing");
 } else {
-  if (windowsWidget.url !== "index.html?display=desktop-widget") {
-    errors.push("Windows widget must open the transparent frontend presentation");
+  if (windowsWidget.url !== "desktop-widget.html") {
+    errors.push("Windows widget must open the dedicated transparent frontend entry");
   }
   if (windowsWidget.alwaysOnTop !== true) {
     errors.push("Windows widget must stay always on top");

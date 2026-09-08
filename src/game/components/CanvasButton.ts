@@ -10,6 +10,7 @@ export type CanvasButtonOptions = {
   textColor?: number;
   borderColor?: number;
   fontSize?: number;
+  disabled?: boolean;
   onPress: () => void;
 };
 
@@ -33,6 +34,12 @@ export class CanvasButton extends Container {
     this.labelText.anchor.set(0.5);
     this.labelText.position.set(options.width / 2, options.height / 2);
     this.addChild(this.background, this.labelText);
+
+    if (options.disabled) {
+      this.eventMode = "none";
+      this.cursor = "default";
+      return;
+    }
 
     this.eventMode = "static";
     this.cursor = "pointer";

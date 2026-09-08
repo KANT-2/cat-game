@@ -1,5 +1,5 @@
 /** 런타임이 구분하는 리소스의 시각적 용도다. */
-export type AssetKind = "background" | "environment" | "furniture" | "cat" | "ui" | "effect";
+export type AssetKind = "background" | "environment" | "furniture" | "consumable" | "cat" | "ui" | "effect";
 
 /** 애니메이션 또는 상태별 단일 프레임 파일이다. */
 export type AssetFrame = {
@@ -44,11 +44,13 @@ export type AssetCatalogData = {
  * @throws JSON의 버전이 `1`이 아니거나 최상위 `bundles` 객체가 없으면 형식 오류를 던진다.
  *
  * @remarks
- * 이 함수는 빠른 런타임 진입 검증만 수행한다. 개별 ID 중복, 파일 존재 여부, anchor 범위와
- * 금지된 게임 규칙 필드는 빌드 전에 `npm run assets:check`로 검증한다.
+ * 온라인에서는 배포 직후 이전 서비스 워커의 카탈로그가 새 JavaScript와 섞이지 않도록 캐시를
+ * 우회한다. 네트워크를 사용할 수 없으면 서비스 워커가 미리 저장한 고정 URL로 다시 시도한다.
+ * 개별 ID 중복, 파일 존재 여부, anchor 범위와 금지된 게임 규칙 필드는 빌드 전에
+ * `npm run assets:check`로 검증한다.
  */
 export async function loadAssetCatalog(url = "/assets/catalog.json"): Promise<AssetCatalogData> {
-  const response = await fetch(url);
+  const response = await fetchFreshCatalog(url);
   if (!response.ok) {
     throw new Error(`Asset catalog request failed: ${response.status}`);
   }
@@ -57,6 +59,20 @@ export async function loadAssetCatalog(url = "/assets/catalog.json"): Promise<As
     throw new Error("Unsupported asset catalog format");
   }
   return catalog;
+}
+
+async function fetchFreshCatalog(url: string): Promise<Response> {
+  const separator = url.includes("?") ? "&" : "?";
+  const freshUrl = `${url}${separator}catalog-revision=${Date.now()}`;
+  try {
+    const response = await fetch(freshUrl, { cache: "no-store" });
+    if (response.ok) {
+      return response;
+    }
+  } catch {
+    // The stable URL remains precached by the service worker for offline startup.
+  }
+  return fetch(url);
 }
 
 /**

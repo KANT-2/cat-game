@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+!.env.example
+.agents
+.codex
+.cache
+node_modules
+dist
+coverage
+images
+asset-workbench
+cat-sprite-project
+src-tauri/target
+*.log

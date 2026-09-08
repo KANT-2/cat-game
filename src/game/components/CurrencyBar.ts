@@ -7,6 +7,14 @@ export type CurrencyBarView = {
   amountText: Text;
 };
 
+type CoinAmountOptions = {
+  color?: number;
+  fontSize?: number;
+  gap?: number;
+  iconSize?: number;
+  order?: "icon-first" | "amount-first";
+};
+
 /**
  * 단일 코인 재화를 표시하는 공통 HUD 바를 만든다.
  *
@@ -40,4 +48,36 @@ export function createCoinIcon(iconSrc: string, size: number): Sprite {
   icon.width = size;
   icon.height = size;
   return icon;
+}
+
+/**
+ * 코인 아이콘과 금액을 같은 세로 중심선에 맞춘 한 줄 표시로 만든다.
+ *
+ * @param iconSrc - 에셋 카탈로그에서 해석한 코인 이미지 경로.
+ * @param amount - 표시할 숫자 또는 `+50`처럼 이미 조합된 금액 문구.
+ * @param options - 글자와 아이콘 크기, 간격 및 표시 순서.
+ * @returns 다른 텍스트 옆에 하나의 묶음으로 배치할 수 있는 컨테이너.
+ */
+export function createCoinAmount(iconSrc: string, amount: string | number, options: CoinAmountOptions = {}): Container {
+  const fontSize = options.fontSize ?? 18;
+  const iconSize = options.iconSize ?? fontSize + 6;
+  const gap = options.gap ?? 8;
+  const order = options.order ?? "icon-first";
+  const container = new Container();
+  const icon = createCoinIcon(iconSrc, iconSize);
+  const amountText = new Text({
+    text: typeof amount === "number" ? amount.toLocaleString() : amount,
+    style: textStyle(fontSize, options.color ?? 0x654126, "800"),
+  });
+  icon.anchor.set(0, 0.5);
+  amountText.anchor.set(0, 0.5);
+  if (order === "icon-first") {
+    icon.position.set(0, 0);
+    amountText.position.set(iconSize + gap, 0);
+  } else {
+    amountText.position.set(0, 0);
+    icon.position.set(amountText.width + gap, 0);
+  }
+  container.addChild(icon, amountText);
+  return container;
 }

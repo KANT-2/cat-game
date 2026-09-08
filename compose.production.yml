@@ -1,0 +1,133 @@
+name: cat-game-production
+
+services:
+  db:
+    image: postgres:16.10-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cat_game
+      POSTGRES_USER: cat_game
+      POSTGRES_PASSWORD: ${CAT_GAME_DB_PASSWORD:?set CAT_GAME_DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cat_game -d cat_game"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - cat_game_production_data:/var/lib/postgresql/data
+    networks:
+      - data
+
+  backend:
+    build:
+      context: ${CAT_GAME_BACKEND_PATH:-../cat-game-backend}
+    restart: unless-stopped
+    command:
+      - sh
+      - -c
+      - >-
+        python -m alembic -c alembic.ini.example upgrade head &&
+        python scripts/seed_game_catalog.py &&
+        python scripts/seed_learning_tasks.py &&
+        python scripts/seed_sql_tasks.py &&
+        exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+        --proxy-headers --forwarded-allow-ips=*
+    environment:
+      APP_ENV: production
+      DATABASE_URL: ${CAT_GAME_DATABASE_URL:?set CAT_GAME_DATABASE_URL}
+      CORS_ORIGINS: ${CAT_GAME_PUBLIC_ORIGIN:?set CAT_GAME_PUBLIC_ORIGIN}
+      AUTH_RATE_LIMIT_SECRET: ${CAT_GAME_AUTH_RATE_LIMIT_SECRET:?set CAT_GAME_AUTH_RATE_LIMIT_SECRET}
+      SESSION_DAYS: ${CAT_GAME_SESSION_DAYS:-30}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=2)
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    networks:
+      - web
+      - data
+
+  grading-worker:
+    build:
+      context: ${CAT_GAME_BACKEND_PATH:-../cat-game-backend}
+      target: worker
+    restart: unless-stopped
+    command: ["python", "-m", "app.modules.grading.worker"]
+    environment:
+      APP_ENV: production
+      DATABASE_URL: ${CAT_GAME_DATABASE_URL:?set CAT_GAME_DATABASE_URL}
+      AUTH_RATE_LIMIT_SECRET: ${CAT_GAME_AUTH_RATE_LIMIT_SECRET:?set CAT_GAME_AUTH_RATE_LIMIT_SECRET}
+      GRADING_IMAGE: ${CAT_GAME_GRADING_IMAGE:-cat-game-python-grader:3.12}
+      GRADING_TIMEOUT_SECONDS: ${CAT_GAME_GRADING_TIMEOUT_SECONDS:-5}
+      GRADING_MEMORY: ${CAT_GAME_GRADING_MEMORY:-128m}
+      GRADING_CPUS: ${CAT_GAME_GRADING_CPUS:-0.5}
+      GRADING_PIDS_LIMIT: ${CAT_GAME_GRADING_PIDS_LIMIT:-64}
+      GRADING_OUTPUT_BYTES: ${CAT_GAME_GRADING_OUTPUT_BYTES:-65536}
+      GRADING_MAX_CONCURRENCY: ${CAT_GAME_GRADING_MAX_CONCURRENCY:-2}
+      GRADING_LEASE_SECONDS: ${CAT_GAME_GRADING_LEASE_SECONDS:-60}
+      SQL_GRADING_DATABASE_URL: ${CAT_GAME_SQL_GRADING_DATABASE_URL:?set CAT_GAME_SQL_GRADING_DATABASE_URL}
+      SQL_GRADING_CONNECT_TIMEOUT_SECONDS: ${CAT_GAME_SQL_GRADING_CONNECT_TIMEOUT_SECONDS:-3}
+      SQL_GRADING_STATEMENT_TIMEOUT_MS: ${CAT_GAME_SQL_GRADING_STATEMENT_TIMEOUT_MS:-1000}
+      SQL_GRADING_MAX_ROWS: ${CAT_GAME_SQL_GRADING_MAX_ROWS:-1000}
+      SQL_GRADING_OUTPUT_BYTES: ${CAT_GAME_SQL_GRADING_OUTPUT_BYTES:-65536}
+      DOCKER_HOST: ${CAT_GAME_GRADING_DOCKER_HOST:?set CAT_GAME_GRADING_DOCKER_HOST}
+      DOCKER_TLS_VERIFY: ${CAT_GAME_GRADING_DOCKER_TLS_VERIFY:-1}
+      DOCKER_CERT_PATH: /run/secrets/grading-docker
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.modules.grading.health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    volumes:
+      - ${CAT_GAME_GRADING_CERT_PATH:?set CAT_GAME_GRADING_CERT_PATH}:/run/secrets/grading-docker:ro
+    networks:
+      - data
+
+  frontend:
+    build:
+      context: .
+      args:
+        VITE_CAT_GAME_API_BASE_URL: /
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "127.0.0.1:${CAT_GAME_HTTP_PORT:-8080}:80"
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:size=32m
+      - /var/run:size=1m
+      - /tmp:size=16m
+    networks:
+      - web
+
+networks:
+  web:
+  data:
+    internal: true
+
+volumes:
+  cat_game_production_data:

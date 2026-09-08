@@ -5,7 +5,7 @@
       {
         "label": "widget",
         "title": "{ 냥 }",
-        "url": "index.html?display=desktop-widget",
+        "url": "desktop-widget.html",
         "width": 1120,
         "height": 630,
         "center": true,

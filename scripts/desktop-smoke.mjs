@@ -6,6 +6,19 @@ const screenshotPath = (name) => join(tmpdir(), name);
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1120, height: 630 } });
 const errors = [];
+const requestedAssets = [];
+
+await page.addInitScript(() => {
+  Math.random = () => 0.1;
+  window.__widgetStorageAccesses = [];
+  for (const method of ["getItem", "setItem", "removeItem"]) {
+    const original = Storage.prototype[method];
+    Storage.prototype[method] = function (...args) {
+      window.__widgetStorageAccesses.push(`${method}:${String(args[0])}`);
+      return original.apply(this, args);
+    };
+  }
+});
 
 page.on("console", (message) => {
   if (message.type() === "error") {
@@ -13,10 +26,15 @@ page.on("console", (message) => {
   }
 });
 page.on("pageerror", (error) => errors.push(`page: ${error.message}`));
+page.on("request", (request) => {
+  const requestedUrl = new URL(request.url());
+  if (requestedUrl.pathname.startsWith("/assets/")) {
+    requestedAssets.push(requestedUrl.pathname);
+  }
+});
 
 const baseUrl = process.env.GAME_URL ?? "http://127.0.0.1:5173/";
-const url = new URL(baseUrl);
-url.searchParams.set("display", "desktop-widget");
+const url = new URL("desktop-widget.html", baseUrl);
 await page.goto(url.toString(), { waitUntil: "networkidle" });
 await page.locator("canvas").waitFor({ state: "visible" });
 await page.waitForTimeout(800);
@@ -31,6 +49,7 @@ const presentation = await page.evaluate(async () => {
     bodyBackground: getComputedStyle(document.body).backgroundColor,
     mountBackground: mount ? getComputedStyle(mount).backgroundColor : "missing",
     serviceWorkerRegistrations,
+    storageAccesses: window.__widgetStorageAccesses,
   };
 });
 
@@ -48,6 +67,25 @@ for (const [layer, background] of Object.entries({
 }
 if (presentation.serviceWorkerRegistrations !== 0) {
   throw new Error("desktop widget must not register the PWA service worker");
+}
+if (presentation.storageAccesses.length > 0) {
+  throw new Error(`desktop widget must not access game storage: ${presentation.storageAccesses.join(", ")}`);
+}
+const forbiddenAssetPrefixes = [
+  "/assets/cats/ink-black/",
+  "/assets/cats/siamese-seal/",
+  "/assets/cats/orange-tabby/",
+  "/assets/environment/",
+  "/assets/ui/home-menu/",
+];
+const forbiddenRequests = requestedAssets.filter((asset) =>
+  forbiddenAssetPrefixes.some((prefix) => asset.startsWith(prefix)),
+);
+if (forbiddenRequests.length > 0) {
+  throw new Error(`desktop widget loaded game-only assets: ${forbiddenRequests.join(", ")}`);
+}
+if (!requestedAssets.some((asset) => asset.startsWith("/assets/cats/fluffy-white/"))) {
+  throw new Error("desktop widget did not load the dedicated fluffy cat assets");
 }
 
 await page.screenshot({ path: screenshotPath("nyang-desktop-widget.png"), omitBackground: true });
