@@ -1,7 +1,7 @@
 import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
 import type { Awaitable, LearningResetResult } from "../../core/GameClient";
-import { catVariants, type CatVariant } from "../../domain/cats";
+import { type CatVariant, catVariants } from "../../domain/cats";
 import type { FurnitureKind, GameSettings, GameState } from "../../domain/room";
 import { type ShopItemId, shopItemDefinitions } from "../../domain/shop";
 import { BackButton } from "../components/BackButton";
