@@ -1278,7 +1278,27 @@
       { "id": "furniture.ocean.cat-tower.03", "kind": "furniture", "src": "/assets/furniture/ocean/ocean-cat-tower-03.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["ocean", "cat-tree", "variant", "transparent", "belt-view"] },
       { "id": "furniture.ocean.hideout.02", "kind": "furniture", "src": "/assets/furniture/ocean/ocean-hideout-02.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["ocean", "hideout", "variant", "transparent", "belt-view"] },
       { "id": "furniture.ocean.scratcher.02", "kind": "furniture", "src": "/assets/furniture/ocean/ocean-scratcher-02.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["ocean", "scratcher", "variant", "transparent", "belt-view"] },
-      { "id": "furniture.ocean.litter-box.02", "kind": "furniture", "src": "/assets/furniture/ocean/ocean-litter-box-02.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["ocean", "litter-box", "variant", "transparent", "belt-view"] }
+      { "id": "furniture.ocean.litter-box.02", "kind": "furniture", "src": "/assets/furniture/ocean/ocean-litter-box-02.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["ocean", "litter-box", "variant", "transparent", "belt-view"] },
+
+      { "id": "furniture.alley.cat-tower.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/alley-cat-tower-03.png", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["alley", "cat-tree", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.alley.hideout.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/alley-hideout-03.png", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["alley", "hideout", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.alley.litter-box.04", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/alley-litter-box-04.png", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["alley", "litter-box", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.alley.rug.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/alley-rug-03.png", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["alley", "rug", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.alley.scratcher.04", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/alley-scratcher-04.png", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["alley", "scratcher", "variant", "transparent", "belt-view"] },
+
+      { "id": "furniture.desk.cat-tower.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/desk-cat-tower-03.png", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["desk", "cat-tree", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.desk.hideout.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/desk-hideout-03.png", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["desk", "hideout", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.desk.litter-box.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/desk-litter-box-03.png", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["desk", "litter-box", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.desk.rug.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/desk-rug-03.png", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["desk", "rug", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.desk.scratcher.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/desk-scratcher-03.png", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["desk", "scratcher", "variant", "transparent", "belt-view"] },
+
+      { "id": "furniture.ocean.cat-tower.incoming.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/ocean-cat-tower-03.png", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["ocean", "cat-tree", "variant", "incoming", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.food-bowl.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/ocean-food-bowl-front-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["ocean", "food-bowl", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.hideout.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/ocean-hideout-03.png", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["ocean", "hideout", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.litter-box.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/ocean-litter-box-03.png", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["ocean", "litter-box", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.scratcher.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/ocean-scratcher-03.png", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["ocean", "scratcher", "variant", "transparent", "belt-view"] },
+
+      { "id": "furniture.room.rug.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/room-rug-03.png", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["room", "rug", "variant", "transparent", "belt-view"] }
     ],
     "decorations": [
       { "id": "furniture.decor.reed-clump.01", "kind": "furniture", "src": "/assets/decor/forest-reed-clump-01.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["forest", "reed", "grass", "decor", "transparent", "belt-view"] },
