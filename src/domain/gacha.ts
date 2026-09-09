@@ -1,14 +1,8 @@
 import type { CatVariant } from "./cats";
-import type { ShopItemId } from "./shop";
+import { type ShopItemId, shopItemDefinitions } from "./shop";
 
 export type GachaDrawCount = 1 | 11;
-export type GachaRewardId =
-  | "cat.ink"
-  | "cat.tabby"
-  | "furniture.desk"
-  | "furniture.catTower"
-  | "decor.plant"
-  | "furniture.sofa";
+export type GachaRewardId = "cat.ink" | "cat.tabby" | ShopItemId;
 
 export type GachaRewardDefinition = {
   id: GachaRewardId;
@@ -21,17 +15,27 @@ export type GachaRewardDefinition = {
 export const GACHA_SINGLE_COST = 30;
 export const GACHA_MULTI_COST = 300;
 export const GACHA_DUPLICATE_CAT_COINS = 15;
+const furnitureGroups = [
+  { weight: 0.1, kinds: ["desk", "hideout"] },
+  { weight: 0.25, kinds: ["catTree", "scratcher"] },
+  { weight: 0.3, kinds: ["plant"] },
+  { weight: 0.3, kinds: ["sofa", "bed", "rug", "litterBox"] },
+];
+
 export const gachaRewardDefinitions: readonly GachaRewardDefinition[] = [
   { id: "cat.ink", weight: 0.05, kind: "cat", catVariant: "ink" },
-  { id: "furniture.desk", weight: 0.1, kind: "furniture", shopItemId: "furniture.desk" },
-  {
-    id: "furniture.catTower",
-    weight: 0.25,
-    kind: "furniture",
-    shopItemId: "furniture.catTower",
-  },
-  { id: "decor.plant", weight: 0.3, kind: "furniture", shopItemId: "decor.plant" },
-  { id: "furniture.sofa", weight: 0.3, kind: "furniture", shopItemId: "furniture.sofa" },
+  ...furnitureGroups.flatMap((group): GachaRewardDefinition[] => {
+    const ids = (Object.keys(shopItemDefinitions) as ShopItemId[]).filter((id) => {
+      const item = shopItemDefinitions[id];
+      return item.kind === "furniture" && group.kinds.includes(item.furnitureKind);
+    });
+    return ids.map((id) => ({
+      id,
+      weight: group.weight / ids.length,
+      kind: "furniture",
+      shopItemId: id,
+    }));
+  }),
 ];
 
 /** 설정된 가중치에 따라 요청한 횟수만큼 독립적인 뽑기 결과를 만든다. */

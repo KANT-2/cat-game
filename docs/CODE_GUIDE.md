@@ -451,3 +451,16 @@ UI는 가격이나 잔액을 판정하지 않고 `buyShopItem()` 결과를 따�
 원격 클라이언트는 `POST /api/v1/game/consumables/use`에 요청 UUID와 카탈로그 키를 보내며 서버가 보유
 고양이와 수량을 검증하고 한 개를 원자적으로 차감한다. 재시도는 같은 요청 UUID를 사용한다. 간식은
 고양이의 짧은 긍정적 애니메이션만 재생하며 허기, 방치 패널티 또는 능력치 보너스를 만들지 않는다.
+
+## 가챠 풀과 학습 문구
+
+`domain/gacha.ts`는 `shopItemDefinitions`의 가구·장식을 풀로 사용한다. 고양이 먹구름 5%는 유지한다.
+SR 10%는 desk/hideout, R 25%는 catTree/scratcher, N 60%는 plant 30%와
+sofa/bed/rug/litterBox 30%로 나누고, 각 묶음 안에서는 상품별 균등 확률을 사용한다.
+이 규칙은 백엔드 `app/modules/game/gacha.py`와 함께 변경해야 한다. 벽지·바닥·소모품은 제외한다.
+원격 보상의 상품 ID 허용 목록도 같은 풀에서 파생하므로 새 테마 상품을 정상 수신한다.
+
+`services/learningDescription.ts`가 추천·선택 카드와 객관식·코드 상세 설명에 공통 적용된다.
+이전 seed의 `[고양이 이야기]`는 `[도와주세요!]`로 표시하고, 그 뒤의 기존 요청 제목은 `[문제]`로
+바꿔 중복을 피한다. 신규 seed 설명은 그대로 표시한다. 표시 문구는 `content/ko.json`에서 관리한다.
+실제 스토리 갱신은 백엔드 Python/SQL seed 재실행이 필요하다.

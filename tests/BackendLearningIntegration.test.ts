@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { GameStateRepository } from "../src/core/GameClient";
 import { LocalGameClient } from "../src/core/LocalGameClient";
+import { gachaRewardDefinitions } from "../src/domain/gacha";
 import { createDefaultState, type GameState } from "../src/domain/room";
 import { BackendApiClient } from "../src/services/BackendApiClient";
 import { BackendLearningGameClient } from "../src/services/BackendLearningGameClient";
@@ -25,6 +26,66 @@ const catAssetId = "66666666-6666-4666-8666-666666666666";
 const sqlTaskId = "77777777-7777-4777-8777-777777777777";
 
 describe("backend learning integration", () => {
+  it("accepts every expanded gacha reward from the server", async () => {
+    let rewardId = "furniture.ocean.rug";
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const path = new URL(String(input)).pathname;
+      if (path === "/api/v1/game/snapshot") {
+        return json(gameSnapshot(1000, 0));
+      }
+      if (path === "/api/v1/game/gacha") {
+        return json({
+          snapshot: gameSnapshot(970, 0),
+          result: {
+            rewards: [
+              {
+                id: rewardId,
+                kind: "furniture",
+                shop_item_id: rewardId,
+                cat_variant: null,
+                duplicate: false,
+                exchange_coins: 0,
+              },
+            ],
+          },
+        });
+      }
+      return json([]);
+    });
+    const api = new BackendApiClient("http://localhost:8000", userId, fetcher);
+    const client = await BackendLearningGameClient.createConnected(new LocalGameClient(new MemoryRepository()), api);
+    for (const reward of gachaRewardDefinitions.filter((entry) => entry.kind === "furniture")) {
+      rewardId = reward.id;
+      await expect(client.drawGacha(1)).resolves.toMatchObject({
+        ok: true,
+        rewards: [{ id: reward.id, shopItemId: reward.id }],
+      });
+    }
+  });
+
+  it("uses the same request copy for recommendation, selection and detail views", async () => {
+    const task = {
+      ...learningTask(taskId, "PYTHON"),
+      description: "[고양이 이야기] 츄르 부탁\n\n[도와주세요!] 두 수의 합",
+    };
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const path = new URL(String(input)).pathname;
+      if (path === "/api/v1/game/snapshot") {
+        return json(gameSnapshot(1000, 0));
+      }
+      if (path.includes("proficien")) {
+        return json([]);
+      }
+      return json([task]);
+    });
+    const api = new BackendApiClient("http://localhost:8000", userId, fetcher);
+    const client = await BackendLearningGameClient.createConnected(new LocalGameClient(new MemoryRepository()), api);
+    const expected = { text: "[도와주세요!] 츄르 부탁\n\n[문제] 두 수의 합" };
+    expect(client.getStudyTasks()[0].summary).toEqual(expected);
+    expect(client.getQuiz(taskId)?.summary).toEqual(expected);
+    expect(client.getQuiz(taskId)?.prompt).toEqual(expected);
+  });
+
   it("passes a browser test date only with the recommendations request", async () => {
     vi.stubGlobal("location", { search: "?testDate=2026-09-09" });
     const fetcher = vi.fn(async (input: RequestInfo | URL) => {
@@ -77,11 +138,7 @@ describe("backend learning integration", () => {
       }
       if (pathname === "/api/v1/learning/recommendations") {
         recommendationReads += 1;
-        return json(
-          recommendationReads === 1
-            ? [learningTask(taskId, "PYTHON")]
-            : [learningTask(sqlTaskId, "SQL")],
-        );
+        return json(recommendationReads === 1 ? [learningTask(taskId, "PYTHON")] : [learningTask(sqlTaskId, "SQL")]);
       }
       if (pathname === "/api/v1/game/settings" && init?.method === "PATCH") {
         expect(JSON.parse(String(init.body))).toMatchObject({ learning_domain: "SQL" });

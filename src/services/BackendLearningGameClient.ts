@@ -51,6 +51,7 @@ import {
   type BackendGameSnapshot,
   type BackendLearningTask,
 } from "./BackendApiClient";
+import { learningDescription } from "./learningDescription";
 
 /** FastAPI 상태와 명령을 권위 있게 사용하며 로컬 클라이언트는 초기 상태 형태에만 사용한다. */
 export class BackendLearningGameClient implements GameClient {
@@ -281,8 +282,8 @@ export class BackendLearningGameClient implements GameClient {
     return {
       id: task.publicId,
       title: { text: cleanTaskTitle(task.title) },
-      summary: { text: task.description },
-      prompt: { text: task.description },
+      summary: { text: learningDescription(task.description) },
+      prompt: { text: learningDescription(task.description) },
       choices: Object.entries(task.options).map(([id, text]) => ({ id, label: { text } })),
       rewardCoins: task.rewardCoins,
       completed: task.completed,
@@ -347,7 +348,7 @@ export class BackendLearningGameClient implements GameClient {
       ...toStudyTaskView(task),
       type: "code",
       language: task.domain === "SQL" ? "sql" : "python",
-      prompt: { text: task.description },
+      prompt: { text: learningDescription(task.description) },
       starterCode: task.templateCode,
       examples: { messageId: "study.serverExamples" },
       hints: task.hintText ? [{ text: task.hintText }] : [],
@@ -881,7 +882,7 @@ function toStudyTaskView(task: BackendLearningTask): StudyTaskView {
     concept: mapConcept(task.conceptName),
     difficulty: mapDifficulty(task.difficulty),
     title: { text: cleanTaskTitle(task.title) },
-    summary: { text: task.description },
+    summary: { text: learningDescription(task.description) },
     rewardCoins: task.rewardCoins,
     completed: task.completed,
   };
