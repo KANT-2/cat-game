@@ -558,6 +558,34 @@ describe("backend learning integration", () => {
     expect(client.getSnapshot().catMemories.fluffy).toEqual(["코딩 대화"]);
   });
 
+  it("waits longer than the default transport timeout for cat chat", async () => {
+    const fetcher = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+      return new Promise<Response>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          resolve(
+            json({
+              cat_asset_public_id: catAssetId,
+              reply: "생선도 좋지만 오늘은 츄르가 좋아, 냐옹.",
+              category: "COMPANION",
+              memory_count: 1,
+              remembered: true,
+            }),
+          );
+        }, 20);
+        init?.signal?.addEventListener("abort", () => {
+          clearTimeout(timer);
+          reject(new DOMException("Request aborted", "AbortError"));
+        });
+      });
+    });
+    const api = new BackendApiClient("http://localhost:8000", userId, fetcher, 1);
+
+    await expect(api.chatWithCat(catAssetId, "츄르랑 생선 중에 뭐가 더 좋아?")).resolves.toMatchObject({
+      reply: "생선도 좋지만 오늘은 츄르가 좋아, 냐옹.",
+      remembered: true,
+    });
+  });
+
   it("uses browser cookies and CSRF protection without exposing the development user header", async () => {
     const requests: Array<{ init: RequestInit | undefined; pathname: string }> = [];
     const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
