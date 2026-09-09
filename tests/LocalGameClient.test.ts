@@ -184,7 +184,7 @@ describe("LocalGameClient", () => {
 
   it("draws a furniture reward and stores the exact product", () => {
     const repository = new MemoryRepository();
-    const client = new LocalGameClient(repository, () => 0.1);
+    const client = new LocalGameClient(repository, () => 0.06);
 
     const result = client.drawGacha(1);
 
@@ -249,7 +249,7 @@ describe("LocalGameClient", () => {
 
   it("gives eleven independently drawn rewards for the multi draw", () => {
     const repository = new MemoryRepository();
-    const client = new LocalGameClient(repository, () => 0.9);
+    const client = new LocalGameClient(repository, () => 0.701);
 
     const result = client.drawGacha(11);
 
@@ -265,7 +265,7 @@ describe("LocalGameClient", () => {
   it("requires the full 300 coins before starting the multi draw", () => {
     const repository = new MemoryRepository();
     repository.state.coins = 299;
-    const client = new LocalGameClient(repository, () => 0.9);
+    const client = new LocalGameClient(repository, () => 0.701);
 
     expect(client.drawGacha(11)).toEqual({ ok: false, reason: "insufficient-coins" });
     expect(client.getSnapshot().coins).toBe(299);

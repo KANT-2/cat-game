@@ -316,7 +316,7 @@ if (parsedState.attendanceStreak !== 1 || parsedState.attendanceLastClaimDate.le
 if ("gems" in parsedState) {
   throw new Error("legacy gem currency should not remain in the saved state");
 }
-if (parsedState.shopInventory?.["furniture.desk"] !== 1) {
+if (parsedState.shopInventory?.["furniture.alley.hideout-2"] !== 1) {
   throw new Error("gacha furniture reward was not stored with its exact product id");
 }
 if (parsedState.activeWallpaper !== "wallpaper.cream") {
