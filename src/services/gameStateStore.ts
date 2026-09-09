@@ -219,6 +219,7 @@ function readSettings(value: unknown, fallback: GameSettings): GameSettings {
     effectsEnabled: typeof saved.effectsEnabled === "boolean" ? saved.effectsEnabled : fallback.effectsEnabled,
     effectsVolume: readPercent(saved.effectsVolume, fallback.effectsVolume),
     reducedMotion: typeof saved.reducedMotion === "boolean" ? saved.reducedMotion : fallback.reducedMotion,
+    learningDomain: saved.learningDomain === "SQL" ? "SQL" : "PYTHON",
   };
 }
 

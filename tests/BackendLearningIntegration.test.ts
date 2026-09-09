@@ -22,6 +22,7 @@ const taskId = "22222222-2222-4222-8222-222222222222";
 const attemptId = "33333333-3333-4333-8333-333333333333";
 const catId = "55555555-5555-4555-8555-555555555555";
 const catAssetId = "66666666-6666-4666-8666-666666666666";
+const sqlTaskId = "77777777-7777-4777-8777-777777777777";
 
 describe("backend learning integration", () => {
   it("passes a browser test date only with the recommendations request", async () => {
@@ -56,6 +57,50 @@ describe("backend learning integration", () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+
+  it("persists the selected learning domain and immediately reloads matching recommendations", async () => {
+    let recommendationReads = 0;
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const pathname = new URL(String(input)).pathname;
+      if (pathname === "/health") {
+        return json({ status: "ok" });
+      }
+      if (pathname === "/api/v1/session/me") {
+        return json(userPayload());
+      }
+      if (pathname === "/api/v1/learning/proficiencies") {
+        return json([]);
+      }
+      if (pathname === "/api/v1/game/snapshot") {
+        return json(gameSnapshot(1_000, 0));
+      }
+      if (pathname === "/api/v1/learning/recommendations") {
+        recommendationReads += 1;
+        return json(
+          recommendationReads === 1
+            ? [learningTask(taskId, "PYTHON")]
+            : [learningTask(sqlTaskId, "SQL")],
+        );
+      }
+      if (pathname === "/api/v1/game/settings" && init?.method === "PATCH") {
+        expect(JSON.parse(String(init.body))).toMatchObject({ learning_domain: "SQL" });
+        return json({ snapshot: gameSnapshot(1_000, 0, { learningDomain: "SQL" }), result: {} });
+      }
+      return json({ detail: "not found" }, 404);
+    });
+    const client = await BackendLearningGameClient.create(
+      new LocalGameClient(new MemoryRepository()),
+      new BackendApiClient("http://localhost:8000", userId, fetcher),
+    );
+
+    await expect(client.updateSettings({ learningDomain: "SQL" })).resolves.toMatchObject({
+      learningDomain: "SQL",
+    });
+
+    expect(recommendationReads).toBe(2);
+    expect(client.getQuiz(taskId)).toBeNull();
+    expect(client.getCodeChallenge(sqlTaskId)).toMatchObject({ language: "sql" });
   });
 
   it("loads server state and tasks, then keeps game mutations authoritative", async () => {
@@ -581,6 +626,7 @@ function gameSnapshot(
     bonusClaimed?: boolean;
     memories?: string[];
     consumableQuantity?: number;
+    learningDomain?: "PYTHON" | "SQL";
   } = {},
 ) {
   return {
@@ -607,6 +653,7 @@ function gameSnapshot(
       effects_enabled: true,
       effects_volume: 80,
       reduced_motion: false,
+      learning_domain: daily.learningDomain ?? "PYTHON",
     },
     cats: [
       {
@@ -641,6 +688,25 @@ function gameSnapshot(
           ]),
     ],
     placements: [],
+  };
+}
+
+function learningTask(publicId: string, domain: "PYTHON" | "SQL") {
+  return {
+    public_id: publicId,
+    concept_public_id: "44444444-4444-4444-8444-444444444444",
+    concept_name: `${domain}:basics`,
+    title: domain === "SQL" ? "SQL 기본 문제" : "Python 기본 문제",
+    type: domain === "SQL" ? "CODE" : "MULTIPLE_CHOICE",
+    domain,
+    difficulty: "BRONZE",
+    description: "기본 문제",
+    template_code: domain === "SQL" ? "SELECT 1;" : "",
+    options: domain === "SQL" ? null : { A: "정답", B: "오답" },
+    hint_text: null,
+    reward_coins: 30,
+    is_active: true,
+    completed: false,
   };
 }
 

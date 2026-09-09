@@ -40,6 +40,7 @@ export type GameSettings = {
   effectsEnabled: boolean;
   effectsVolume: number;
   reducedMotion: boolean;
+  learningDomain: "PYTHON" | "SQL";
 };
 
 /** 로컬 또는 원격 저장소로 직렬화할 수 있는 게임 스냅샷이다. */
@@ -125,6 +126,7 @@ export function createDefaultState(): GameState {
       effectsEnabled: true,
       effectsVolume: 80,
       reducedMotion: false,
+      learningDomain: "PYTHON",
     },
     furniture: defaultFurniture.map((item) => ({ ...item })),
     inventory: {

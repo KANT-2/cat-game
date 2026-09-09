@@ -36,7 +36,7 @@ export class SettingsPage extends Container {
   private studyAlerts = true;
   private rewardAlerts = true;
   private quietHours = true;
-  private subjectIndex = 0;
+  private subjectIndex: number;
   private hintsEnabled = true;
   private explanationsEnabled = true;
   private dailyGoal = 5;
@@ -49,6 +49,7 @@ export class SettingsPage extends Container {
     this.bgmVolume = settings.bgmVolume;
     this.effectsEnabled = settings.effectsEnabled;
     this.effectsVolume = settings.effectsVolume;
+    this.subjectIndex = learningDomains.indexOf(settings.learningDomain);
     this.render();
   }
 
@@ -240,8 +241,12 @@ export class SettingsPage extends Container {
       "settings.subject",
       "settings.subjectDescription",
       subjectMessages[this.subjectIndex],
-      () => {
+      async () => {
         this.subjectIndex = (this.subjectIndex + 1) % subjectMessages.length;
+        const settings = await this.options.onUpdateSettings({
+          learningDomain: learningDomains[this.subjectIndex],
+        });
+        this.subjectIndex = learningDomains.indexOf(settings.learningDomain);
       },
     );
     this.addGridToggle(950, 245, "settings.hints", "settings.hintsDescription", this.hintsEnabled, () => {
@@ -534,9 +539,9 @@ const confirmMessages: Record<ConfirmAction, { title: MessageId; description: Me
 
 const subjectMessages: readonly MessageId[] = [
   "settings.subjectPython",
-  "settings.subjectJavaScript",
-  "settings.subjectWeb",
+  "settings.subjectSql",
 ];
+const learningDomains = ["PYTHON", "SQL"] as const;
 function clampVolume(value: number): number {
   return Math.min(100, Math.max(0, value));
 }

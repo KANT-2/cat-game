@@ -582,8 +582,19 @@ export class BackendLearningGameClient implements GameClient {
 
   async updateSettings(patch: Partial<GameSettings>): Promise<GameSettings> {
     try {
+      const learningDomainChanged =
+        patch.learningDomain !== undefined && patch.learningDomain !== this.state.settings.learningDomain;
       const mutation = await this.api.updateGameSettings(patch);
       this.applyServerSnapshot(mutation.snapshot);
+      if (learningDomainChanged) {
+        this.tasks.clear();
+        const tasks = await this.api.getLearningRecommendations(10);
+        for (const task of tasks) {
+          this.tasks.set(task.publicId, task);
+        }
+        this.state = mergeTaskProgress(this.state, this.tasks.values());
+        this.emit();
+      }
     } catch (error) {
       console.warn("Backend settings update failed", error);
     }
