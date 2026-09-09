@@ -28,6 +28,7 @@ export type BackendLearningTaskQuery = {
 };
 
 export type BackendConceptProficiency = {
+  domain: "PYTHON" | "SQL";
   conceptName: string;
   attempts: number;
   proficiencyLevel: number;
@@ -601,6 +602,7 @@ function parseTask(value: unknown): BackendLearningTask {
 function parseConceptProficiency(value: unknown): BackendConceptProficiency {
   const record = asRecord(value);
   return {
+    domain: readEnum(record, "domain", ["PYTHON", "SQL"] as const),
     conceptName: readString(record, "name"),
     attempts: readNumber(record, "attempts"),
     proficiencyLevel: readNumber(record, "proficiency_level"),

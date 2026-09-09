@@ -61,6 +61,7 @@ describe("backend learning integration", () => {
 
   it("persists the selected learning domain and immediately reloads matching recommendations", async () => {
     let recommendationReads = 0;
+    let proficiencyReads = 0;
     const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const pathname = new URL(String(input)).pathname;
       if (pathname === "/health") {
@@ -70,7 +71,12 @@ describe("backend learning integration", () => {
         return json(userPayload());
       }
       if (pathname === "/api/v1/learning/proficiencies") {
-        return json([]);
+        proficiencyReads += 1;
+        return json(
+          proficiencyReads === 1
+            ? [{ concept_public_id: taskId, domain: "PYTHON", name: "loops", attempts: 2, proficiency_level: 50 }]
+            : [{ concept_public_id: sqlTaskId, domain: "SQL", name: "joins", attempts: 0, proficiency_level: 0 }],
+        );
       }
       if (pathname === "/api/v1/game/snapshot") {
         return json(gameSnapshot(1_000, 0));
@@ -99,6 +105,8 @@ describe("backend learning integration", () => {
     });
 
     expect(recommendationReads).toBe(2);
+    expect(proficiencyReads).toBe(2);
+    expect(client.getStudyMastery()).toEqual([{ conceptName: "joins", attempts: 0, proficiencyLevel: 0 }]);
     expect(client.getQuiz(taskId)).toBeNull();
     expect(client.getCodeChallenge(sqlTaskId)).toMatchObject({ language: "sql" });
   });
@@ -144,7 +152,8 @@ describe("backend learning integration", () => {
         return json([
           {
             concept_public_id: "44444444-4444-4444-8444-444444444444",
-            name: "PYTHON:variables",
+            domain: "PYTHON",
+            name: "variables",
             attempts: 10,
             proficiency_level: 70,
           },
@@ -231,7 +240,7 @@ describe("backend learning integration", () => {
     expect(client.getStudyTasks()).toMatchObject([
       { id: taskId, type: "quiz", concept: "variables", title: { text: "두 수의 합" }, completed: false },
     ]);
-    expect(client.getStudyMastery().variables).toBe(70);
+    expect(client.getStudyMastery()).toEqual([{ conceptName: "variables", attempts: 10, proficiencyLevel: 70 }]);
     expect(client.getSnapshot().catMemories.fluffy).toEqual(["반복문을 연습했어요"]);
     await expect(client.clearCatMemories()).resolves.toEqual({ ok: true, removed: 1 });
     expect(client.getSnapshot().catMemories).toEqual({});
