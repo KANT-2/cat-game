@@ -115,6 +115,7 @@ export type BackendGameSnapshot = {
     effectsEnabled: boolean;
     effectsVolume: number;
     reducedMotion: boolean;
+    learningDomain: "PYTHON" | "SQL";
   };
   cats: BackendGameCat[];
   items: BackendGameItem[];
@@ -364,6 +365,7 @@ export class BackendApiClient {
     effectsEnabled?: boolean;
     effectsVolume?: number;
     reducedMotion?: boolean;
+    learningDomain?: "PYTHON" | "SQL";
   }): Promise<BackendGameMutation> {
     return this.gameMutation("/api/v1/game/settings", "PATCH", {
       bgm_enabled: patch.bgmEnabled,
@@ -371,6 +373,7 @@ export class BackendApiClient {
       effects_enabled: patch.effectsEnabled,
       effects_volume: patch.effectsVolume,
       reduced_motion: patch.reducedMotion,
+      learning_domain: patch.learningDomain,
     });
   }
 
@@ -712,6 +715,7 @@ function parseGameSnapshot(value: unknown): BackendGameSnapshot {
       effectsEnabled: readBoolean(settings, "effects_enabled"),
       effectsVolume: readNumber(settings, "effects_volume"),
       reducedMotion: readBoolean(settings, "reduced_motion"),
+      learningDomain: readEnum(settings, "learning_domain", ["PYTHON", "SQL"] as const),
     },
     cats,
     items,

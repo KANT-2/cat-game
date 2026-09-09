@@ -402,6 +402,9 @@ export class LocalGameClient implements GameClient {
   }
 
   getStudyTasks(): StudyTaskView[] {
+    if (this.state.settings.learningDomain === "SQL") {
+      return [];
+    }
     return studyTaskDefinitions.map((task) => ({
       id: task.id,
       type: task.type,

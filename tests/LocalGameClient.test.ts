@@ -431,7 +431,10 @@ describe("LocalGameClient", () => {
     expect(client.updateSettings({ bgmEnabled: false, effectsVolume: 37 })).toMatchObject({
       bgmEnabled: false,
       effectsVolume: 40,
+      learningDomain: "PYTHON",
     });
+    expect(client.updateSettings({ learningDomain: "SQL" })).toMatchObject({ learningDomain: "SQL" });
+    expect(client.getStudyTasks()).toEqual([]);
     expect(client.clearCatMemories()).toEqual({ ok: true, removed: 1 });
     expect(client.getSnapshot().ownedCats).toContain("fluffy");
     expect(client.getSnapshot().catMemories).toEqual({});
