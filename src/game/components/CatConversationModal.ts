@@ -161,14 +161,11 @@ export class CatConversationModal extends Container {
     const visibleReply = clampConversationText(
       this.pending ? message("cat.conversation.pending") : (this.replyText ?? message("cat.conversation.prompt")),
     );
+    const defaultFontSize = this.replyText ? 21 : 20;
     const text = new Text({
       text: visibleReply,
       style: {
-        ...textStyle(
-          visibleReply.length > 95 ? 17 : this.replyText ? 21 : 20,
-          0x482b20,
-          this.replyText ? "700" : "600",
-        ),
+        ...textStyle(visibleReply.length > 95 ? 17 : defaultFontSize, 0x482b20, this.replyText ? "700" : "600"),
         wordWrap: true,
         wordWrapWidth: 665,
         lineHeight: visibleReply.length > 95 ? 23 : 30,
