@@ -298,7 +298,12 @@ export class BackendLearningGameClient implements GameClient {
       return { ok: false, reason: "choice-not-found" };
     }
     try {
-      const attempt = await this.api.grade({ taskPublicId: quizId, selectedOption: choiceId, usedHint: false });
+      const attempt = await this.api.grade({
+        requestId: createRequestId(),
+        taskPublicId: quizId,
+        selectedOption: choiceId,
+        usedHint: false,
+      });
       if (attempt.status !== "COMPLETED" || attempt.correct === null) {
         return { ok: false, reason: "grading-failed" };
       }
@@ -361,6 +366,7 @@ export class BackendLearningGameClient implements GameClient {
     const submittedCode = task.domain === "SQL" ? normalizeSqlWhitespace(code) : code;
     try {
       const attempt = await this.api.grade({
+        requestId: createRequestId(),
         taskPublicId: challengeId,
         submittedCode,
         usedHint: hintsUsed > 0,

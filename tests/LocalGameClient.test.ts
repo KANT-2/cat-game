@@ -253,13 +253,23 @@ describe("LocalGameClient", () => {
 
     const result = client.drawGacha(11);
 
-    expect(result).toMatchObject({ ok: true, remainingCoins: 1_099_730 });
+    expect(result).toMatchObject({ ok: true, remainingCoins: 1_099_700 });
     if (!result.ok) {
       throw new Error("expected multi draw to succeed");
     }
     expect(result.rewards).toHaveLength(11);
     expect(result.rewards.every((reward) => reward.id === "furniture.sofa")).toBe(true);
     expect(client.getSnapshot().shopInventory["furniture.sofa"]).toBe(11);
+  });
+
+  it("requires the full 300 coins before starting the multi draw", () => {
+    const repository = new MemoryRepository();
+    repository.state.coins = 299;
+    const client = new LocalGameClient(repository, () => 0.9);
+
+    expect(client.drawGacha(11)).toEqual({ ok: false, reason: "insufficient-coins" });
+    expect(client.getSnapshot().coins).toBe(299);
+    expect(repository.save).not.toHaveBeenCalled();
   });
 
   it("rejects a draw without enough coins and cannot select an unowned cat", () => {
@@ -442,7 +452,7 @@ describe("LocalGameClient", () => {
     expect(client.getSnapshot().catMemories.ink).toBeUndefined();
   });
 
-  it("keeps free chat useful while rejecting prompt control and unknown knowledge", () => {
+  it("keeps free chat useful while rejecting prompt control", () => {
     const repository = new MemoryRepository();
     const client = new LocalGameClient(repository);
 
@@ -460,10 +470,22 @@ describe("LocalGameClient", () => {
     });
     expect(client.chatWithCat("fluffy", "양자역학을 자세히 설명해 줘")).toMatchObject({
       ok: true,
-      category: "UNKNOWN",
+      category: "GENERAL",
       reply: { messageId: "cat.conversation.unknownReply" },
       remembered: false,
     });
     expect(client.getSnapshot().catMemories.fluffy).toEqual(["사용자와 코딩 학습에 관해 대화했다."]);
+  });
+
+  it("recognizes natural play invitations as companion chat", () => {
+    const client = new LocalGameClient(new MemoryRepository());
+
+    for (const prompt of ["같이 놀자", "같이 놀래?", "우리 같이 놀까?", "나랑 놀아 줘", "공놀이하자"]) {
+      expect(client.chatWithCat("fluffy", prompt)).toMatchObject({
+        ok: true,
+        category: "COMPANION",
+        remembered: true,
+      });
+    }
   });
 });
