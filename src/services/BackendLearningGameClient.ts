@@ -336,7 +336,7 @@ export class BackendLearningGameClient implements GameClient {
   }
 
   getStudyMastery(): StudyMasteryView {
-    return { ...this.mastery };
+    return this.mastery.map((entry) => ({ ...entry }));
   }
 
   getCodeChallenge(challengeId: string): CodeChallengeView | null {
@@ -589,10 +589,14 @@ export class BackendLearningGameClient implements GameClient {
       this.applyServerSnapshot(mutation.snapshot);
       if (learningDomainChanged) {
         this.tasks.clear();
-        const tasks = await this.api.getLearningRecommendations(10);
+        const [tasks, proficiencies] = await Promise.all([
+          this.api.getLearningRecommendations(10),
+          this.api.getLearningProficiencies(),
+        ]);
         for (const task of tasks) {
           this.tasks.set(task.publicId, task);
         }
+        this.mastery = toStudyMastery(proficiencies);
         this.state = mergeTaskProgress(this.state, this.tasks.values());
         this.emit();
       }
@@ -897,25 +901,11 @@ function mapConcept(value: string): StudyTaskView["concept"] {
 }
 
 function toStudyMastery(proficiencies: BackendConceptProficiency[]): StudyMasteryView {
-  const buckets: Record<StudyTaskView["concept"], { weightedTotal: number; attempts: number }> = {
-    variables: { weightedTotal: 0, attempts: 0 },
-    conditionals: { weightedTotal: 0, attempts: 0 },
-    loops: { weightedTotal: 0, attempts: 0 },
-    functions: { weightedTotal: 0, attempts: 0 },
-    other: { weightedTotal: 0, attempts: 0 },
-  };
-  for (const proficiency of proficiencies) {
-    const bucket = buckets[mapConcept(proficiency.conceptName)];
-    const weight = Math.max(1, proficiency.attempts);
-    bucket.weightedTotal += proficiency.proficiencyLevel * weight;
-    bucket.attempts += weight;
-  }
-  return Object.fromEntries(
-    Object.entries(buckets).map(([concept, value]) => [
-      concept,
-      value.attempts === 0 ? 0 : Math.round(value.weightedTotal / value.attempts),
-    ]),
-  ) as StudyMasteryView;
+  return proficiencies.map((proficiency) => ({
+    conceptName: proficiency.conceptName,
+    attempts: proficiency.attempts,
+    proficiencyLevel: proficiency.proficiencyLevel,
+  }));
 }
 
 function mapDifficulty(value: BackendLearningTask["difficulty"]): StudyTaskView["difficulty"] {

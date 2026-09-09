@@ -109,7 +109,11 @@ export type StudyTaskView = {
   completed: boolean;
 };
 
-export type StudyMasteryView = Record<StudyConcept, number>;
+export type StudyMasteryView = ReadonlyArray<{
+  conceptName: string;
+  attempts: number;
+  proficiencyLevel: number;
+}>;
 
 export type CodeChallengeView = StudyTaskView & {
   type: "code";

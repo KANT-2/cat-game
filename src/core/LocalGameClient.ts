@@ -422,13 +422,30 @@ export class LocalGameClient implements GameClient {
 
   getStudyMastery(): import("./GameClient").StudyMasteryView {
     const tasks = this.getStudyTasks();
-    return Object.fromEntries(
-      (["variables", "conditionals", "loops", "functions", "other"] as const).map((concept) => {
-        const related = tasks.filter((task) => task.concept === concept);
-        const completed = related.filter((task) => task.completed).length;
-        return [concept, related.length === 0 ? 0 : Math.round((completed / related.length) * 100)];
-      }),
-    ) as import("./GameClient").StudyMasteryView;
+    const names =
+      this.state.settings.learningDomain === "SQL"
+        ? [
+            "basics",
+            "filtering",
+            "aggregation",
+            "joins",
+            "subqueries",
+            "advanced_queries",
+            "data_manipulation",
+            "schema",
+            "transactions",
+          ]
+        : ["basics", "conditionals", "loops", "strings", "collections", "functions", "exceptions"];
+    return names.map((conceptName) => {
+      const localConcept = conceptName === "basics" ? "variables" : conceptName;
+      const related = tasks.filter((task) => task.concept === localConcept);
+      const completed = related.filter((task) => task.completed).length;
+      return {
+        conceptName,
+        attempts: completed,
+        proficiencyLevel: related.length === 0 ? 0 : Math.round((completed / related.length) * 100),
+      };
+    });
   }
 
   getCodeChallenge(challengeId: string): CodeChallengeView | null {

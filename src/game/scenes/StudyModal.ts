@@ -45,6 +45,24 @@ const conceptMessages: Record<StudyConcept, MessageId> = {
   other: "study.conceptOther",
 };
 
+const masteryConceptMessages: Record<string, MessageId> = {
+  basics: "study.masteryConceptBasics",
+  conditionals: "study.masteryConceptConditionals",
+  loops: "study.masteryConceptLoops",
+  strings: "study.masteryConceptStrings",
+  collections: "study.masteryConceptCollections",
+  functions: "study.masteryConceptFunctions",
+  exceptions: "study.masteryConceptExceptions",
+  filtering: "study.masteryConceptFiltering",
+  aggregation: "study.masteryConceptAggregation",
+  joins: "study.masteryConceptJoins",
+  subqueries: "study.masteryConceptSubqueries",
+  advanced_queries: "study.masteryConceptAdvancedQueries",
+  data_manipulation: "study.masteryConceptDataManipulation",
+  schema: "study.masteryConceptSchema",
+  transactions: "study.masteryConceptTransactions",
+};
+
 const difficultyMessages: Record<
   StudyDifficulty,
   "study.filterBasic" | "study.filterApplied" | "study.filterChallenge"
@@ -117,23 +135,34 @@ export class StudyModal extends Container {
     const title = new Text({ text: message("study.masteryTitle"), style: textStyle(21, 0x493022, "800") });
     title.position.set(78, 142);
     this.body.addChild(panel, title);
-    const masteryByConcept = this.options.getMastery();
-    (["variables", "conditionals", "loops", "functions", "other"] as const).forEach((concept, index) => {
-      const mastery = masteryByConcept[concept];
-      const y = 180 + index * 32;
-      const label = new Text({ text: message(conceptMessages[concept]), style: textStyle(15, 0x4a3023, "700") });
-      label.position.set(78, y - 4);
-      const track = new Graphics().roundRect(205, y, 188, 14, 7).fill(0xe4ccb0);
-      const fillWidth = mastery === 0 ? 0 : Math.max(10, (188 * mastery) / 100);
+    const masteryEntries = this.options.getMastery();
+    masteryEntries.forEach((entry, index) => {
+      const column = Math.floor(index / 5);
+      const row = index % 5;
+      const x = 68 + column * 202;
+      const y = 180 + row * 32;
+      const mastery = entry.proficiencyLevel;
+      const isUnassessed = entry.attempts === 0;
+      const labelId = masteryConceptMessages[entry.conceptName];
+      const label = new Text({
+        text: labelId ? message(labelId) : entry.conceptName,
+        style: textStyle(12, 0x4a3023, "700"),
+      });
+      label.position.set(x, y - 4);
+      const trackX = x + 82;
+      const track = new Graphics().roundRect(trackX, y, 73, 14, 7).fill(0xe4ccb0);
+      const fillWidth = mastery === 0 ? 0 : Math.max(6, (73 * mastery) / 100);
       if (fillWidth > 0) {
-        track.roundRect(205, y, fillWidth, 14, 7).fill(concept === "loops" ? 0xe69b4d : 0x82a768);
+        track.roundRect(trackX, y, fillWidth, 14, 7).fill(entry.conceptName === "loops" ? 0xe69b4d : 0x82a768);
       }
       const value = new Text({
-        text: message("study.masteryValue", { value: mastery }),
-        style: textStyle(14, 0x604333, "800"),
+        text: isUnassessed
+          ? message("study.masteryUnassessed")
+          : message("study.masteryValue", { value: mastery }),
+        style: textStyle(isUnassessed ? 12 : 14, isUnassessed ? 0x9a806e : 0x604333, "800"),
       });
       value.anchor.set(1, 0);
-      value.position.set(438, y - 3);
+      value.position.set(x + 194, y - 3);
       this.body.addChild(label, track, value);
     });
     const notice = new Text({
