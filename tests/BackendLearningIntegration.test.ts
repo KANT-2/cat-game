@@ -24,6 +24,23 @@ const catId = "55555555-5555-4555-8555-555555555555";
 const catAssetId = "66666666-6666-4666-8666-666666666666";
 
 describe("backend learning integration", () => {
+  it("passes a browser test date only with the recommendations request", async () => {
+    vi.stubGlobal("location", { search: "?testDate=2026-09-09" });
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      expect(url.pathname).toBe("/api/v1/learning/recommendations");
+      expect(url.searchParams.get("limit")).toBe("10");
+      expect(url.searchParams.get("test_date")).toBe("2026-09-09");
+      return json([]);
+    });
+    try {
+      const api = new BackendApiClient("http://localhost:8000", userId, fetcher);
+      await expect(api.getLearningRecommendations()).resolves.toEqual([]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("calls the browser fetch implementation with its required global receiver", async () => {
     const originalFetch = globalThis.fetch;
     const browserFetch = vi.fn(function (this: unknown, input: RequestInfo | URL) {
@@ -138,11 +155,13 @@ describe("backend learning integration", () => {
         });
       }
       if (url.pathname === "/api/v1/attempts" && init?.method === "POST") {
-        expect(JSON.parse(String(init.body))).toMatchObject({
+        const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+        expect(body).toMatchObject({
           task_public_id: taskId,
           selected_option: "A",
           context_type: "LEARNING",
         });
+        expect(body.request_id).toEqual(expect.any(String));
         return json({ public_id: attemptId, status: "PENDING" }, 202);
       }
       if (url.pathname === `/api/v1/attempts/${attemptId}`) {
@@ -305,10 +324,12 @@ describe("backend learning integration", () => {
         return json(gameSnapshot(1_000, 0));
       }
       if (pathname === "/api/v1/attempts" && init?.method === "POST") {
-        expect(JSON.parse(String(init.body))).toMatchObject({
+        const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+        expect(body).toMatchObject({
           task_public_id: taskId,
           submitted_code: "select 1;",
         });
+        expect(body.request_id).toEqual(expect.any(String));
         return json({ public_id: attemptId, status: "PENDING" }, 202);
       }
       if (pathname === `/api/v1/attempts/${attemptId}`) {

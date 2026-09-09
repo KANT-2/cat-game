@@ -34,6 +34,7 @@ export type BackendConceptProficiency = {
 };
 
 export type BackendAttemptSubmission = {
+  requestId: string;
   taskPublicId: string;
   submittedCode?: string;
   selectedOption?: string;
@@ -223,7 +224,12 @@ export class BackendApiClient {
   /** 인증 사용자의 추천 학습 과제를 서버 순서대로 조회한다. */
   async getLearningRecommendations(limit = 10): Promise<BackendLearningTask[]> {
     const safeLimit = Math.max(1, Math.min(50, Math.trunc(limit)));
-    const payload = await this.request(`/api/v1/learning/recommendations?limit=${safeLimit}`);
+    const parameters = new URLSearchParams({ limit: String(safeLimit) });
+    const testDate = browserRecommendationTestDate();
+    if (testDate) {
+      parameters.set("test_date", testDate);
+    }
+    const payload = await this.request(`/api/v1/learning/recommendations?${parameters.toString()}`);
     if (!Array.isArray(payload)) {
       throw new Error("Backend recommendations response is invalid");
     }
@@ -421,6 +427,7 @@ export class BackendApiClient {
   /** 학습 답안을 서버 채점 큐에 제출하고 완료 또는 실패 상태까지 폴링한다. */
   async grade(submission: BackendAttemptSubmission, waitTimeoutMs = 20_000): Promise<BackendAttempt> {
     const payload = {
+      request_id: submission.requestId,
       task_public_id: submission.taskPublicId,
       submitted_code: submission.submittedCode,
       selected_option: submission.selectedOption,
@@ -535,6 +542,14 @@ export class BackendApiClient {
       authenticated,
     );
   }
+}
+
+function browserRecommendationTestDate(): string | null {
+  if (typeof globalThis.location?.search !== "string") {
+    return null;
+  }
+  const value = new URLSearchParams(globalThis.location.search).get("testDate");
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
 }
 
 function parseUser(value: unknown): BackendUser {

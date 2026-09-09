@@ -19,7 +19,7 @@ export type GachaRewardDefinition = {
 };
 
 export const GACHA_SINGLE_COST = 30;
-export const GACHA_MULTI_COST = 270;
+export const GACHA_MULTI_COST = 300;
 export const GACHA_DUPLICATE_CAT_COINS = 15;
 export const gachaRewardDefinitions: readonly GachaRewardDefinition[] = [
   { id: "cat.ink", weight: 0.05, kind: "cat", catVariant: "ink" },
