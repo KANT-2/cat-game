@@ -58,7 +58,7 @@ export type GachaReward = {
 
 export type GachaDrawResult =
   | { ok: true; rewards: GachaReward[]; remainingCoins: number }
-  | { ok: false; reason: "insufficient-coins" | "server-unavailable" };
+  | { ok: false; reason: "insufficient-coins" | "catalog-updating" | "server-unavailable" };
 
 export type CatSelectionResult =
   | { ok: true; activeCat: CatVariant }

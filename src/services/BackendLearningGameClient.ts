@@ -241,6 +241,9 @@ export class BackendLearningGameClient implements GameClient {
       this.applyServerSnapshot(mutation.snapshot);
       return { ok: true, rewards, remainingCoins: mutation.snapshot.balance };
     } catch (error) {
+      if (isBackendReason(error, "resource-not-found")) {
+        return { ok: false, reason: "catalog-updating" };
+      }
       return {
         ok: false,
         reason: isBackendReason(error, "insufficient-coins") ? "insufficient-coins" : "server-unavailable",
