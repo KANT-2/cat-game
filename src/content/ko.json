@@ -378,6 +378,7 @@
   "gacha.resultClose": "확인",
   "gacha.selectMainCat": "대표 고양이로 선택",
   "gacha.insufficientCoins": "코인이 부족해요.",
+  "gacha.catalogUpdating": "새 보상 목록을 준비하고 있어요. 잠시 뒤 다시 뽑아 주세요.",
   "gacha.serverUnavailable": "뽑기에 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요.",
   "gacha.duplicateExchange": "중복 교환 코인 +{amount}",
   "ranking.title": "랭킹",

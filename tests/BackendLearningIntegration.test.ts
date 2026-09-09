@@ -63,6 +63,23 @@ describe("backend learning integration", () => {
     }
   });
 
+  it("reports a lagging gacha catalog as a retryable update", async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const path = new URL(String(input)).pathname;
+      if (path === "/api/v1/game/snapshot") {
+        return json(gameSnapshot(1000, 0));
+      }
+      if (path === "/api/v1/game/gacha") {
+        return json({ detail: "resource-not-found" }, 404);
+      }
+      return json([]);
+    });
+    const api = new BackendApiClient("http://localhost:8000", userId, fetcher);
+    const client = await BackendLearningGameClient.createConnected(new LocalGameClient(new MemoryRepository()), api);
+
+    await expect(client.drawGacha(1)).resolves.toEqual({ ok: false, reason: "catalog-updating" });
+  });
+
   it("uses the same request copy for recommendation, selection and detail views", async () => {
     const task = {
       ...learningTask(taskId, "PYTHON"),

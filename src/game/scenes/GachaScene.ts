@@ -171,8 +171,12 @@ export class GachaScene extends Container {
   private showFailure(reason: Extract<GachaDrawResult, { ok: false }>["reason"]): void {
     this.clearResults();
     const panel = createCozyPanel(350, 190, 900, 520, { fill: 0xfff4df, border: 0x7b4b32, radius: 30 });
-    const messageId: MessageId =
-      reason === "insufficient-coins" ? "gacha.insufficientCoins" : "gacha.serverUnavailable";
+    let messageId: MessageId = "gacha.serverUnavailable";
+    if (reason === "insufficient-coins") {
+      messageId = "gacha.insufficientCoins";
+    } else if (reason === "catalog-updating") {
+      messageId = "gacha.catalogUpdating";
+    }
     const title = centeredText(message(messageId), 800, 355, 32);
     const close = new CanvasButton({
       label: message("gacha.resultClose"),
