@@ -137,6 +137,7 @@ export type BackendCatChat = {
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 type CsrfTokenProvider = () => string | null;
 type AuthenticationExpiredListener = () => void;
+const CAT_CHAT_REQUEST_TIMEOUT_MS = 35_000;
 
 export class BackendApiError extends Error {
   constructor(
@@ -407,18 +408,27 @@ export class BackendApiClient {
     });
   }
 
-  /** 자유 문장을 서버의 입력·출력 가드를 거쳐 보유 고양이에게 전달한다. */
+  /**
+   * 자유 문장을 서버의 입력·출력 가드를 거쳐 보유 고양이에게 전달한다.
+   *
+   * @remarks Gemini의 서버 제한 30초가 먼저 끝나도록 일반 API보다 긴 35초 전송 제한을 사용한다.
+   */
   async chatWithCat(
     catAssetPublicId: string,
     message: string,
     recentMessages: readonly { role: "user" | "assistant"; text: string }[] = [],
   ): Promise<BackendCatChat> {
     const record = asRecord(
-      await this.request(`/api/v1/cats/${encodeURIComponent(catAssetPublicId)}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, recent_messages: recentMessages.slice(-10) }),
-      }),
+      await this.request(
+        `/api/v1/cats/${encodeURIComponent(catAssetPublicId)}/chat`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, recent_messages: recentMessages.slice(-10) }),
+        },
+        true,
+        CAT_CHAT_REQUEST_TIMEOUT_MS,
+      ),
     );
     const remembered = typeof record.remembered === "boolean" ? record.remembered : record.memory != null;
     return {
@@ -457,7 +467,12 @@ export class BackendApiClient {
     throw new Error("Backend grading timed out");
   }
 
-  private async request(path: string, init: RequestInit = {}, authenticated = true): Promise<unknown> {
+  private async request(
+    path: string,
+    init: RequestInit = {},
+    authenticated = true,
+    timeoutMs = this.requestTimeoutMs,
+  ): Promise<unknown> {
     const headers = new Headers(init.headers);
     headers.set("Accept", "application/json");
     const method = (init.method ?? "GET").toUpperCase();
@@ -481,7 +496,7 @@ export class BackendApiClient {
     const attemptLimit = isSafeMethod(method) ? 2 : 1;
     for (let attempt = 0; attempt < attemptLimit; attempt += 1) {
       const controller = new AbortController();
-      const timeout = globalThis.setTimeout(() => controller.abort(), this.requestTimeoutMs);
+      const timeout = globalThis.setTimeout(() => controller.abort(), timeoutMs);
       try {
         const response = await this.fetcher(`${this.baseUrl}${path}`, {
           ...init,
