@@ -104,6 +104,32 @@ describe("backend learning integration", () => {
     expect(client.getQuiz(taskId)?.prompt).toEqual(expectedPrompt);
   });
 
+  it("turns newline-separated server guidance into progressive code hints", async () => {
+    const task = {
+      ...learningTask(taskId, "PYTHON"),
+      type: "CODE" as const,
+      hint_text: "[시작] 입력을 변수에 담으세요.\n[핵심] 두 값을 더하세요.\n[확인] 결과만 출력하세요.",
+    };
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const path = new URL(String(input)).pathname;
+      if (path === "/api/v1/game/snapshot") {
+        return json(gameSnapshot(1000, 0));
+      }
+      if (path.includes("proficien")) {
+        return json([]);
+      }
+      return json([task]);
+    });
+    const api = new BackendApiClient("http://localhost:8000", userId, fetcher);
+    const client = await BackendLearningGameClient.createConnected(new LocalGameClient(new MemoryRepository()), api);
+
+    expect(client.getCodeChallenge(taskId)?.hints).toEqual([
+      { text: "[시작] 입력을 변수에 담으세요." },
+      { text: "[핵심] 두 값을 더하세요." },
+      { text: "[확인] 결과만 출력하세요." },
+    ]);
+  });
+
   it("passes a browser test date only with the recommendations request", async () => {
     vi.stubGlobal("location", { search: "?testDate=2026-09-09" });
     const fetcher = vi.fn(async (input: RequestInfo | URL) => {
