@@ -33,6 +33,8 @@ export type HomeIconSources = {
   settings: string;
   back: string;
   coin: string;
+  studyBackdrop: string;
+  studyMascot: string;
   shopShowcase: string;
   gachaBackdrop: string;
   gachaMachine: string;
@@ -176,7 +178,7 @@ export class HomeScene extends Container {
     this.placementPanel?.position.set(width / 2, height - 92);
     this.layoutRoomEditPanel();
     this.purchaseChoicePanel?.position.set(width / 2, height / 2);
-    this.furnitureEditPanel?.position.set(width / 2, height - 92);
+    this.furnitureEditPanel?.position.set(width / 2, height - 42);
     this.toastLayer.layout(width);
   }
 
@@ -293,6 +295,8 @@ export class HomeScene extends Container {
     this.enterPage();
     this.studyModal = new StudyModal({
       tasks: this.gameClient.getStudyTasks(),
+      backdrop: this.iconSources.studyBackdrop,
+      mascot: this.iconSources.studyMascot,
       getQuiz: (quizId) => this.gameClient.getQuiz(quizId),
       getCodeChallenge: (challengeId) => this.gameClient.getCodeChallenge(challengeId),
       onAnswer: (quizId, choiceId) => this.gameClient.answerQuiz(quizId, choiceId),
@@ -831,7 +835,8 @@ export class HomeScene extends Container {
     });
     store.position.set(160, -24);
     panel.addChild(cancel, label, move, store);
-    panel.position.set(this.screenWidth / 2, this.screenHeight - 92);
+    panel.scale.set(0.6);
+    panel.position.set(this.screenWidth / 2, this.screenHeight - 42);
     this.furnitureEditPanel = panel;
     this.uiLayer.addChild(panel);
   }

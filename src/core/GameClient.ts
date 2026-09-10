@@ -5,7 +5,14 @@ import type { DailyQuestId } from "../domain/dailyQuest";
 import type { GachaDrawCount, GachaRewardId } from "../domain/gacha";
 import type { FurnitureKind, GameSettings, GameState } from "../domain/room";
 import type { ConsumableEffect, ShopItemId } from "../domain/shop";
-import type { CodeTestResult, StudyConcept, StudyDifficulty, StudyTaskType } from "../domain/study";
+import type {
+  CodeTestResult,
+  StudyCodeLanguage,
+  StudyConcept,
+  StudyDifficulty,
+  StudyLanguage,
+  StudyTaskType,
+} from "../domain/study";
 
 /** 가구 배치를 요청할 때 UI가 게임 시스템에 전달하는 직렬화 가능한 명령이다. */
 export type PlacementCommand = {
@@ -99,6 +106,7 @@ export type QuizAnswerResult =
 export type StudyTaskView = {
   id: string;
   type: StudyTaskType;
+  language: StudyLanguage;
   concept: StudyConcept;
   difficulty: StudyDifficulty;
   title: GameText;
@@ -109,7 +117,7 @@ export type StudyTaskView = {
 
 export type CodeChallengeView = StudyTaskView & {
   type: "code";
-  language: "python" | "sql";
+  language: StudyCodeLanguage;
   prompt: GameText;
   signature: string;
   starterBody: string;

@@ -2,6 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import type { GameStateRepository } from "../src/core/GameClient";
 import { LocalGameClient } from "../src/core/LocalGameClient";
 import { createDefaultState, type GameState } from "../src/domain/room";
+import {
+  ML_SUPERVISED_QUIZ_ID,
+  PYTHON_SQUARE_CODE_ID,
+  SQL_ACTIVE_CATS_CODE_ID,
+  SQL_SELECT_QUIZ_ID,
+} from "../src/domain/study";
 
 class MemoryRepository implements GameStateRepository {
   state = createDefaultState();
@@ -69,6 +75,46 @@ describe("LocalGameClient", () => {
       coinsAwarded: 0,
     });
     expect(repository.save).not.toHaveBeenCalled();
+  });
+
+  it("provides solvable SQL and machine-learning task pages", () => {
+    const repository = new MemoryRepository();
+    repository.state.completedQuizIds = [];
+    const client = new LocalGameClient(repository);
+    const tasks = client.getStudyTasks();
+
+    expect(tasks.filter((task) => task.language === "python")).toHaveLength(7);
+    expect(tasks.filter((task) => task.language === "sql")).toHaveLength(7);
+    expect(tasks.filter((task) => task.language === "machine-learning")).toHaveLength(4);
+    expect(client.getQuiz(SQL_SELECT_QUIZ_ID)?.choices).toHaveLength(3);
+    expect(client.getQuiz(ML_SUPERVISED_QUIZ_ID)?.choices).toHaveLength(3);
+    expect(client.answerQuiz(SQL_SELECT_QUIZ_ID, "select-users")).toMatchObject({ correct: false });
+    expect(client.answerQuiz(SQL_SELECT_QUIZ_ID, "select-name")).toMatchObject({
+      correct: true,
+      firstCompletion: true,
+      coinsAwarded: 25,
+    });
+    expect(client.answerQuiz(ML_SUPERVISED_QUIZ_ID, "supervised")).toMatchObject({
+      correct: true,
+      firstCompletion: true,
+      coinsAwarded: 25,
+    });
+    expect(client.submitCodeChallenge(PYTHON_SQUARE_CODE_ID, "    return n + n", 0)).toMatchObject({
+      passed: false,
+      coinsAwarded: 0,
+    });
+    expect(client.submitCodeChallenge(PYTHON_SQUARE_CODE_ID, "    return n * n", 0)).toMatchObject({
+      passed: true,
+      firstCompletion: true,
+      coinsAwarded: 40,
+    });
+    expect(client.submitCodeChallenge(SQL_ACTIVE_CATS_CODE_ID, "SELECT * FROM cats;", 0)).toMatchObject({
+      passed: false,
+      coinsAwarded: 0,
+    });
+    expect(
+      client.submitCodeChallenge(SQL_ACTIVE_CATS_CODE_ID, "SELECT name\nFROM cats\nWHERE active = true;", 0),
+    ).toMatchObject({ passed: true, firstCompletion: true, coinsAwarded: 40 });
   });
 
   it("buys furniture and consumes one owned item when placed", () => {

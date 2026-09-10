@@ -9,7 +9,7 @@ export type BackendLearningTask = {
   conceptName: string;
   title: string;
   type: "CODE" | "MULTIPLE_CHOICE";
-  domain: "PYTHON" | "SQL";
+  domain: "PYTHON" | "SQL" | "MACHINE_LEARNING";
   difficulty: "BRONZE" | "SILVER" | "GOLD";
   description: string;
   templateCode: string;
@@ -508,7 +508,7 @@ function parseUser(value: unknown): BackendUser {
 function parseTask(value: unknown): BackendLearningTask {
   const record = asRecord(value);
   const type = readEnum(record, "type", ["CODE", "MULTIPLE_CHOICE"] as const);
-  const domain = readEnum(record, "domain", ["PYTHON", "SQL"] as const);
+  const domain = readEnum(record, "domain", ["PYTHON", "SQL", "MACHINE_LEARNING"] as const);
   const difficulty = readEnum(record, "difficulty", ["BRONZE", "SILVER", "GOLD"] as const);
   const rawOptions = record.options;
   let options: Record<string, string> | null = null;

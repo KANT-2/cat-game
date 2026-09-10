@@ -302,10 +302,14 @@ export class BackendLearningGameClient implements GameClient {
     if (task?.type !== "CODE") {
       return null;
     }
+    const language = mapStudyLanguage(task.domain);
+    if (language === "machine-learning") {
+      return null;
+    }
     return {
       ...toStudyTaskView(task),
       type: "code",
-      language: task.domain === "SQL" ? "sql" : "python",
+      language,
       prompt: { text: task.description },
       signature: "",
       starterBody: task.templateCode,
@@ -808,6 +812,7 @@ function toStudyTaskView(task: BackendLearningTask): StudyTaskView {
   return {
     id: task.publicId,
     type: task.type === "CODE" ? "code" : "quiz",
+    language: mapStudyLanguage(task.domain),
     concept: mapConcept(task.conceptName),
     difficulty: mapDifficulty(task.difficulty),
     title: { text: cleanTaskTitle(task.title) },
@@ -815,6 +820,16 @@ function toStudyTaskView(task: BackendLearningTask): StudyTaskView {
     rewardCoins: task.rewardCoins,
     completed: task.completed,
   };
+}
+
+function mapStudyLanguage(domain: BackendLearningTask["domain"]): StudyTaskView["language"] {
+  if (domain === "SQL") {
+    return "sql";
+  }
+  if (domain === "MACHINE_LEARNING") {
+    return "machine-learning";
+  }
+  return "python";
 }
 
 function mapConcept(value: string): StudyTaskView["concept"] {

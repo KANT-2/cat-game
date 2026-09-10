@@ -23,7 +23,7 @@ import {
   rotatedSize,
 } from "../domain/room";
 import { type ShopItemId, shopItemDefinitions } from "../domain/shop";
-import { codeChallengeDefinitions, gradeSumChallenge, quizDefinitions, studyTaskDefinitions } from "../domain/study";
+import { codeChallengeDefinitions, gradeCodeChallenge, quizDefinitions, studyTaskDefinitions } from "../domain/study";
 import type {
   ApplyRoomThemeResult,
   AttendanceClaimResult,
@@ -400,6 +400,7 @@ export class LocalGameClient implements GameClient {
     return studyTaskDefinitions.map((task) => ({
       id: task.id,
       type: task.type,
+      language: task.language,
       concept: task.concept,
       difficulty: task.difficulty,
       title: { messageId: task.titleMessage },
@@ -420,7 +421,7 @@ export class LocalGameClient implements GameClient {
     return {
       id: challenge.id,
       type: challenge.type,
-      language: "python",
+      language: challenge.language,
       concept: challenge.concept,
       difficulty: challenge.difficulty,
       title: { messageId: challenge.titleMessage },
@@ -445,7 +446,7 @@ export class LocalGameClient implements GameClient {
     if (body.trim().length === 0) {
       return { ok: false, reason: "empty-code" };
     }
-    const grade = gradeSumChallenge(body);
+    const grade = gradeCodeChallenge(challenge.grader, body);
     if (!grade.passed) {
       return { ok: true, passed: false, tests: grade.tests, firstCompletion: false, coinsAwarded: 0 };
     }

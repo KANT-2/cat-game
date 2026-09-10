@@ -1308,7 +1308,33 @@
       { "id": "consumable.catnip-biscuits.01", "kind": "consumable", "src": "/assets/consumables/catnip-biscuits-01.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["catnip", "treat", "transparent"] },
       { "id": "consumable.tuna-soup.01", "kind": "consumable", "src": "/assets/consumables/tuna-soup-01.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["tuna", "treat", "transparent"] }
     ],
-    "study": [],
+    "study": [
+      {
+        "id": "ui.scene.study-forest-board.03",
+        "kind": "ui",
+        "src": "/assets/ui/scenes/study-forest-board-03.png"
+      },
+      {
+        "id": "ui.scene.study-forest-board.02",
+        "kind": "ui",
+        "src": "/assets/ui/scenes/study-forest-board-02.png"
+      },
+      {
+        "id": "ui.scene.study-forest-board.01",
+        "kind": "ui",
+        "src": "/assets/ui/scenes/study-forest-board-01.png"
+      },
+      {
+        "id": "ui.scene.study-parchment-backdrop.01",
+        "kind": "ui",
+        "src": "/assets/ui/scenes/study-parchment-backdrop-01.png"
+      },
+      {
+        "id": "ui.scene.study-siamese-leaning.01",
+        "kind": "ui",
+        "src": "/assets/ui/scenes/study-siamese-leaning-01.png"
+      }
+    ],
     "common-ui": [
       {
         "id": "background.loading.cat-study-night.01",
