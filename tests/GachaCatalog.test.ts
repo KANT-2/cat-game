@@ -40,10 +40,10 @@ describe("learning description", () => {
     expect(learningDescription(current)).toBe(current);
   });
 
-  it("uses a natural story sentence on cards without a request prefix", () => {
+  it("uses the task problem on cards without a section prefix", () => {
     const description =
       "[오늘의 냥이 임무] 학생 조회\n\n[도와주세요!] 나비가 우유 주문을 정리하고 있어요.\n\n[문제] 학생을 조회하세요.";
-    expect(learningCardSummary(description)).toBe("나비가 우유 주문을 정리하고 있어요.");
-    expect(learningCardSummary(description)).not.toContain("[도와주세요!]");
+    expect(learningCardSummary(description)).toBe("학생을 조회하세요.");
+    expect(learningCardSummary(description)).not.toContain("[문제]");
   });
 });

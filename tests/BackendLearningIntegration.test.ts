@@ -97,7 +97,7 @@ describe("backend learning integration", () => {
     });
     const api = new BackendApiClient("http://localhost:8000", userId, fetcher);
     const client = await BackendLearningGameClient.createConnected(new LocalGameClient(new MemoryRepository()), api);
-    const expectedSummary = { text: "츄르 부탁" };
+    const expectedSummary = { text: "두 수의 합" };
     const expectedPrompt = { text: "[도와주세요!] 츄르 부탁\n\n[문제] 두 수의 합" };
     expect(client.getStudyTasks()[0].summary).toEqual(expectedSummary);
     expect(client.getQuiz(taskId)?.summary).toEqual(expectedSummary);

@@ -15,16 +15,16 @@ export function learningDescription(description: string): string {
 }
 
 /**
- * Return the story sentence used by recommendation and task cards without a repeated section label.
+ * Return the problem sentence used by recommendation and task cards without a repeated section label.
  * @param description - Server-authored task text containing story and problem sections.
- * @returns The story section with its bracketed heading removed, or the first useful section.
+ * @returns The problem section with its bracketed heading removed, or the first useful section.
  */
 export function learningCardSummary(description: string): string {
   const sections = learningDescription(description)
     .split(/\r?\n\s*\r?\n/)
     .map((section) => section.trim())
     .filter((section) => section.length > 0);
-  const story = sections.find((section) => section.startsWith("[도와주세요!]"));
+  const problem = sections.find((section) => section.startsWith("[문제]"));
   const fallback = sections.find((section) => !section.startsWith("[오늘의 냥이 임무]")) ?? sections[0] ?? "";
-  return (story ?? fallback).replace(/^\[[^\]]+\]\s*/, "").trim();
+  return (problem ?? fallback).replace(/^\[[^\]]+\]\s*/, "").trim();
 }
