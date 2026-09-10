@@ -68,6 +68,10 @@ export class LocalGameClient implements GameClient {
     return cloneState(this.state);
   }
 
+  getProfileImageUrl(): string | null {
+    return null;
+  }
+
   subscribe(listener: GameStateListener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -402,6 +406,7 @@ export class LocalGameClient implements GameClient {
   }
 
   getStudyTasks(): StudyTaskView[] {
+    this.ensureDailyState();
     if (this.state.settings.learningDomain === "SQL") {
       return [];
     }
@@ -413,11 +418,12 @@ export class LocalGameClient implements GameClient {
       title: { messageId: task.titleMessage },
       summary: { messageId: task.summaryMessage },
       rewardCoins: task.rewardCoins,
-      completed:
-        task.type === "quiz"
-          ? this.state.completedQuizIds.includes(task.id)
-          : this.state.completedCodeChallengeIds.includes(task.id),
+      completed: this.state.dailyCompletedTaskIds.includes(task.id),
     }));
+  }
+
+  prepareStudy(): void {
+    this.ensureDailyState();
   }
 
   getStudyMastery(): import("./GameClient").StudyMasteryView {

@@ -2,6 +2,7 @@ export type BackendUser = {
   publicId: string;
   username: string;
   balance: number;
+  profileImageUrl: string | null;
 };
 
 export type BackendLearningTask = {
@@ -176,7 +177,7 @@ export class BackendApiClient {
     this.userPublicId = null;
     this.browserSession = true;
     try {
-      return parseUser(await this.request("/api/v1/session/me"));
+      return parseUser(await this.request("/api/v1/session/me"), this.baseUrl);
     } catch (error) {
       this.browserSession = false;
       throw error;
@@ -185,7 +186,7 @@ export class BackendApiClient {
 
   /** 이메일과 비밀번호로 서버가 관리하는 브라우저 세션을 시작한다. */
   async login(email: string, password: string): Promise<BackendUser> {
-    const user = parseUser(await this.jsonCommand("/api/v1/session/login", { email, password }, false));
+    const user = parseUser(await this.jsonCommand("/api/v1/session/login", { email, password }, false), this.baseUrl);
     this.userPublicId = null;
     this.browserSession = true;
     return user;
@@ -193,7 +194,10 @@ export class BackendApiClient {
 
   /** 새 계정을 만들고 서버가 관리하는 브라우저 세션을 시작한다. */
   async register(email: string, username: string, password: string): Promise<BackendUser> {
-    const user = parseUser(await this.jsonCommand("/api/v1/session/register", { email, username, password }, false));
+    const user = parseUser(
+      await this.jsonCommand("/api/v1/session/register", { email, username, password }, false),
+      this.baseUrl,
+    );
     this.userPublicId = null;
     this.browserSession = true;
     return user;
@@ -221,7 +225,7 @@ export class BackendApiClient {
       const session = asRecord(await this.request("/api/v1/session/development", { method: "POST" }, false));
       this.userPublicId = readString(session, "public_id");
     }
-    return parseUser(await this.request("/api/v1/session/me"));
+    return parseUser(await this.request("/api/v1/session/me"), this.baseUrl);
   }
 
   /** 인증 사용자의 추천 학습 과제를 서버 순서대로 조회한다. */
@@ -571,12 +575,21 @@ function browserRecommendationTestDate(): string | null {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
 }
 
-function parseUser(value: unknown): BackendUser {
+function parseUser(value: unknown, baseUrl: string): BackendUser {
   const record = asRecord(value);
+  const platform = record.platform;
+  const platformRecord =
+    platform && typeof platform === "object" && !Array.isArray(platform) ? asRecord(platform) : null;
+  const profile = platformRecord?.profile;
+  const profileRecord =
+    profile && typeof profile === "object" && !Array.isArray(profile) ? asRecord(profile) : null;
+  const hasProfileImage =
+    typeof profileRecord?.profile_image === "string" && profileRecord.profile_image.trim() !== "";
   return {
     publicId: readString(record, "public_id"),
     username: readString(record, "username"),
     balance: readNumber(record, "balance"),
+    profileImageUrl: hasProfileImage ? `${baseUrl}/api/v1/session/me/profile-image` : null,
   };
 }
 

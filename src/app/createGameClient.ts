@@ -37,8 +37,11 @@ export async function createGameClient(): Promise<GameClientStart> {
     return { kind: "ready", client: await BackendLearningGameClient.create(local, api), session: null };
   }
   try {
-    await api.connectBrowserSession();
-    return { kind: "ready", ...browserSession(await BackendLearningGameClient.createConnected(local, api), api) };
+    const user = await api.connectBrowserSession();
+    return {
+      kind: "ready",
+      ...browserSession(await BackendLearningGameClient.createConnected(local, api, user), api),
+    };
   } catch (error) {
     if (!(error instanceof BackendApiError) || error.status !== 401) {
       throw error;
@@ -50,12 +53,11 @@ export async function createGameClient(): Promise<GameClientStart> {
   return {
     kind: "authentication-required",
     authenticate: async (mode, email, password) => {
-      if (mode === "login") {
-        await api.login(email, password);
-      } else {
-        await api.register(email, deriveUsername(email), password);
-      }
-      return browserSession(await BackendLearningGameClient.createConnected(local, api), api);
+      const user =
+        mode === "login"
+          ? await api.login(email, password)
+          : await api.register(email, deriveUsername(email), password);
+      return browserSession(await BackendLearningGameClient.createConnected(local, api, user), api);
     },
   };
 }

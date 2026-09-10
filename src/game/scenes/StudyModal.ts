@@ -23,14 +23,18 @@ import { formatStudyDetails, summarizeStudyText } from "../presentation/studyPre
 type FilterValue<T extends string> = "all" | T;
 type FilterSelectId = "type" | "concept" | "difficulty";
 type FeedbackTest = { label: string; passed: boolean };
+type LearningDomain = "PYTHON" | "SQL";
+type LearningDomainChange = { learningDomain: LearningDomain; tasks: StudyTaskView[] };
 
 type StudyModalOptions = {
   tasks: StudyTaskView[];
+  learningDomain: LearningDomain;
   getMastery: () => StudyMasteryView;
   getQuiz: (quizId: string) => QuizView | null;
   getCodeChallenge: (challengeId: string) => CodeChallengeView | null;
   onAnswer: (quizId: string, choiceId: string) => Awaitable<QuizAnswerResult>;
   onSubmitCode: (challengeId: string, code: string, hintsUsed: number) => Awaitable<CodeSubmissionResult>;
+  onChangeLearningDomain: (learningDomain: LearningDomain) => Awaitable<LearningDomainChange>;
   onClose: () => void;
   backIcon: string;
   coinIcon: string;
@@ -80,6 +84,8 @@ export class StudyModal extends Container {
   private readonly feedbackLayer = new Container();
   private readonly options: StudyModalOptions;
   private tasks: StudyTaskView[];
+  private learningDomain: LearningDomain;
+  private domainChangePending = false;
   private typeFilter: FilterValue<StudyTaskType> = "all";
   private conceptFilter: FilterValue<StudyConcept> = "all";
   private difficultyFilter: FilterValue<StudyDifficulty> = "all";
@@ -93,6 +99,7 @@ export class StudyModal extends Container {
     super();
     this.options = options;
     this.tasks = options.tasks.map((task) => ({ ...task }));
+    this.learningDomain = options.learningDomain;
     this.background.eventMode = "static";
     this.body.sortableChildren = true;
     this.addChild(this.background, this.page);
@@ -109,10 +116,51 @@ export class StudyModal extends Container {
   private renderDashboard(): void {
     this.clearBody();
     this.drawBaseHeader(message("study.dashboardTitle"), message("study.dashboardSubtitle"), this.options.onClose);
+    this.buildLearningDomainSelector();
     this.buildMasteryPanel();
     this.buildRecommendation();
     this.buildFilters();
     this.buildTaskList();
+  }
+
+  private buildLearningDomainSelector(): void {
+    const label = new Text({ text: message("settings.subject"), style: textStyle(15, 0x604333, "800") });
+    label.anchor.set(1, 0.5);
+    label.position.set(1260, 51);
+    const domains: readonly LearningDomain[] = ["PYTHON", "SQL"];
+    const buttons = domains.map((domain, index) => {
+      const active = domain === this.learningDomain;
+      const button = new CanvasButton({
+        label: message(domain === "PYTHON" ? "settings.subjectPython" : "settings.subjectSql"),
+        width: 120,
+        height: 50,
+        color: active ? 0xf0ad55 : 0xe9c9a4,
+        onPress: () => void this.changeLearningDomain(domain),
+      });
+      button.position.set(1280 + index * 135, 26);
+      return button;
+    });
+    this.body.addChild(label, ...buttons);
+  }
+
+  private async changeLearningDomain(domain: LearningDomain): Promise<void> {
+    if (this.domainChangePending || domain === this.learningDomain) {
+      return;
+    }
+    this.domainChangePending = true;
+    try {
+      const result = await this.options.onChangeLearningDomain(domain);
+      this.learningDomain = result.learningDomain;
+      this.tasks = result.tasks.map((task) => ({ ...task }));
+      this.typeFilter = "all";
+      this.conceptFilter = "all";
+      this.difficultyFilter = "all";
+      this.openFilterSelect = null;
+      this.taskPage = 0;
+      this.renderDashboard();
+    } finally {
+      this.domainChangePending = false;
+    }
   }
 
   private drawBaseHeader(titleValue: string, subtitleValue: string, onBack: () => void): void {

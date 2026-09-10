@@ -354,9 +354,13 @@ describe("LocalGameClient", () => {
     );
     client.answerQuiz("python-range-001", "zero-to-two");
     expect(client.getDailyQuests()[0].progress).toBe(1);
+    expect(client.getStudyTasks().find((task) => task.id === "python-range-001")?.completed).toBe(true);
 
     day = 4;
+    client.prepareStudy();
     expect(client.getDailyQuests()[0].progress).toBe(0);
+    expect(client.getStudyTasks().find((task) => task.id === "python-range-001")?.completed).toBe(false);
+    expect(client.getSnapshot().completedQuizIds).toContain("python-range-001");
     expect(client.getSnapshot().claimedDailyQuestIds).toEqual([]);
   });
 

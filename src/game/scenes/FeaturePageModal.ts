@@ -1,6 +1,6 @@
 import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
-import type { Awaitable, LearningResetResult } from "../../core/GameClient";
+import type { Awaitable } from "../../core/GameClient";
 import { type CatVariant, catVariants } from "../../domain/cats";
 import type { FurnitureKind, GameSettings, GameState } from "../../domain/room";
 import { type ShopItemId, shopItemDefinitions } from "../../domain/shop";
@@ -34,8 +34,8 @@ type Options = {
   onUseConsumable: (itemId: ShopItemId, catVariant: CatVariant) => Awaitable<boolean>;
   onEnterRoomEdit: () => void;
   onOpenAttendance: () => void;
+  profileImageUrl: string | null;
   onUpdateSettings: (patch: Partial<GameSettings>) => Awaitable<GameSettings>;
-  onResetLearning: () => Awaitable<LearningResetResult>;
   onLogout: (() => Awaitable<boolean>) | null;
   catAnimations: CatAnimationLibrary;
   backIcon: string;
@@ -149,11 +149,9 @@ export class FeaturePageModal extends Container {
         mode,
         onStatus: (id) => this.show(id),
         onOpenAttendance: this.options.onOpenAttendance,
-        onOpenProfileImage: () => this.options.onNavigate("owned"),
-        onOpenCatCollection: () => this.options.onNavigate("collection"),
+        profileImageUrl: this.options.profileImageUrl,
         getState: this.options.getState,
         onUpdateSettings: (patch) => this.options.onUpdateSettings(patch),
-        onResetLearning: this.options.onResetLearning,
         onLogout: this.options.onLogout,
       }),
     );
@@ -219,6 +217,17 @@ export class FeaturePageModal extends Container {
     });
     edit.position.set(1290, 112);
     this.content.addChild(edit);
+    if (this.ownedCategory === "cats") {
+      const collection = new CanvasButton({
+        label: message("settings.catCollection"),
+        width: 220,
+        height: 54,
+        color: 0x91aa82,
+        onPress: () => this.options.onNavigate("collection"),
+      });
+      collection.position.set(1045, 112);
+      this.content.addChild(collection);
+    }
     this.buildOwnedTabs();
     if (this.ownedCategory === "cats") {
       state.ownedCats.forEach((variant, index) => {
