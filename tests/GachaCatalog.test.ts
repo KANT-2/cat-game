@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { drawGachaRewards, gachaRewardDefinitions } from "../src/domain/gacha";
 import { shopItemDefinitions } from "../src/domain/shop";
-import { learningDescription } from "../src/services/learningDescription";
+import { learningCardSummary, learningDescription } from "../src/services/learningDescription";
 
 describe("catalog gacha pool", () => {
   it("covers every furniture product, with the existing total and cat probability", () => {
@@ -38,5 +38,12 @@ describe("learning description", () => {
     );
     const current = "[도와주세요!] 우유 주문\n\n[문제] SELECT 1";
     expect(learningDescription(current)).toBe(current);
+  });
+
+  it("uses a natural story sentence on cards without a request prefix", () => {
+    const description =
+      "[오늘의 냥이 임무] 학생 조회\n\n[도와주세요!] 나비가 우유 주문을 정리하고 있어요.\n\n[문제] 학생을 조회하세요.";
+    expect(learningCardSummary(description)).toBe("나비가 우유 주문을 정리하고 있어요.");
+    expect(learningCardSummary(description)).not.toContain("[도와주세요!]");
   });
 });

@@ -156,9 +156,7 @@ export class StudyModal extends Container {
         track.roundRect(trackX, y, fillWidth, 14, 7).fill(entry.conceptName === "loops" ? 0xe69b4d : 0x82a768);
       }
       const value = new Text({
-        text: isUnassessed
-          ? message("study.masteryUnassessed")
-          : message("study.masteryValue", { value: mastery }),
+        text: isUnassessed ? message("study.masteryUnassessed") : message("study.masteryValue", { value: mastery }),
         style: textStyle(isUnassessed ? 12 : 14, isUnassessed ? 0x9a806e : 0x604333, "800"),
       });
       value.anchor.set(1, 0);
@@ -470,48 +468,43 @@ export class StudyModal extends Container {
     this.clearBody();
     this.drawBaseHeader(resolveGameText(quiz.title), resolveGameText(quiz.summary), () => this.renderDashboard());
     const problem = createCozyPanel(70, 115, 1460, 750, { fill: 0xfff9ec, border: 0xb77a4f, radius: 28 });
-    const promptValue = resolveGameText(quiz.prompt);
-    const [firstLine, ...codeLines] = promptValue.split(/\r?\n/);
-    const prompt = new Text({ text: firstLine, style: textStyle(23, 0x493022, "800") });
-    prompt.position.set(115, 160);
-    const codeBox = new Graphics()
-      .roundRect(115, 220, 1370, 180, 16)
-      .fill(0x252b35)
-      .stroke({ color: 0x5c6674, width: 2 });
-    const code = new Text({
-      text: codeLines.join("\n").trim(),
+    const prompt = new Text({
+      text: formatStudyDetails(resolveGameText(quiz.prompt)),
       style: {
-        ...textStyle(20, 0xdce99a, "600"),
-        fontFamily: "Consolas, monospace",
-        lineHeight: 30,
+        ...textStyle(19, 0x493022, "600"),
+        lineHeight: 27,
         wordWrap: true,
-        wordWrapWidth: 1310,
+        wordWrapWidth: 1280,
       },
     });
-    code.position.set(145, 245);
+    prompt.position.set(115, 155);
+    fitQuizPromptText(prompt);
+    const promptBoxHeight = prompt.height + 34;
+    const promptBox = new Graphics()
+      .roundRect(95, 137, 1320, promptBoxHeight, 16)
+      .fill(0xfff3d9)
+      .stroke({ color: 0xd6ad7c, width: 2 });
+    const choiceLayout = quizChoiceLayout(prompt.y + prompt.height, quiz.choices.length);
     const choicesTitle = new Text({ text: message("study.choicesTitle"), style: textStyle(20, 0x493022, "800") });
-    choicesTitle.position.set(115, 425);
-    this.body.addChild(problem, prompt, codeBox, code, choicesTitle);
+    choicesTitle.position.set(115, choiceLayout.titleY);
+    this.body.addChild(problem, promptBox, prompt, choicesTitle);
     if (quiz.rewardCoins > 0) {
       const reward = this.createCoinRewardBadge(quiz.rewardCoins, 125);
       reward.position.set(1320, 145);
       this.body.addChild(reward);
     }
-    const choiceGap = 12;
-    const choiceAreaHeight = 370;
-    const choiceCount = Math.max(1, quiz.choices.length);
-    const choiceHeight = Math.min(68, Math.floor((choiceAreaHeight - choiceGap * (choiceCount - 1)) / choiceCount));
     quiz.choices.forEach((choice, index) => {
       const button = new CanvasButton({
         label: `${String.fromCharCode(65 + index)}   ${resolveGameText(choice.label)}`,
         width: 1370,
-        height: choiceHeight,
+        height: choiceLayout.height,
         fontSize: 16,
+        wrapLabel: true,
         color: 0xffefd2,
         borderColor: 0xc18a5b,
         onPress: () => this.answerQuiz(quiz, choice.id),
       });
-      button.position.set(115, 465 + index * (choiceHeight + choiceGap));
+      button.position.set(115, choiceLayout.startY + index * (choiceLayout.height + choiceLayout.gap));
       this.body.addChild(button);
     });
   }
@@ -624,7 +617,7 @@ export class StudyModal extends Container {
     });
     editorTitle.position.set(625, 155);
     const editorHelp = new Text({
-      text: message(challenge.language === "sql" ? "study.sqlEditorHelp" : "study.editorHelp"),
+      text: message(editorHelpMessage(challenge.editorMode)),
       style: { ...textStyle(15, 0x76533c, "600"), wordWrap: true, wordWrapWidth: 470 },
     });
     editorHelp.position.set(625, 193);
@@ -916,6 +909,39 @@ export class StudyModal extends Container {
   }
 }
 
+/** Shrink a wrapped quiz prompt only as much as needed to reserve space for all four choices. */
+export function fitQuizPromptText(text: Text): void {
+  const maximumHeight = 245;
+  const minimumFontSize = 14;
+  let fontSize = Number(text.style.fontSize);
+  while (text.height > maximumHeight && fontSize > minimumFontSize) {
+    fontSize -= 1;
+    text.style.fontSize = fontSize;
+    text.style.lineHeight = fontSize + 7;
+  }
+  if (text.height > maximumHeight) {
+    text.scale.set(maximumHeight / text.height);
+  }
+}
+
+/** Place quiz choices after the measured prompt and keep them inside the logical Canvas page. */
+export function quizChoiceLayout(promptBottom: number, choiceCountValue: number) {
+  const count = Math.max(1, choiceCountValue);
+  const gap = 10;
+  const titleY = promptBottom + 34;
+  const startY = titleY + 38;
+  const availableHeight = 825 - startY;
+  const height = Math.min(72, Math.floor((availableHeight - gap * (count - 1)) / count));
+  return { titleY, startY, height, gap, bottom: startY + count * height + (count - 1) * gap };
+}
+
 function resolveGameText(value: GameText): string {
   return "text" in value ? value.text : message(value.messageId);
+}
+
+function editorHelpMessage(mode: CodeChallengeView["editorMode"]): MessageId {
+  if (mode === "function") {
+    return "study.functionEditorHelp";
+  }
+  return mode === "query" ? "study.sqlEditorHelp" : "study.editorHelp";
 }

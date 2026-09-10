@@ -290,6 +290,10 @@ describe("LocalGameClient", () => {
       () => 0.5,
       () => new Date(2026, 8, 3),
     );
+    expect(client.getCodeChallenge("python-sum-001")).toMatchObject({
+      editorMode: "function",
+      starterCode: expect.stringContaining("def sum_to(n):"),
+    });
 
     const failed = client.submitCodeChallenge("python-sum-001", "def sum_to(n):\n    return 0", 0);
     expect(failed).toMatchObject({ ok: true, passed: false, coinsAwarded: 0 });

@@ -97,10 +97,11 @@ describe("backend learning integration", () => {
     });
     const api = new BackendApiClient("http://localhost:8000", userId, fetcher);
     const client = await BackendLearningGameClient.createConnected(new LocalGameClient(new MemoryRepository()), api);
-    const expected = { text: "[도와주세요!] 츄르 부탁\n\n[문제] 두 수의 합" };
-    expect(client.getStudyTasks()[0].summary).toEqual(expected);
-    expect(client.getQuiz(taskId)?.summary).toEqual(expected);
-    expect(client.getQuiz(taskId)?.prompt).toEqual(expected);
+    const expectedSummary = { text: "츄르 부탁" };
+    const expectedPrompt = { text: "[도와주세요!] 츄르 부탁\n\n[문제] 두 수의 합" };
+    expect(client.getStudyTasks()[0].summary).toEqual(expectedSummary);
+    expect(client.getQuiz(taskId)?.summary).toEqual(expectedSummary);
+    expect(client.getQuiz(taskId)?.prompt).toEqual(expectedPrompt);
   });
 
   it("passes a browser test date only with the recommendations request", async () => {
@@ -182,7 +183,7 @@ describe("backend learning integration", () => {
     expect(proficiencyReads).toBe(2);
     expect(client.getStudyMastery()).toEqual([{ conceptName: "joins", attempts: 0, proficiencyLevel: 0 }]);
     expect(client.getQuiz(taskId)).toBeNull();
-    expect(client.getCodeChallenge(sqlTaskId)).toMatchObject({ language: "sql" });
+    expect(client.getCodeChallenge(sqlTaskId)).toMatchObject({ language: "sql", editorMode: "query" });
   });
 
   it("loads server state and tasks, then keeps game mutations authoritative", async () => {
@@ -812,7 +813,7 @@ function learningTask(publicId: string, domain: "PYTHON" | "SQL") {
     domain,
     difficulty: "BRONZE",
     description: "기본 문제",
-    template_code: domain === "SQL" ? "SELECT 1;" : "",
+    template_code: domain === "SQL" ? "-- 아래에 SQL을 작성하세요.\n" : "",
     options: domain === "SQL" ? null : { A: "정답", B: "오답" },
     hint_text: null,
     reward_coins: 30,

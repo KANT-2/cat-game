@@ -10,6 +10,7 @@ export type CanvasButtonOptions = {
   textColor?: number;
   borderColor?: number;
   fontSize?: number;
+  wrapLabel?: boolean;
   disabled?: boolean;
   onPress: () => void;
 };
@@ -28,6 +29,14 @@ export class CanvasButton extends Container {
       text: options.label,
       style: {
         ...textStyle(options.fontSize ?? 17, options.textColor ?? 0x3c2a21, "700"),
+        ...(options.wrapLabel
+          ? {
+              align: "left" as const,
+              lineHeight: (options.fontSize ?? 17) + 5,
+              wordWrap: true,
+              wordWrapWidth: options.width - 48,
+            }
+          : {}),
         dropShadow: { color: 0xffffff, alpha: 0.48, angle: -Math.PI / 2, blur: 0, distance: 1 },
       },
     });

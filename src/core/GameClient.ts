@@ -118,6 +118,7 @@ export type StudyMasteryView = ReadonlyArray<{
 export type CodeChallengeView = StudyTaskView & {
   type: "code";
   language: "python" | "sql";
+  editorMode: "program" | "function" | "query";
   prompt: GameText;
   starterCode: string;
   examples: GameText;
