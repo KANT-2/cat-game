@@ -1,11 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { attendanceRewardForCycleDay, attendanceStreakBonus, nextAttendanceStreak } from "../src/domain/attendance";
+import {
+  activeAttendanceStreak,
+  attendanceRewardForCycleDay,
+  attendanceStreakBonus,
+  nextAttendanceStreak,
+} from "../src/domain/attendance";
 
 describe("attendance rules", () => {
   it("continues only on the next local calendar day", () => {
     expect(nextAttendanceStreak("2026-09-03", 2, "2026-09-04")).toBe(3);
     expect(nextAttendanceStreak("2026-09-01", 5, "2026-09-04")).toBe(1);
     expect(nextAttendanceStreak("", 0, "2026-09-04")).toBe(1);
+  });
+
+  it("shows only a streak that is still active on the current game date", () => {
+    expect(activeAttendanceStreak("2026-09-04", 3, "2026-09-04")).toBe(3);
+    expect(activeAttendanceStreak("2026-09-03", 3, "2026-09-04")).toBe(3);
+    expect(activeAttendanceStreak("2026-09-02", 3, "2026-09-04")).toBe(0);
+    expect(activeAttendanceStreak("", 0, "2026-09-04")).toBe(0);
   });
 
   it("adds milestone bonuses on the third and seventh cycle days", () => {
