@@ -376,7 +376,7 @@ export class BackendLearningGameClient implements GameClient {
       prompt: { text: learningDescription(task.description) },
       starterCode: task.templateCode,
       examples: { messageId: "study.serverExamples" },
-      hints: task.hintText ? [{ text: task.hintText }] : [],
+      hints: splitHintSteps(task.hintText).map((text) => ({ text })),
       bonusCoins: 0,
     };
   }
@@ -915,6 +915,15 @@ function toStudyTaskView(task: BackendLearningTask): StudyTaskView {
     rewardCoins: task.rewardCoins,
     completed: task.completed,
   };
+}
+
+function splitHintSteps(hintText: string | null): string[] {
+  return hintText
+    ? hintText
+        .split(/\r?\n/)
+        .map((step) => step.trim())
+        .filter(Boolean)
+    : [];
 }
 
 function mapConcept(value: string): StudyTaskView["concept"] {
