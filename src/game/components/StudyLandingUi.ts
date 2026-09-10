@@ -40,6 +40,8 @@ type StudySubjectButtonOptions = {
   label: string;
   description: string;
   color: number;
+  width?: number;
+  height?: number;
   onPress: () => void;
 };
 
@@ -47,8 +49,8 @@ type StudySubjectButtonOptions = {
 export class StudySubjectButton extends Container {
   constructor(options: StudySubjectButtonOptions) {
     super();
-    const width = 426;
-    const height = 121;
+    const width = options.width ?? 435;
+    const height = options.height ?? 130;
     const shadow = new Graphics().roundRect(0, 6, width, height, 14).fill({ color: 0x79512c, alpha: 0.16 });
     const face = new Graphics();
     const drawFace = (hovered: boolean) => {
@@ -67,9 +69,9 @@ export class StudySubjectButton extends Container {
     };
     drawFace(false);
     const title = new Text({ text: options.label, style: textStyle(32, 0x4a2b1c, "800") });
-    title.position.set(25, 28);
+    title.position.set(25, height >= 145 ? 36 : 31);
     const description = new Text({ text: options.description, style: textStyle(19, 0x6e4e3a, "600") });
-    description.position.set(25, 75);
+    description.position.set(25, height >= 145 ? 91 : 80);
     const arrow = new Graphics()
       .moveTo(width - 43, height / 2 - 10)
       .lineTo(width - 33, height / 2)

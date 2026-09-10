@@ -160,14 +160,14 @@ export class DailyQuestScene extends Container {
       progress.position.set(930, y + 80);
       const rewardLabel = new Text({ text: message("daily.rewardLabel"), style: textStyle(16, 0x7b542f, "800") });
       rewardLabel.anchor.set(0, 0.5);
-      rewardLabel.position.set(1060, y + 36);
+      rewardLabel.position.set(1060, y + 72);
       const reward = createCoinAmount(this.options.coinIcon, `+${quest.rewardCoins}`, {
         color: 0x7b542f,
         fontSize: 16,
         iconSize: 24,
         gap: 6,
       });
-      reward.position.set(1060 + rewardLabel.width + 16, y + 36);
+      reward.position.set(1060 + rewardLabel.width + 16, y + 72);
       let actionLabel: "daily.claimed" | "daily.claim" | "daily.goStudy" = "daily.goStudy";
       let actionColor = 0xadc08d;
       if (quest.claimed) {

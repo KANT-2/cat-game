@@ -15,7 +15,7 @@ import { CanvasButton } from "../components/CanvasButton";
 import { createCozyPageBackground, createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
 import { createCoinAmount } from "../components/CurrencyBar";
 import { layoutToFillViewport } from "../components/fullscreenLayout";
-import { createStudyLeaves, createStudyPanel, StudySubjectButton } from "../components/StudyLandingUi";
+import { StudySubjectButton } from "../components/StudyLandingUi";
 import { applySmoothTextureSampling } from "../components/smoothSprite";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
 import type { CodeEditorOverlay, CodeEditorOverlayFactory } from "../ports/CodeEditorOverlay";
@@ -46,7 +46,6 @@ type FeedbackTest = { label: string; passed: boolean };
 
 type StudyModalOptions = {
   tasks: StudyTaskView[];
-  backdrop: string;
   mascot: string;
   getQuiz: (quizId: string) => QuizView | null;
   getCodeChallenge: (challengeId: string) => CodeChallengeView | null;
@@ -86,7 +85,6 @@ const difficultyMessages: Record<
 /** 학습 대시보드와 퀴즈·함수 작성형 풀이 화면을 한 Canvas 장면에서 전환한다. */
 export class StudyModal extends Container {
   private readonly background = new Graphics();
-  private readonly landingBackdrop: Sprite;
   private readonly landingMascot: Sprite;
   private readonly page = new Container();
   private readonly body = new Container();
@@ -109,8 +107,6 @@ export class StudyModal extends Container {
   constructor(options: StudyModalOptions) {
     super();
     this.options = options;
-    this.landingBackdrop = Sprite.from(options.backdrop);
-    applySmoothTextureSampling(this.landingBackdrop);
     this.landingMascot = Sprite.from(options.mascot);
     applySmoothTextureSampling(this.landingMascot);
     this.landingMascot.anchor.set(0.5, 0.85);
@@ -118,7 +114,7 @@ export class StudyModal extends Container {
     this.tasks = options.tasks.map((task) => ({ ...task }));
     this.background.eventMode = "static";
     this.body.sortableChildren = true;
-    this.addChild(this.background, this.landingBackdrop, this.page);
+    this.addChild(this.background, this.page);
     this.page.addChild(this.body, this.feedbackLayer, this.landingMascot);
     this.renderDashboard();
   }
@@ -127,20 +123,14 @@ export class StudyModal extends Container {
     this.viewportWidth = width;
     this.viewportHeight = height;
     this.background.clear().rect(0, 0, width, height).fill(0xfff7e8);
-    this.landingBackdrop.width = width;
-    this.landingBackdrop.height = height;
-    if (this.selectedSubject) {
-      layoutToFillViewport(this.page, width, height);
-    } else {
-      this.page.scale.set(width / BASE_WIDTH, height / 1000);
-      this.page.position.set(0, 0);
-    }
+    layoutToFillViewport(this.page, width, height);
     this.layoutCodeEditor();
   }
 
   private renderDashboard(): void {
     this.clearBody();
     if (!this.selectedSubject) {
+      this.body.addChild(createCozyPageBackground(BASE_WIDTH, BASE_HEIGHT));
       this.buildLandingHeader();
       this.buildMasteryPanel();
       this.buildRecommendation();
@@ -159,29 +149,25 @@ export class StudyModal extends Container {
   }
 
   private buildLandingHeader(): void {
-    this.landingBackdrop.visible = true;
     this.landingMascot.visible = true;
-    const back = new BackButton({ iconSrc: this.options.backIcon, size: 68, onPress: this.options.onClose });
-    back.position.set(110, 132);
-    const title = new Text({ text: message("study.dashboardTitle"), style: textStyle(60, 0x482616, "800") });
-    title.anchor.set(0.5, 0);
-    title.position.set(800, 128);
-    const leftLeaf = createStudyLeaves();
-    leftLeaf.position.set(694, 169);
-    const rightLeaf = createStudyLeaves();
-    rightLeaf.scale.x = -1;
-    rightLeaf.position.set(906, 169);
+    const back = new BackButton({ iconSrc: this.options.backIcon, size: 72, onPress: this.options.onClose });
+    back.position.set(24, 20);
+    const title = new Text({ text: message("study.dashboardTitle"), style: textStyle(34, 0x3f2418, "800") });
+    title.position.set(130, 22);
+    const subtitle = new Text({ text: message("study.dashboardSubtitle"), style: textStyle(16, 0x76533d, "600") });
+    subtitle.position.set(132, 66);
+    const ornament = createTitleOrnament(132, 89, 170);
     this.landingMascot.scale.set(145 / this.landingMascot.texture.width);
-    this.landingMascot.position.set(1378, 91);
-    this.body.addChild(back, title, leftLeaf, rightLeaf);
+    this.landingMascot.position.set(1400, 126);
+    this.body.addChild(back, title, subtitle, ornament);
   }
 
   private buildSubjectSelection(): void {
-    const panel = createStudyPanel(110, 630, 1366, 297);
+    const panel = createCozyPanel(445, 455, 1110, 380, { fill: 0xfff8e9, border: 0x95603d, radius: 28 });
     const title = new Text({ text: message("study.languageTitle"), style: textStyle(32, 0x493022, "800") });
-    title.position.set(138, 650);
+    title.position.set(490, 480);
     const help = new Text({ text: message("study.subjectSelectionHelp"), style: textStyle(21, 0x76533c, "600") });
-    help.position.set(138, 696);
+    help.position.set(490, 522);
     this.body.addChild(panel, title, help);
     const pageCount = Math.max(1, Math.ceil(studySubjects.length / subjectPageSize));
     this.subjectPage = Math.min(this.subjectPage, pageCount - 1);
@@ -191,6 +177,8 @@ export class StudyModal extends Container {
         label: message(subjectMessages[subject]),
         description: message(subjectDescriptionMessages[subject]),
         color: subjectColors[subject],
+        width: 320,
+        height: 155,
         onPress: () => {
           this.selectedSubject = subject;
           this.typeFilter = "all";
@@ -201,13 +189,13 @@ export class StudyModal extends Container {
           this.renderDashboard();
         },
       });
-      button.position.set(138 + index * 446, 735);
+      button.position.set(480 + index * 350, 565);
       this.body.addChild(button);
     });
     this.buildPagination(
       this.subjectPage,
       pageCount,
-      874,
+      770,
       (page) => {
         this.subjectPage = page;
         this.renderDashboard();
@@ -236,77 +224,115 @@ export class StudyModal extends Container {
   }
 
   private buildMasteryPanel(): void {
-    const panel = createStudyPanel(110, 255, 658, 360);
-    const title = new Text({ text: message("study.subjectMasteryTitle"), style: textStyle(32, 0x493022, "800") });
-    title.position.set(138, 280);
-    const rules = new Graphics()
-      .moveTo(138, 323)
-      .lineTo(740, 323)
-      .moveTo(138, 568)
-      .lineTo(740, 568)
-      .stroke({ color: 0xc3a382, width: 1.3 });
-    this.body.addChild(panel, title, rules);
+    const panel = createCozyPanel(55, 125, 360, 710, { fill: 0xfff4df, border: 0xa66b43, radius: 28 });
+    const title = new Text({ text: message("study.subjectMasteryTitle"), style: textStyle(23, 0x493022, "800") });
+    title.anchor.set(0.5);
+    title.position.set(235, 170);
+    const headingRule = new Graphics().moveTo(90, 202).lineTo(380, 202).stroke({ color: 0xc3a382, width: 1.3 });
+    this.body.addChild(panel, title, headingRule);
     const start = this.subjectPage * subjectPageSize;
     studySubjects.slice(start, start + subjectPageSize).forEach((subject, index) => {
       const related = this.tasks.filter((task) => task.language === subject);
       const completed = related.filter((task) => task.completed).length;
       const mastery = related.length === 0 ? 0 : Math.round((completed / related.length) * 100);
-      const y = 365 + index * 74;
-      const label = new Text({ text: message(subjectMessages[subject]), style: textStyle(25, 0x4a3023, "700") });
-      label.position.set(140, y - 7);
+      const y = 220 + index * 115;
+      const label = new Text({ text: message(subjectMessages[subject]), style: textStyle(22, 0x4a3023, "700") });
+      label.position.set(90, y);
       const track = new Graphics()
-        .roundRect(300, y, 345, 27, 14)
+        .roundRect(90, y + 48, 290, 22, 11)
         .fill({ color: 0xe5d5bd, alpha: 0.8 })
         .stroke({ color: 0xb79874, width: 1.5 });
       if (mastery > 0) {
-        const fillWidth = Math.max(27, (345 * mastery) / 100);
+        const fillWidth = Math.max(22, (290 * mastery) / 100);
         track
-          .roundRect(300, y, fillWidth, 27, 14)
+          .roundRect(90, y + 48, fillWidth, 22, 11)
           .fill(0x88aa5e)
           .stroke({ color: 0x57783b, width: 1.5 })
-          .roundRect(304, y + 3, fillWidth - 8, 8, 4)
+          .roundRect(94, y + 51, Math.max(8, fillWidth - 8), 7, 4)
           .fill({ color: 0xcde3a3, alpha: 0.4 });
       }
       const value = new Text({
         text: message("study.masteryValue", { value: mastery }),
-        style: textStyle(26, 0x604333, "800"),
+        style: textStyle(22, 0x604333, "800"),
       });
       value.anchor.set(1, 0);
-      value.position.set(735, y - 7);
+      value.position.set(380, y);
       this.body.addChild(label, track, value);
     });
-    const notice = new Text({ text: message("study.masteryNotice"), style: textStyle(16, 0x85634d, "600") });
-    notice.position.set(138, 580);
-    this.body.addChild(notice);
+    const pageCount = Math.max(1, Math.ceil(studySubjects.length / subjectPageSize));
+    this.subjectPage = Math.min(this.subjectPage, pageCount - 1);
+    const previous = new CanvasButton({
+      label: message("study.previousPage"),
+      width: 82,
+      height: 34,
+      fontSize: 13,
+      color: this.subjectPage > 0 ? 0xd9b184 : 0xd8d0c5,
+      disabled: this.subjectPage === 0,
+      onPress: () => {
+        this.subjectPage -= 1;
+        this.renderDashboard();
+      },
+    });
+    previous.position.set(90, 560);
+    const page = new Text({
+      text: message("study.pageStatus", { current: this.subjectPage + 1, total: pageCount }),
+      style: textStyle(15, 0x55382a, "800"),
+    });
+    page.anchor.set(0.5);
+    page.position.set(235, 577);
+    const next = new CanvasButton({
+      label: message("study.nextPage"),
+      width: 82,
+      height: 34,
+      fontSize: 13,
+      color: this.subjectPage < pageCount - 1 ? 0xe5a153 : 0xd8d0c5,
+      disabled: this.subjectPage >= pageCount - 1,
+      onPress: () => {
+        this.subjectPage += 1;
+        this.renderDashboard();
+      },
+    });
+    next.position.set(298, 560);
+    const noticePanel = new Graphics()
+      .roundRect(90, 635, 290, 105, 20)
+      .fill(0xffe8bf)
+      .stroke({ color: 0xd39b5d, width: 2 });
+    const notice = new Text({
+      text: message("study.masteryNotice"),
+      style: { ...textStyle(15, 0x76533c, "600"), align: "center", wordWrap: true, wordWrapWidth: 248, lineHeight: 22 },
+    });
+    notice.anchor.set(0.5);
+    notice.position.set(235, 687);
+    this.body.addChild(previous, page, next, noticePanel, notice);
   }
 
   private buildRecommendation(): void {
     const recommended = this.tasks.find((task) => !task.completed) ?? this.tasks[0];
-    const panel = createStudyPanel(782, 255, 694, 360);
-    const heading = new Text({ text: message("study.recommendedTitle"), style: textStyle(32, 0x493022, "800") });
-    heading.position.set(810, 280);
+    const panel = createCozyPanel(445, 125, 1110, 300, { fill: 0xfff8e9, border: 0x95603d, radius: 28 });
+    const heading = new Text({ text: message("study.recommendedTitle"), style: textStyle(25, 0x493022, "800") });
+    heading.position.set(490, 155);
     const completedCount = this.tasks.filter((task) => task.completed).length;
-    const badge = new Graphics().roundRect(1315, 279, 137, 38, 19).fill(0xf2e7cf);
+    const badge = new Graphics().roundRect(1360, 151, 150, 38, 19).fill(0xf2e7cf);
     if (completedCount > 0) {
-      badge.roundRect(1315, 279, Math.max(38, (137 * completedCount) / this.tasks.length), 38, 19).fill(0xb6cd87);
+      badge.roundRect(1360, 151, Math.max(38, (150 * completedCount) / this.tasks.length), 38, 19).fill(0xb6cd87);
     }
-    badge.roundRect(1315, 279, 137, 38, 19).stroke({ color: 0x91a46c, width: 1.5 });
+    badge.roundRect(1360, 151, 150, 38, 19).stroke({ color: 0x91a46c, width: 1.5 });
     const badgeText = new Text({
       text: message("study.progressBadge", { completed: completedCount, total: this.tasks.length }),
       style: textStyle(17, 0x57442b, "800"),
     });
     badgeText.anchor.set(0.5);
-    badgeText.position.set(1383.5, 298);
+    badgeText.position.set(1435, 170);
     const rules = new Graphics()
-      .moveTo(810, 328)
-      .lineTo(1448, 328)
-      .moveTo(810, 492)
-      .lineTo(1448, 492)
+      .moveTo(490, 198)
+      .lineTo(1510, 198)
+      .moveTo(490, 332)
+      .lineTo(1510, 332)
       .stroke({ color: 0xc3a382, width: 1.3 });
     this.body.addChild(panel, heading, badge, badgeText, rules);
     if (!recommended) {
       const empty = new Text({ text: message("study.noTasks"), style: textStyle(21, 0x76533c, "600") });
-      empty.position.set(810, 390);
+      empty.position.set(490, 270);
       this.body.addChild(empty);
       return;
     }
@@ -314,39 +340,39 @@ export class StudyModal extends Container {
       text: summarizeStudyText(resolveGameText(recommended.title), 30),
       style: { ...textStyle(32, 0x3f281c, "800"), wordWrap: true, wordWrapWidth: 640, lineHeight: 38 },
     });
-    title.position.set(810, 368);
+    title.position.set(490, 222);
     const summary = new Text({
       text: summarizeStudyText(resolveGameText(recommended.summary), 60),
-      style: { ...textStyle(20, 0x6e4e3a, "600"), wordWrap: true, wordWrapWidth: 640, lineHeight: 27 },
+      style: { ...textStyle(18, 0x6e4e3a, "600"), wordWrap: true, wordWrapWidth: 690, lineHeight: 25 },
     });
-    summary.position.set(810, 430);
+    summary.position.set(490, 275);
     const metadata = new Text({
       text: `${message(conceptMessages[recommended.concept])}  ·  ${message(difficultyMessages[recommended.difficulty])}`,
       style: textStyle(20, 0x7b5336, "700"),
     });
-    metadata.position.set(810, 523);
+    metadata.position.set(490, 365);
     const reward =
       recommended.rewardCoins > 0
         ? createCoinAmount(this.options.coinIcon, `+${recommended.rewardCoins}`, { fontSize: 22, iconSize: 30 })
         : null;
-    reward?.position.set(810 + metadata.width + 20, 538);
+    reward?.position.set(490 + metadata.width + 20, 380);
     const start = new CanvasButton({
       label: message(recommended.completed ? "study.reviewTask" : "study.quickStart"),
-      width: 255,
-      height: 78,
+      width: 225,
+      height: 62,
       fontSize: 25,
       color: 0xeeaa58,
       onPress: () => this.openTask(recommended),
     });
-    start.position.set(1195, 516);
+    start.position.set(1275, 346);
     this.body.addChild(title, summary, metadata);
     if (reward) {
       this.body.addChild(reward);
     }
     const arrow = new Graphics()
-      .moveTo(1415, 543)
-      .lineTo(1425, 555)
-      .lineTo(1415, 567)
+      .moveTo(1460, 363)
+      .lineTo(1470, 377)
+      .lineTo(1460, 391)
       .stroke({ color: 0x754322, width: 4, cap: "round", join: "round" });
     this.body.addChild(start, arrow);
   }
@@ -1046,7 +1072,6 @@ export class StudyModal extends Container {
   }
 
   private clearBody(): void {
-    this.landingBackdrop.visible = false;
     this.landingMascot.visible = false;
     this.body.scale.set(1);
     this.body.position.set(0, 0);

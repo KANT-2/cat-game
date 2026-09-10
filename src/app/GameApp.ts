@@ -150,7 +150,6 @@ export class GameApp {
       settings: assetPath(assetCatalog, "ui.home.settings.02"),
       back: assetPath(assetCatalog, "ui.common.back-button.01"),
       coin: assetPath(assetCatalog, "ui.common.currency-coin.01"),
-      studyBackdrop: assetPath(assetCatalog, "ui.scene.study-forest-board.03"),
       studyMascot: assetPath(assetCatalog, "ui.scene.study-siamese-leaning.01"),
       shopShowcase: assetPath(assetCatalog, "ui.scene.shop-showcase.01"),
       gachaBackdrop: assetPath(assetCatalog, "ui.scene.gacha-room-backdrop.01"),

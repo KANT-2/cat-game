@@ -18,6 +18,7 @@ import { shopItemNameMessages } from "../shopItemPresentation";
 type ShopSceneOptions = {
   getState: () => GameState;
   onBack: () => void;
+  onOpenOwned: () => void;
   onBuy: (itemId: ShopItemId) => void;
   heroArt: string;
   backIcon: string;
@@ -190,6 +191,7 @@ export class ShopScene extends Container {
   private readonly onBuy: (itemId: ShopItemId) => void;
   private readonly getState: () => GameState;
   private readonly onBack: () => void;
+  private readonly onOpenOwned: () => void;
   private readonly heroArt: string;
   private readonly backIcon: string;
   private readonly coinIcon: string;
@@ -206,6 +208,7 @@ export class ShopScene extends Container {
     this.onBuy = options.onBuy;
     this.getState = options.getState;
     this.onBack = options.onBack;
+    this.onOpenOwned = options.onOpenOwned;
     this.heroArt = options.heroArt;
     this.backIcon = options.backIcon;
     this.coinIcon = options.coinIcon;
@@ -256,9 +259,18 @@ export class ShopScene extends Container {
     const state = this.getState();
     const currency = createCurrencyBar(this.coinIcon, state.coins);
     currency.container.position.set(1230, 22);
+    const owned = new CanvasButton({
+      label: message("shop.openOwned"),
+      width: 170,
+      height: 62,
+      color: 0xf3d4aa,
+      fontSize: 20,
+      onPress: this.onOpenOwned,
+    });
+    owned.position.set(1040, 22);
     const back = new BackButton({ iconSrc: this.backIcon, size: 72, onPress: this.onBack });
     back.position.set(24, 20);
-    this.headerLayer.addChild(sign, title, ornament, currency.container, back);
+    this.headerLayer.addChild(sign, title, ornament, owned, currency.container, back);
   }
 
   private renderNavigation(): void {

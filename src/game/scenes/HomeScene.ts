@@ -33,7 +33,6 @@ export type HomeIconSources = {
   settings: string;
   back: string;
   coin: string;
-  studyBackdrop: string;
   studyMascot: string;
   shopShowcase: string;
   gachaBackdrop: string;
@@ -295,7 +294,6 @@ export class HomeScene extends Container {
     this.enterPage();
     this.studyModal = new StudyModal({
       tasks: this.gameClient.getStudyTasks(),
-      backdrop: this.iconSources.studyBackdrop,
       mascot: this.iconSources.studyMascot,
       getQuiz: (quizId) => this.gameClient.getQuiz(quizId),
       getCodeChallenge: (challengeId) => this.gameClient.getCodeChallenge(challengeId),
@@ -381,6 +379,7 @@ export class HomeScene extends Container {
     this.shopScene = new ShopScene({
       getState: () => this.state,
       onBack: () => this.closeShop(),
+      onOpenOwned: () => this.openFeaturePage("owned"),
       onBuy: (itemId) => this.buyShopItem(itemId),
       heroArt: this.iconSources.shopShowcase,
       backIcon: this.iconSources.back,
@@ -583,8 +582,8 @@ export class HomeScene extends Container {
       .rect(-this.screenWidth / 2, -this.screenHeight / 2, this.screenWidth, this.screenHeight)
       .fill({ color: 0x2f211b, alpha: 0.58 });
     blocker.eventMode = "static";
-    panel.addChild(
-      blocker,
+    const dialog = new Container();
+    dialog.addChild(
       new Graphics().roundRect(-470, -270, 940, 540, 32).fill(0xfff3dc).stroke({ color: 0x68442f, width: 5 }),
     );
     const title = new Text({ text: message("shop.purchaseChoiceTitle"), style: textStyle(34, 0x3d2b22, "800") });
@@ -620,7 +619,9 @@ export class HomeScene extends Container {
       },
     });
     store.position.set(30, 45);
-    panel.addChild(title, guide, place, store);
+    dialog.addChild(title, guide, place, store);
+    dialog.scale.set(0.5);
+    panel.addChild(blocker, dialog);
     panel.position.set(this.screenWidth / 2, this.screenHeight / 2);
     this.purchaseChoicePanel = panel;
     this.pageLayer.addChild(panel);
