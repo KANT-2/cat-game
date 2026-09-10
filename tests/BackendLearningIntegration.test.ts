@@ -613,7 +613,10 @@ describe("backend learning integration", () => {
         return json({ status: "ok" });
       }
       if (pathname === "/api/v1/session/me") {
-        return json(userPayload());
+        return json({
+          ...userPayload(),
+          platform: { status: "available", profile: { profile_image: "/media/avatar.png" } },
+        });
       }
       if (pathname === "/api/v1/session/logout") {
         return new Response(null, { status: 204 });
@@ -625,7 +628,10 @@ describe("backend learning integration", () => {
     });
     const api = new BackendApiClient("http://localhost:8000", null, fetcher, 5_000, () => "csrf-token");
 
-    await expect(api.connectBrowserSession()).resolves.toMatchObject({ publicId: userId });
+    await expect(api.connectBrowserSession()).resolves.toMatchObject({
+      publicId: userId,
+      profileImageUrl: "http://localhost:8000/api/v1/session/me/profile-image",
+    });
     await api.updateGameSettings({ reducedMotion: true });
     await expect(api.logout()).resolves.toBeUndefined();
 

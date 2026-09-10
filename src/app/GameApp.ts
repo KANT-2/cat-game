@@ -155,6 +155,15 @@ export class GameApp {
       gachaMachine: assetPath(assetCatalog, "ui.scene.gacha-machine-cutout.01"),
     };
     await Assets.load(Object.values(iconSources));
+    let profileImageUrl = gameClient.getProfileImageUrl();
+    if (profileImageUrl) {
+      try {
+        await Assets.load(profileImageUrl);
+      } catch (error) {
+        console.warn("Student profile image could not be loaded", error);
+        profileImageUrl = null;
+      }
+    }
     const codeEditorFactory = new CodeMirrorEditorOverlayFactory(mount);
     const textInputFactory = new BrowserTextInputBridgeFactory(mount);
     const home = new HomeScene(
@@ -164,6 +173,7 @@ export class GameApp {
       forestArt,
       codeEditorFactory,
       textInputFactory,
+      profileImageUrl,
       gameSession
         ? async () => {
             try {

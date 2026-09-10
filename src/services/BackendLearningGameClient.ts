@@ -50,6 +50,7 @@ import {
   type BackendConceptProficiency,
   type BackendGameSnapshot,
   type BackendLearningTask,
+  type BackendUser,
 } from "./BackendApiClient";
 import { learningCardSummary, learningDescription } from "./learningDescription";
 
@@ -70,6 +71,7 @@ export class BackendLearningGameClient implements GameClient {
     tasks: BackendLearningTask[],
     snapshot: BackendGameSnapshot,
     proficiencies: BackendConceptProficiency[],
+    private readonly profileImageUrl: string | null,
   ) {
     for (const task of tasks) {
       this.tasks.set(task.publicId, task);
@@ -83,22 +85,37 @@ export class BackendLearningGameClient implements GameClient {
 
   /** 서버 연결과 추천 과제 초기화를 마친 원격 학습 클라이언트를 만든다. */
   static async create(local: GameClient, api: BackendApiClient): Promise<BackendLearningGameClient> {
-    await api.connect();
-    return BackendLearningGameClient.createConnected(local, api);
+    const user = await api.connect();
+    return BackendLearningGameClient.createConnected(local, api, user);
   }
 
   /** 인증이 끝난 HTTP 어댑터에서 서버 스냅샷과 추천 과제를 병렬로 읽어 원격 클라이언트를 만든다. */
-  static async createConnected(local: GameClient, api: BackendApiClient): Promise<BackendLearningGameClient> {
+  static async createConnected(
+    local: GameClient,
+    api: BackendApiClient,
+    user: BackendUser | null = null,
+  ): Promise<BackendLearningGameClient> {
     const [tasks, snapshot, proficiencies] = await Promise.all([
       api.getLearningRecommendations(10),
       api.getGameSnapshot(),
       api.getLearningProficiencies(),
     ]);
-    return new BackendLearningGameClient(local, api, tasks, snapshot, proficiencies);
+    return new BackendLearningGameClient(
+      local,
+      api,
+      tasks,
+      snapshot,
+      proficiencies,
+      user?.profileImageUrl ?? null,
+    );
   }
 
   getSnapshot(): GameState {
     return cloneState(this.state);
+  }
+
+  getProfileImageUrl(): string | null {
+    return this.profileImageUrl;
   }
 
   subscribe(listener: GameStateListener): () => void {
@@ -336,6 +353,10 @@ export class BackendLearningGameClient implements GameClient {
 
   getStudyTasks(): StudyTaskView[] {
     return [...this.tasks.values()].map(toStudyTaskView);
+  }
+
+  async prepareStudy(): Promise<void> {
+    await this.refreshFromServer();
   }
 
   getStudyMastery(): StudyMasteryView {

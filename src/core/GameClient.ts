@@ -245,6 +245,9 @@ export interface GameClient {
    */
   getSnapshot(): GameState;
 
+  /** 로그인 연동 학생 프로필 이미지 URL을 반환하며 미연동이면 `null`이다. */
+  getProfileImageUrl(): string | null;
+
   /**
    * 성공적으로 커밋된 이후의 상태 변경을 구독한다.
    *
@@ -344,6 +347,9 @@ export interface GameClient {
 
   /** 학습 홈에 표시할 과제 목록과 완료 상태를 반환한다. */
   getStudyTasks(): StudyTaskView[];
+
+  /** 학습 화면 진입 전에 날짜가 바뀐 진행 상태와 서버 과제 목록을 갱신한다. */
+  prepareStudy(): Awaitable<void>;
 
   /** 최근 채점 기록으로 서버 또는 로컬 저장소가 계산한 개념별 숙련도를 반환한다. */
   getStudyMastery(): StudyMasteryView;

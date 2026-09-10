@@ -62,6 +62,7 @@ export class HomeScene extends Container {
   private attendanceModal: AttendanceModal | null = null;
   private catConversationModal: CatConversationModal | null = null;
   private studyModal: StudyModal | null = null;
+  private studyOpening = false;
   private shopScene: ShopScene | null = null;
   private dailyQuestScene: DailyQuestScene | null = null;
   private gachaScene: GachaScene | null = null;
@@ -79,6 +80,7 @@ export class HomeScene extends Container {
   private screenWidth = BASE_WIDTH;
   private screenHeight = BASE_HEIGHT;
   private readonly onLogout: (() => Promise<boolean>) | null;
+  private readonly profileImageUrl: string | null;
 
   constructor(
     gameClient: GameClient,
@@ -87,6 +89,7 @@ export class HomeScene extends Container {
     forestArt: ForestArt,
     codeEditorFactory: CodeEditorOverlayFactory,
     textInputFactory: TextInputBridgeFactory,
+    profileImageUrl: string | null,
     onLogout: (() => Promise<boolean>) | null = null,
   ) {
     super();
@@ -98,6 +101,7 @@ export class HomeScene extends Container {
     this.consumableArt = forestArt.consumables;
     this.codeEditorFactory = codeEditorFactory;
     this.textInputFactory = textInputFactory;
+    this.profileImageUrl = profileImageUrl;
     this.onLogout = onLogout;
     this.state = gameClient.getSnapshot();
     this.clearing = new ForestClearingView({
@@ -196,7 +200,7 @@ export class HomeScene extends Container {
     frame.height = profileSize * visualScale;
     frame.position.set((profileSize - frame.width) / 2, (profileSize - frame.height) / 2);
     const activeAnimations = this.catAnimations[this.state.activeCat];
-    const portrait = new Sprite(activeAnimations.idle.textures[0]);
+    const portrait = Sprite.from(this.profileImageUrl ?? activeAnimations.idle.textures[0]);
     this.profilePortrait = portrait;
     this.fitProfilePortrait();
     const portraitMask = new Graphics().roundRect(40, 36, 76, 68, 16).fill(0xffffff);
@@ -211,7 +215,7 @@ export class HomeScene extends Container {
   private buildSideMenu(): void {
     this.shopOptions.visible = false;
 
-    const study = this.createIconButton(this.iconSources.study, message("home.study"), true, () => this.openStudy());
+    const study = this.createIconButton(this.iconSources.study, message("home.study"), true, () => void this.openStudy());
     const dailyQuest = this.createIconButton(this.iconSources.dailyQuest, message("home.dailyQuest"), true, () =>
       this.openDailyQuest(),
     );
@@ -285,19 +289,35 @@ export class HomeScene extends Container {
     this.uiLayer.visible = true;
   }
 
-  private openStudy(): void {
-    if (this.studyModal) {
+  private async openStudy(): Promise<void> {
+    if (this.studyModal || this.studyOpening) {
       return;
+    }
+    this.studyOpening = true;
+    try {
+      await this.gameClient.prepareStudy();
+    } catch (error) {
+      console.warn("Study refresh failed", error);
+    } finally {
+      this.studyOpening = false;
     }
     this.clearOpenPages();
     this.enterPage();
     this.studyModal = new StudyModal({
       tasks: this.gameClient.getStudyTasks(),
+      learningDomain: this.gameClient.getSnapshot().settings.learningDomain,
       getMastery: () => this.gameClient.getStudyMastery(),
       getQuiz: (quizId) => this.gameClient.getQuiz(quizId),
       getCodeChallenge: (challengeId) => this.gameClient.getCodeChallenge(challengeId),
       onAnswer: (quizId, choiceId) => this.gameClient.answerQuiz(quizId, choiceId),
       onSubmitCode: (challengeId, code, hintsUsed) => this.gameClient.submitCodeChallenge(challengeId, code, hintsUsed),
+      onChangeLearningDomain: async (learningDomain) => {
+        const settings = await this.gameClient.updateSettings({ learningDomain });
+        return {
+          learningDomain: settings.learningDomain,
+          tasks: this.gameClient.getStudyTasks(),
+        };
+      },
       onClose: () => this.closeStudy(),
       backIcon: this.iconSources.back,
       coinIcon: this.iconSources.coin,
@@ -408,7 +428,7 @@ export class HomeScene extends Container {
       getState: () => this.state,
       getQuests: () => this.gameClient.getDailyQuests(),
       onBack: () => this.closeDailyQuest(),
-      onOpenStudy: () => this.openStudy(),
+      onOpenStudy: () => void this.openStudy(),
       onClaim: (questId) => this.gameClient.claimDailyQuest(questId),
       onClaimBonus: () => this.gameClient.claimDailyBonus(),
       backIcon: this.iconSources.back,
@@ -492,9 +512,9 @@ export class HomeScene extends Container {
         this.enterRoomEditMode();
       },
       onUpdateSettings: (patch) => this.gameClient.updateSettings(patch),
-      onResetLearning: () => this.gameClient.resetLearningProgress(),
       onLogout: this.onLogout,
       onOpenAttendance: () => this.openAttendance(true),
+      profileImageUrl: this.profileImageUrl,
       catAnimations: this.catAnimations,
       furnitureArt: this.furnitureArt,
       consumableArt: this.consumableArt,
@@ -885,6 +905,9 @@ export class HomeScene extends Container {
   }
 
   private applyActiveCat(variant: CatVariant): void {
+    if (this.profileImageUrl) {
+      return;
+    }
     const animations = this.catAnimations[variant];
     if (this.profilePortrait) {
       this.profilePortrait.texture = animations.idle.textures[0];
@@ -897,6 +920,16 @@ export class HomeScene extends Container {
       return;
     }
 
+    if (this.profileImageUrl) {
+      const portraitScale = Math.max(
+        76 / this.profilePortrait.texture.width,
+        68 / this.profilePortrait.texture.height,
+      );
+      this.profilePortrait.anchor.set(0.5);
+      this.profilePortrait.scale.set(portraitScale);
+      this.profilePortrait.position.set(78, 70);
+      return;
+    }
     const portraitScale = 118 / this.profilePortrait.texture.height;
     this.profilePortrait.anchor.set(0.5, 0);
     this.profilePortrait.scale.set(portraitScale);
