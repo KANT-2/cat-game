@@ -8,7 +8,7 @@ import { textStyle } from "../config";
 
 type SettingsSection = "account" | "sound";
 type SettingsPageMode = "settings" | "account";
-type ConfirmAction = "logout" | "dataReset" | "accountDelete";
+type ConfirmAction = "logout";
 
 type SettingsPageOptions = {
   mode: SettingsPageMode;
@@ -134,29 +134,24 @@ export class SettingsPage extends Container {
     this.addDetail("settings.nicknameValue", 840, 280);
     this.addActionButton("settings.change", 1330, 253, 160, () => this.notify("settings.accountActionReady"));
 
-    this.addCard(70, 370, 1450, 125);
-    this.addLabel("settings.accountLink", 100, 390, 20);
-    this.addDetail("settings.accountLinkDescription", 100, 448);
-    this.addActionButton("settings.linkGoogle", 1200, 385, 135, () => this.notify("settings.linkReady"));
-    this.addActionButton("settings.linkEmail", 1350, 385, 140, () => this.notify("settings.linkReady"));
+    this.addCard(70, 370, 1450, 75);
+    this.addLabel("settings.lastSync", 100, 390, 18);
+    this.addDetail("settings.lastSyncValue", 420, 391);
 
-    this.addCard(70, 515, 1450, 75);
-    this.addLabel("settings.lastSync", 100, 535, 18);
-    this.addDetail("settings.lastSyncValue", 420, 536);
-
-    const danger = new Graphics()
-      .roundRect(70, 610, 1450, 185, 24)
-      .fill(0xffe1d5)
-      .stroke({ color: 0xb65d49, width: 3 });
-    const title = new Text({ text: message("settings.dangerZone"), style: textStyle(21, 0x8c3429, "800") });
-    title.position.set(100, 630);
-    const detail = new Text({ text: message("settings.dangerDescription"), style: textStyle(15, 0x7e5148, "600") });
-    detail.position.set(100, 667);
-    this.addChild(danger, title, detail);
+    const sessionPanel = createCozyPanel(70, 465, 1450, 185, {
+      fill: 0xfff8e9,
+      border: 0xc38a58,
+      radius: 24,
+    });
+    const title = new Text({ text: message("settings.sessionManagement"), style: textStyle(21, 0x493022, "800") });
+    title.position.set(100, 485);
+    const detail = new Text({ text: message("settings.sessionDescription"), style: textStyle(15, 0x76533c, "600") });
+    detail.position.set(100, 522);
+    this.addChild(sessionPanel, title, detail);
     this.addActionButton(
       "settings.logout",
-      400,
-      715,
+      670,
+      570,
       250,
       () => {
         if (!this.options.onLogout) {
@@ -166,15 +161,6 @@ export class SettingsPage extends Container {
         this.askConfirmation("logout");
       },
       0xe7b080,
-    );
-    this.addActionButton("settings.dataReset", 675, 715, 250, () => this.askConfirmation("dataReset"), 0xe58c72);
-    this.addActionButton(
-      "settings.accountDelete",
-      950,
-      715,
-      250,
-      () => this.askConfirmation("accountDelete"),
-      0xd96c5b,
     );
   }
 
@@ -328,13 +314,11 @@ export class SettingsPage extends Container {
       color: 0xd96c5b,
       onPress: async () => {
         this.confirmAction = null;
-        if (action === "logout") {
-          const loggedOut = await this.options.onLogout?.();
-          if (!loggedOut) {
-            this.notify("settings.logoutFailed");
-            this.render();
-            return;
-          }
+        const loggedOut = await this.options.onLogout?.();
+        if (!loggedOut) {
+          this.notify("settings.logoutFailed");
+          this.render();
+          return;
         }
         this.notify(confirmMessages[action].status);
         this.render();
@@ -355,16 +339,6 @@ const confirmMessages: Record<ConfirmAction, { title: MessageId; description: Me
     title: "settings.confirmLogoutTitle",
     description: "settings.confirmLogoutDescription",
     status: "settings.logoutComplete",
-  },
-  dataReset: {
-    title: "settings.confirmDataResetTitle",
-    description: "settings.confirmDataResetDescription",
-    status: "settings.accountActionReady",
-  },
-  accountDelete: {
-    title: "settings.confirmAccountDeleteTitle",
-    description: "settings.confirmAccountDeleteDescription",
-    status: "settings.accountActionReady",
   },
 };
 function clampVolume(value: number): number {

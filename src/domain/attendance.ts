@@ -16,6 +16,15 @@ export function nextAttendanceStreak(lastClaimDate: string, currentStreak: numbe
   return 1;
 }
 
+/** 오늘 기준으로 아직 이어지고 있는 실제 연속 출석 일수를 반환한다. */
+export function activeAttendanceStreak(lastClaimDate: string, currentStreak: number, today: string): number {
+  const elapsedDays = daysBetween(lastClaimDate, today);
+  if ((elapsedDays !== 0 && elapsedDays !== 1) || currentStreak <= 0) {
+    return 0;
+  }
+  return Math.floor(currentStreak);
+}
+
 /** 연속 출석 주기의 해당 일차에 추가로 지급할 코인을 반환한다. */
 export function attendanceStreakBonus(streak: number): number {
   if (streak <= 0) {

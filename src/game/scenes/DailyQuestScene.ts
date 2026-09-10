@@ -1,6 +1,7 @@
 import { Container, Graphics, Text } from "pixi.js";
 import { message } from "../../content/messages";
 import type { Awaitable, DailyQuestView, DailyRewardResult } from "../../core/GameClient";
+import { activeAttendanceStreak } from "../../domain/attendance";
 import type { DailyQuestId } from "../../domain/dailyQuest";
 import type { GameState } from "../../domain/room";
 import { BackButton } from "../components/BackButton";
@@ -49,7 +50,11 @@ export class DailyQuestScene extends Container {
     const completed = quests.filter((quest) => quest.complete).length;
     this.buildBackground();
     this.buildHeader(state);
-    this.buildSummary(completed, quests.length);
+    this.buildSummary(
+      completed,
+      quests.length,
+      activeAttendanceStreak(state.attendanceLastClaimDate, state.attendanceStreak, state.dailyQuestDate),
+    );
     this.buildQuestList(quests);
     this.buildBonus(quests, state.dailyBonusClaimed);
     this.buildFairnessNotice();
@@ -75,7 +80,7 @@ export class DailyQuestScene extends Container {
     this.content.addChild(back, title, subtitle, ornament, currency.container);
   }
 
-  private buildSummary(done: number, total: number): void {
+  private buildSummary(done: number, total: number, attendanceStreak: number): void {
     const panel = createCozyPanel(55, 125, 360, 560, { fill: 0xfff4df, border: 0xa66b43, radius: 28 });
     const title = new Text({ text: message("daily.todayProgress"), style: textStyle(23, 0x493022, "800") });
     title.anchor.set(0.5);
@@ -109,7 +114,7 @@ export class DailyQuestScene extends Container {
       .fill(0xffe8bf)
       .stroke({ color: 0xd39b5d, width: 2 });
     const streak = new Text({
-      text: message("daily.streak", { days: 7 }),
+      text: message("daily.streak", { days: attendanceStreak }),
       style: { ...textStyle(20, 0x67432d, "800"), align: "center", lineHeight: 30 },
     });
     streak.anchor.set(0.5);
