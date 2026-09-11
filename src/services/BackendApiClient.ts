@@ -7,6 +7,8 @@ export type BackendUser = {
 
 export type BackendLearningTask = {
   publicId: string;
+  presentationPublicId: string | null;
+  presentationRequired: boolean;
   conceptName: string;
   title: string;
   type: "CODE" | "MULTIPLE_CHOICE";
@@ -38,6 +40,7 @@ export type BackendConceptProficiency = {
 export type BackendAttemptSubmission = {
   requestId: string;
   taskPublicId: string;
+  presentationPublicId?: string;
   submittedCode?: string;
   selectedOption?: string;
   usedHint: boolean;
@@ -240,7 +243,11 @@ export class BackendApiClient {
     if (!Array.isArray(payload)) {
       throw new Error("Backend recommendations response is invalid");
     }
-    return payload.map(parseTask);
+    return Promise.all(
+      payload
+        .map(parseTask)
+        .map((task) => (task.presentationRequired ? this.startLearningPresentation(task.publicId) : task)),
+    );
   }
 
   /** 공개 필터 계약으로 활성 학습 과제를 조회한다. */
@@ -264,7 +271,28 @@ export class BackendApiClient {
     if (!Array.isArray(payload)) {
       throw new Error("Backend learning tasks response is invalid");
     }
-    return payload.map(parseTask);
+    return Promise.all(
+      payload
+        .map(parseTask)
+        .map((task) => (task.presentationRequired ? this.startLearningPresentation(task.publicId) : task)),
+    );
+  }
+
+  /** 한 논리 문제의 표시 방식과 객관식 보기 순서를 서버에 고정한다. */
+  async startLearningPresentation(taskPublicId: string): Promise<BackendLearningTask> {
+    const payload = asRecord(
+      await this.request("/api/v1/attempts/presentations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task_public_id: taskPublicId }),
+      }),
+    );
+    const task = parseTask(payload.task);
+    const presentationPublicId = readString(payload, "presentation_public_id");
+    if (task.publicId !== taskPublicId || task.presentationPublicId !== presentationPublicId) {
+      throw new Error("Backend task presentation response is invalid");
+    }
+    return task;
   }
 
   /** 최근 완료 채점 기록으로 계산한 개념별 숙련도를 조회한다. */
@@ -447,6 +475,7 @@ export class BackendApiClient {
     const payload = {
       request_id: submission.requestId,
       task_public_id: submission.taskPublicId,
+      presentation_public_id: submission.presentationPublicId,
       submitted_code: submission.submittedCode,
       selected_option: submission.selectedOption,
       context_type: "LEARNING",
@@ -581,10 +610,8 @@ function parseUser(value: unknown, baseUrl: string): BackendUser {
   const platformRecord =
     platform && typeof platform === "object" && !Array.isArray(platform) ? asRecord(platform) : null;
   const profile = platformRecord?.profile;
-  const profileRecord =
-    profile && typeof profile === "object" && !Array.isArray(profile) ? asRecord(profile) : null;
-  const hasProfileImage =
-    typeof profileRecord?.profile_image === "string" && profileRecord.profile_image.trim() !== "";
+  const profileRecord = profile && typeof profile === "object" && !Array.isArray(profile) ? asRecord(profile) : null;
+  const hasProfileImage = typeof profileRecord?.profile_image === "string" && profileRecord.profile_image.trim() !== "";
   return {
     publicId: readString(record, "public_id"),
     username: readString(record, "username"),
@@ -613,6 +640,8 @@ function parseTask(value: unknown): BackendLearningTask {
   }
   return {
     publicId: readString(record, "public_id"),
+    presentationPublicId: record.presentation_public_id == null ? null : readString(record, "presentation_public_id"),
+    presentationRequired: record.presentation_required === true,
     conceptName: readString(record, "concept_name"),
     title: readString(record, "title"),
     type,

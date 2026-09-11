@@ -100,14 +100,7 @@ export class BackendLearningGameClient implements GameClient {
       api.getGameSnapshot(),
       api.getLearningProficiencies(),
     ]);
-    return new BackendLearningGameClient(
-      local,
-      api,
-      tasks,
-      snapshot,
-      proficiencies,
-      user?.profileImageUrl ?? null,
-    );
+    return new BackendLearningGameClient(local, api, tasks, snapshot, proficiencies, user?.profileImageUrl ?? null);
   }
 
   getSnapshot(): GameState {
@@ -322,6 +315,7 @@ export class BackendLearningGameClient implements GameClient {
       const attempt = await this.api.grade({
         requestId: createRequestId(),
         taskPublicId: quizId,
+        presentationPublicId: task.presentationPublicId ?? undefined,
         selectedOption: choiceId,
         usedHint: false,
       });
@@ -394,6 +388,7 @@ export class BackendLearningGameClient implements GameClient {
       const attempt = await this.api.grade({
         requestId: createRequestId(),
         taskPublicId: challengeId,
+        presentationPublicId: task.presentationPublicId ?? undefined,
         submittedCode,
         usedHint: hintsUsed > 0,
       });
