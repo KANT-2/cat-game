@@ -2,7 +2,14 @@ import type { CatVariant } from "./cats";
 import { type ShopItemId, shopItemDefinitions } from "./shop";
 
 export type GachaDrawCount = 1 | 11;
-export type GachaRewardId = "cat.ink" | "cat.tabby" | ShopItemId;
+export type GachaRewardId =
+  | "cat.ink"
+  | "cat.tabby"
+  | "cat.silver"
+  | "cat.calico"
+  | "cat.tuxedo"
+  | "cat.fold"
+  | ShopItemId;
 
 export type GachaRewardDefinition = {
   id: GachaRewardId;
@@ -19,11 +26,15 @@ const furnitureGroups = [
   { weight: 0.1, kinds: ["desk", "hideout"] },
   { weight: 0.25, kinds: ["catTree", "scratcher"] },
   { weight: 0.3, kinds: ["plant"] },
-  { weight: 0.3, kinds: ["sofa", "bed", "rug", "litterBox"] },
+  { weight: 0.26, kinds: ["sofa", "bed", "rug", "litterBox"] },
 ];
 
 export const gachaRewardDefinitions: readonly GachaRewardDefinition[] = [
   { id: "cat.ink", weight: 0.05, kind: "cat", catVariant: "ink" },
+  { id: "cat.silver", weight: 0.01, kind: "cat", catVariant: "silver" },
+  { id: "cat.calico", weight: 0.01, kind: "cat", catVariant: "calico" },
+  { id: "cat.tuxedo", weight: 0.01, kind: "cat", catVariant: "tuxedo" },
+  { id: "cat.fold", weight: 0.01, kind: "cat", catVariant: "fold" },
   ...furnitureGroups.flatMap((group): GachaRewardDefinition[] => {
     const ids = (Object.keys(shopItemDefinitions) as ShopItemId[]).filter((id) => {
       const item = shopItemDefinitions[id];

@@ -133,6 +133,10 @@ export class GameApp {
         ink: requireAnimations("ink"),
         siamese: requireAnimations("siamese"),
         tabby: requireAnimations("tabby"),
+        silver: requireAnimations("silver"),
+        calico: requireAnimations("calico"),
+        tuxedo: requireAnimations("tuxedo"),
+        fold: requireAnimations("fold"),
       };
       forestArt = await loadForestArt(assetCatalog, gameClient.getSnapshot().activeWallpaper);
       loading.setProgress(0.98);

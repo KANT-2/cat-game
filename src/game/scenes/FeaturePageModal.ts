@@ -167,8 +167,9 @@ export class FeaturePageModal extends Container {
     this.content.addChild(progress);
     catVariants.forEach((variant, index) => {
       const owned = state.ownedCats.includes(variant);
-      const x = 125 + index * 365;
-      const card = createCozyPanel(x, 250, 315, 430, {
+      const x = 55 + (index % 4) * 375;
+      const y = 190 + Math.floor(index / 4) * 325;
+      const card = createCozyPanel(x, y, 315, 300, {
         fill: owned ? 0xfff5df : 0xd8d0c5,
         border: owned ? 0x91aa82 : 0x8c8176,
         radius: 26,
@@ -176,20 +177,20 @@ export class FeaturePageModal extends Container {
       const portrait = new Sprite(this.options.catAnimations[variant].idle.textures[0]);
       portrait.anchor.set(0.5);
       portrait.scale.set(0.58);
-      portrait.position.set(x + 158, 445);
+      portrait.position.set(x + 158, y + 175);
       portrait.alpha = owned ? 1 : 0.22;
       const name = new Text({
         text: owned ? message(catNameMessages[variant]) : "? ? ?",
         style: textStyle(23, 0x493022, "800"),
       });
       name.anchor.set(0.5);
-      name.position.set(x + 158, 300);
+      name.position.set(x + 158, y + 38);
       const status = new Text({
         text: message(owned ? "gacha.collectionOwned" : "gacha.collectionMissing"),
         style: textStyle(17, owned ? 0x537145 : 0x766f68, "700"),
       });
       status.anchor.set(0.5);
-      status.position.set(x + 158, 625);
+      status.position.set(x + 158, y + 255);
       this.content.addChild(card, portrait, name, status);
     });
   }
@@ -743,6 +744,10 @@ const catNameMessages: Record<CatVariant, MessageId> = {
   ink: "cat.inkName",
   siamese: "cat.siameseName",
   tabby: "cat.tabbyName",
+  silver: "cat.silverName",
+  calico: "cat.calicoName",
+  tuxedo: "cat.tuxedoName",
+  fold: "cat.foldName",
 };
 function titleFor(kind: FeaturePageKind): MessageId {
   return `page.${kind}Title`;

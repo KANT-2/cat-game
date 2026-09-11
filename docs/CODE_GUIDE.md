@@ -373,7 +373,7 @@ Canvas 초기화 전에는 `src/style.css`의 짙은 갈색 앱 셸 배경이 �
 장면의 즉시 표시용 fallback과 맞춰 두며, HTML/DOM UI를 로딩 화면으로 사용하지 않는다. 로딩 장면의
 게임 이름은 Canvas 텍스트 대신 카탈로그의 투명 `{ 냥 }` 로고 이미지를 사용한다.
 
-설치형 PWA는 `catalog.json`, 카탈로그에 등록된 네 고양이의 PNG 시트, 로딩 배경과 WebP·PNG 환경 리소스를
+설치형 PWA는 `catalog.json`, 카탈로그에 등록된 여덟 고양이의 PNG 시트, 로딩 배경과 WebP·PNG 환경 리소스를
 service worker에 미리 저장한다. 가챠로 획득한 고양이도 오프라인에서 바로 표시되어야 하므로 특정 품종을
 precache에서 제외하지 않는다. 공터에 새로 나타나는 고양이는 가구와 다른 고양이를 피한 임의의 셀에서 시작하며,
 좌우 방향과 첫 행동도 무작위로 정한다. 데스크톱 위젯은 `desktop-widget.html`과 `DesktopWidgetApp`에서
@@ -458,9 +458,9 @@ UI는 가격이나 잔액을 판정하지 않고 `buyShopItem()` 결과를 따�
 
 ## 가챠 풀과 학습 문구
 
-`domain/gacha.ts`는 `shopItemDefinitions`의 가구·장식을 풀로 사용한다. 고양이 먹구름 5%는 유지한다.
-SR 10%는 desk/hideout, R 25%는 catTree/scratcher, N 60%는 plant 30%와
-sofa/bed/rug/litterBox 30%로 나누고, 각 묶음 안에서는 상품별 균등 확률을 사용한다.
+`domain/gacha.ts`는 `shopItemDefinitions`의 가구·장식을 풀로 사용한다. 고양이 먹구름은 5%, 신규 고양이
+은별이·단추·콩이·도토리는 각각 1%로 둔다. 가구·장식은 desk/hideout 10%, catTree/scratcher 25%,
+plant 30%, sofa/bed/rug/litterBox 26%로 나누고, 각 묶음 안에서는 상품별 균등 확률을 사용한다.
 이 규칙은 백엔드 `app/modules/game/gacha.py`와 함께 변경해야 한다. 벽지·바닥·소모품은 제외한다.
 원격 보상의 상품 ID 허용 목록도 같은 풀에서 파생하므로 새 테마 상품을 정상 수신한다.
 

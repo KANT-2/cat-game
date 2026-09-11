@@ -321,6 +321,10 @@ const catNameMessages: Record<CatVariant, MessageId> = {
   siamese: "cat.siameseName",
   ink: "cat.inkName",
   tabby: "cat.tabbyName",
+  silver: "cat.silverName",
+  calico: "cat.calicoName",
+  tuxedo: "cat.tuxedoName",
+  fold: "cat.foldName",
 };
 
 function rewardNameMessage(reward: GachaReward): MessageId {

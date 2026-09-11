@@ -139,7 +139,7 @@ PYTHONPATH=cat-sprite-project/.python-deps python3 \
 
 앞뒤가 자연스럽게 이어지지 않는 대기 동작은 선택 구간을 왕복 순서로 패킹할 수 있다. 이 경우 첫 프레임과 마지막 프레임이 중복되지 않게 만들고 `manifest.json`의 `pingPong` 값으로 기록한다. 수면처럼 `hold`로 재생하는 동작은 깨어나는 프레임을 포함하지 않고 실제로 유지할 잠든 자세에서 끝내야 한다.
 
-### 4종 고양이 전체 아카이브
+### 기존 4종 고양이 전체 아카이브
 
 `cat-sprite-project-full-20260901.zip`은 아래 4종을 같은 규격으로 내보낸 작업 원본이다.
 
@@ -155,6 +155,22 @@ PYTHONPATH=cat-sprite-project/.python-deps python3 \
 2번 고양이의 개선 여부는 파일 이름이나 미리보기만으로 판단하지 않는다. 이번 아카이브의 기존 12개 `frames-rgba`는 저장소 작업 원본과 동작별 124프레임 전체가 바이트 단위로 같았다. 따라서 이미 검수된 기존 게임 시트를 교체하지 않고 신규 `scruff_lift` 시트만 추가했다. 이후 개선본을 받으면 기존 원본과 프레임 해시, 얼굴 비율, 외곽 알파를 함께 비교한 뒤 교체한다.
 
 4번 고양이의 피격은 별 모양 효과가 섞인 `hit` 대신 고양이 본체만 일관되게 남는 `hit_v2`를 사용한다. 이처럼 같은 동작의 대안 폴더가 있으면 접촉 시트로 효과 혼입, 그림체 변화, 회복 자세를 비교하고 선택한 원본 이름을 manifest의 `sourceAction`에 남긴다.
+
+### 04 v2와 05~08 추가 아카이브
+
+`cats_04-08-sprites-full124-clean.zip`은 `cat-04-v2`와 신규 `cat-05`~`cat-08`을 포함한다. 저장소 파일명은
+`orange-tabby-v2`, `silver`, `calico`, `tuxedo`, `fold`로 정리한다. `cat-04-v2`는 기존 `tabby`의 개선
+시트로 연결해 저장된 고양이 변형 ID를 유지하고, 신규 변형은 다음처럼 등록한다.
+
+| 원본 폴더 | 게임 변형 | 한국어 이름 |
+| --- | --- | --- |
+| `orange-tabby-v2` | `tabby` | 호박이 |
+| `silver` | `silver` | 은별이 |
+| `calico` | `calico` | 단추 |
+| `tuxedo` | `tuxedo` | 콩이 |
+| `fold` | `fold` | 도토리 |
+
+신규 아카이브에는 기존 `scruff_lift` 동작이 없으므로, 드래그 중 표시되는 `scruffLift` 슬롯은 각 변형의 `groom` 시트를 재사용한다. 원본 누끼는 chroma-key 제거와 녹색 가장자리 보정이 완료된 `frames-rgba`를 기준으로 패킹한다.
 
 ## 7. 검수
 
