@@ -12,7 +12,7 @@ import type {
 } from "../../core/GameClient";
 import type { StudyConcept, StudyDifficulty, StudyTaskType } from "../../domain/study";
 import { BackButton } from "../components/BackButton";
-import { CanvasButton } from "../components/CanvasButton";
+import { CanvasButton, fitWrappedTextHeight } from "../components/CanvasButton";
 import { createCozyPageBackground, createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
 import { createCoinAmount } from "../components/CurrencyBar";
 import { layoutToFillViewport } from "../components/fullscreenLayout";
@@ -521,8 +521,9 @@ export class StudyModal extends Container {
       style: {
         ...textStyle(19, 0x493022, "600"),
         lineHeight: 27,
+        breakWords: true,
         wordWrap: true,
-        wordWrapWidth: 1280,
+        wordWrapWidth: 1160,
       },
     });
     prompt.position.set(115, 155);
@@ -616,31 +617,59 @@ export class StudyModal extends Container {
     problemTitle.position.set(92, 155);
     const prompt = new Text({
       text: formatStudyDetails(resolveGameText(challenge.prompt)),
-      style: { ...textStyle(16, 0x5f4434, "600"), wordWrap: true, wordWrapWidth: 420, lineHeight: 23 },
+      style: {
+        ...textStyle(16, 0x5f4434, "600"),
+        breakWords: true,
+        wordWrap: true,
+        wordWrapWidth: 420,
+        lineHeight: 23,
+      },
     });
     prompt.position.set(92, 198);
-    const examplesTitleY = Math.max(350, prompt.y + prompt.height + 18);
+    fitWrappedTextHeight(prompt, 155, 12, 16, 7);
+    const examplesTitleY = 368;
     const examplesTitle = new Text({ text: message("study.examplesTitle"), style: textStyle(20, 0x493022, "800") });
     examplesTitle.position.set(92, examplesTitleY);
-    const examplesBoxY = examplesTitleY + 38;
+    const examplesBoxY = 402;
     const examplesBox = new Graphics().roundRect(92, examplesBoxY, 425, 92, 16).fill(0xefe2ce);
     const examples = new Text({
       text: resolveGameText(challenge.examples),
-      style: { ...textStyle(16, 0x52382a, "700"), lineHeight: 27, wordWrap: true, wordWrapWidth: 365 },
+      style: {
+        ...textStyle(16, 0x52382a, "700"),
+        breakWords: true,
+        lineHeight: 27,
+        wordWrap: true,
+        wordWrapWidth: 365,
+      },
     });
     examples.position.set(118, examplesBoxY + 22);
-    const hintNoticeY = examplesBoxY + 112;
+    fitWrappedTextHeight(examples, 52, 11, 16, 7);
+    const hintNoticeY = 512;
     const hintNotice = new Text({
       text: message("study.hintRewardNotice"),
-      style: { ...textStyle(15, 0x77523d, "600"), wordWrap: true, wordWrapWidth: 420, lineHeight: 23 },
+      style: {
+        ...textStyle(15, 0x77523d, "600"),
+        breakWords: true,
+        wordWrap: true,
+        wordWrapWidth: 420,
+        lineHeight: 23,
+      },
     });
     hintNotice.position.set(92, hintNoticeY);
+    fitWrappedTextHeight(hintNotice, 46, 12, 15, 8);
     const hintText = new Text({
       text: this.formatRevealedHints(challenge, initialHintsUsed),
-      style: { ...textStyle(16, 0x4f663d, "700"), wordWrap: true, wordWrapWidth: 420, lineHeight: 25 },
+      style: {
+        ...textStyle(16, 0x4f663d, "700"),
+        breakWords: true,
+        wordWrap: true,
+        wordWrapWidth: 420,
+        lineHeight: 25,
+      },
     });
-    const hintButtonY = hintNoticeY + 67;
-    hintText.position.set(92, hintButtonY + 70);
+    const hintButtonY = 572;
+    hintText.position.set(92, 642);
+    fitWrappedTextHeight(hintText, 165, 11, 16, 9);
     const revealedHints = new Set<number>(Array.from({ length: initialHintsUsed }, (_, index) => index));
     const hintButtons = challenge.hints.map((_, index) => {
       const hintButton = new CanvasButton({
@@ -654,6 +683,7 @@ export class StudyModal extends Container {
           }
           this.hintsUsed = revealedHints.size;
           hintText.text = this.formatRevealedHints(challenge, this.hintsUsed);
+          fitWrappedTextHeight(hintText, 165, 11, 16, 9);
         },
       });
       hintButton.position.set(92 + index * 140, hintButtonY);
