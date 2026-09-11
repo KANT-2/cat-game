@@ -21,6 +21,7 @@ class MemoryRepository implements GameStateRepository {
 const userId = "11111111-1111-4111-8111-111111111111";
 const taskId = "22222222-2222-4222-8222-222222222222";
 const attemptId = "33333333-3333-4333-8333-333333333333";
+const presentationId = "88888888-8888-4888-8888-888888888888";
 const catId = "55555555-5555-4555-8555-555555555555";
 const catAssetId = "66666666-6666-4666-8666-666666666666";
 const sqlTaskId = "77777777-7777-4777-8777-777777777777";
@@ -145,6 +146,74 @@ describe("backend learning integration", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  it("starts and keeps the server-selected presentation for a dual-mode task", async () => {
+    const logicalTask = {
+      ...learningTask(taskId, "PYTHON"),
+      type: "CODE",
+      options: null,
+      presentation_required: true,
+    };
+    const presentedTask = {
+      ...logicalTask,
+      type: "MULTIPLE_CHOICE",
+      options: { A: "경계값 오류", B: "3", C: "4", D: "입력 그대로" },
+      presentation_public_id: presentationId,
+      presentation_required: false,
+    };
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = new URL(String(input)).pathname;
+      if (path === "/api/v1/learning/recommendations") {
+        return json([logicalTask]);
+      }
+      if (path === "/api/v1/attempts/presentations") {
+        expect(init?.method).toBe("POST");
+        expect(JSON.parse(String(init?.body))).toEqual({ task_public_id: taskId });
+        return json({ presentation_public_id: presentationId, task: presentedTask });
+      }
+      if (path === "/api/v1/attempts" && init?.method === "POST") {
+        expect(JSON.parse(String(init.body))).toMatchObject({
+          task_public_id: taskId,
+          presentation_public_id: presentationId,
+          selected_option: "B",
+        });
+        return json({ public_id: attemptId, status: "PENDING" }, 202);
+      }
+      if (path === `/api/v1/attempts/${attemptId}`) {
+        return json({
+          public_id: attemptId,
+          task_public_id: taskId,
+          context_type: "LEARNING",
+          status: "COMPLETED",
+          is_correct: true,
+          used_hint: false,
+          attempted_at: "2026-09-11T00:00:00Z",
+          result_detail: { verdict: "ACCEPTED", passed: 1, total: 1 },
+          coins_awarded: 30,
+        });
+      }
+      return json([]);
+    });
+    const api = new BackendApiClient("http://localhost:8000", userId, fetcher);
+
+    const tasks = await api.getLearningRecommendations();
+
+    expect(tasks).toMatchObject([
+      {
+        publicId: taskId,
+        presentationPublicId: presentationId,
+        type: "MULTIPLE_CHOICE",
+        options: { A: "경계값 오류", B: "3", C: "4", D: "입력 그대로" },
+      },
+    ]);
+    await api.grade({
+      requestId: crypto.randomUUID(),
+      taskPublicId: taskId,
+      presentationPublicId: presentationId,
+      selectedOption: "B",
+      usedHint: false,
+    });
   });
 
   it("calls the browser fetch implementation with its required global receiver", async () => {
