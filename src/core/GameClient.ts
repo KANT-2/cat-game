@@ -115,6 +115,16 @@ export type StudyMasteryView = ReadonlyArray<{
   proficiencyLevel: number;
 }>;
 
+export type StudyTierView = {
+  domain: "PYTHON" | "SQL";
+  currentTier: "BRONZE" | "SILVER" | "GOLD";
+  unlockedDifficulties: StudyDifficulty[];
+  nextTier: "SILVER" | "GOLD" | null;
+  completed: number;
+  total: number;
+  required: number;
+};
+
 export type CodeChallengeView = StudyTaskView & {
   type: "code";
   language: "python" | "sql";
@@ -353,6 +363,7 @@ export interface GameClient {
 
   /** 최근 채점 기록으로 서버 또는 로컬 저장소가 계산한 개념별 숙련도를 반환한다. */
   getStudyMastery(): StudyMasteryView;
+  getStudyTier(): StudyTierView;
 
   /** 전체 시작 코드를 자유롭게 편집할 수 있는 코드 과제를 조회한다. */
   getCodeChallenge(challengeId: string): CodeChallengeView | null;

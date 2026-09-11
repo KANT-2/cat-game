@@ -37,6 +37,16 @@ export type BackendConceptProficiency = {
   proficiencyLevel: number;
 };
 
+export type BackendLearningTier = {
+  domain: "PYTHON" | "SQL";
+  currentTier: "BRONZE" | "SILVER" | "GOLD";
+  unlockedDifficulties: Array<"BRONZE" | "SILVER" | "GOLD">;
+  nextTier: "SILVER" | "GOLD" | null;
+  completed: number;
+  total: number;
+  required: number;
+};
+
 export type BackendAttemptSubmission = {
   requestId: string;
   taskPublicId: string;
@@ -302,6 +312,28 @@ export class BackendApiClient {
       throw new Error("Backend proficiencies response is invalid");
     }
     return payload.map(parseConceptProficiency);
+  }
+
+  async getLearningTier(): Promise<BackendLearningTier> {
+    const record = asRecord(await this.request("/api/v1/learning/tier"));
+    const unlocked = record.unlocked_difficulties;
+    if (!Array.isArray(unlocked)) {
+      throw new Error("Backend learning tier response is invalid");
+    }
+    return {
+      domain: readEnum(record, "domain", ["PYTHON", "SQL"] as const),
+      currentTier: readEnum(record, "current_tier", ["BRONZE", "SILVER", "GOLD"] as const),
+      unlockedDifficulties: unlocked.map((value) => {
+        if (value !== "BRONZE" && value !== "SILVER" && value !== "GOLD") {
+          throw new Error("Backend learning tier difficulty is invalid");
+        }
+        return value;
+      }),
+      nextTier: record.next_tier == null ? null : readEnum(record, "next_tier", ["SILVER", "GOLD"] as const),
+      completed: readNumber(record, "completed"),
+      total: readNumber(record, "total"),
+      required: readNumber(record, "required"),
+    };
   }
 
   /** 서버가 권위 있게 보관한 재화·고양이·인벤토리·배치 상태를 조회한다. */

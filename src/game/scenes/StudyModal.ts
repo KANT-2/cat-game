@@ -9,6 +9,7 @@ import type {
   QuizView,
   StudyMasteryView,
   StudyTaskView,
+  StudyTierView,
 } from "../../core/GameClient";
 import type { StudyConcept, StudyDifficulty, StudyTaskType } from "../../domain/study";
 import { BackButton } from "../components/BackButton";
@@ -30,6 +31,7 @@ type StudyModalOptions = {
   tasks: StudyTaskView[];
   learningDomain: LearningDomain;
   getMastery: () => StudyMasteryView;
+  getTier: () => StudyTierView;
   getQuiz: (quizId: string) => QuizView | null;
   getCodeChallenge: (challengeId: string) => CodeChallengeView | null;
   onAnswer: (quizId: string, choiceId: string) => Awaitable<QuizAnswerResult>;
@@ -182,7 +184,21 @@ export class StudyModal extends Container {
     const panel = createCozyPanel(45, 120, 430, 245, { fill: 0xfff7e8, border: 0xb47950, radius: 22 });
     const title = new Text({ text: message("study.masteryTitle"), style: textStyle(21, 0x493022, "800") });
     title.position.set(78, 142);
-    this.body.addChild(panel, title);
+    const tier = this.options.getTier();
+    const tierText = new Text({
+      text:
+        tier.nextTier === null
+          ? message("study.tierHighest", { tier: tier.currentTier })
+          : message("study.tierProgress", {
+              tier: tier.currentTier,
+              completed: tier.completed,
+              required: tier.required,
+            }),
+      style: textStyle(13, 0x744a31, "800"),
+    });
+    tierText.anchor.set(1, 0);
+    tierText.position.set(450, 147);
+    this.body.addChild(panel, title, tierText);
     const masteryEntries = this.options.getMastery();
     masteryEntries.forEach((entry, index) => {
       const column = Math.floor(index / 5);
@@ -268,6 +284,7 @@ export class StudyModal extends Container {
   }
 
   private buildFilters(): void {
+    const tier = this.options.getTier();
     const panel = createCozyPanel(45, 390, 1510, 112, { fill: 0xfff6e5, border: 0xb68a61, radius: 18 });
     const title = new Text({ text: message("study.filterTitle"), style: textStyle(20, 0x493022, "800") });
     title.position.set(72, 425);
@@ -321,12 +338,12 @@ export class StudyModal extends Container {
       430,
       295,
       "study.filterDifficultyLabel",
-      [
+      ([
         ["all", "study.filterAll"],
         ["basic", "study.filterBasic"],
         ["applied", "study.filterApplied"],
         ["challenge", "study.filterChallenge"],
-      ],
+      ] as const).filter(([value]) => value === "all" || tier.unlockedDifficulties.includes(value)),
       this.difficultyFilter,
       (value) => {
         this.difficultyFilter = value;

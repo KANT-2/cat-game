@@ -27,6 +27,21 @@ const catAssetId = "66666666-6666-4666-8666-666666666666";
 const sqlTaskId = "77777777-7777-4777-8777-777777777777";
 
 describe("backend learning integration", () => {
+  it("parses the selected domain tier and promotion target", async () => {
+    const fetcher = vi.fn(async () => json({ ...learningTier("PYTHON"), completed: 39 }));
+    const api = new BackendApiClient("http://localhost:8000", userId, fetcher);
+
+    await expect(api.getLearningTier()).resolves.toEqual({
+      domain: "PYTHON",
+      currentTier: "BRONZE",
+      unlockedDifficulties: ["BRONZE"],
+      nextTier: "SILVER",
+      completed: 39,
+      total: 50,
+      required: 40,
+    });
+  });
+
   it("accepts every expanded gacha reward from the server", async () => {
     let rewardId = "furniture.ocean.rug";
     const fetcher = vi.fn(async (input: RequestInfo | URL) => {
@@ -252,6 +267,9 @@ describe("backend learning integration", () => {
             : [{ concept_public_id: sqlTaskId, domain: "SQL", name: "joins", attempts: 0, proficiency_level: 0 }],
         );
       }
+      if (pathname === "/api/v1/learning/tier") {
+        return json(learningTier("SQL"));
+      }
       if (pathname === "/api/v1/game/snapshot") {
         return json(gameSnapshot(1_000, 0));
       }
@@ -328,6 +346,9 @@ describe("backend learning integration", () => {
             proficiency_level: 70,
           },
         ]);
+      }
+      if (url.pathname === "/api/v1/learning/tier") {
+        return json(learningTier("PYTHON"));
       }
       if (url.pathname === "/api/v1/game/snapshot") {
         snapshotReads += 1;
@@ -920,6 +941,20 @@ function learningTask(publicId: string, domain: "PYTHON" | "SQL") {
     reward_coins: 30,
     is_active: true,
     completed: false,
+  };
+}
+
+function learningTier(domain: "PYTHON" | "SQL") {
+  return {
+    domain,
+    current_tier: "BRONZE",
+    unlocked_difficulties: ["BRONZE"],
+    next_tier: "SILVER",
+    completed: 0,
+    total: 50,
+    required: 40,
+    concept_required_percent: 50,
+    concepts: [],
   };
 }
 

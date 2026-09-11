@@ -24,6 +24,7 @@ import type {
   QuizView,
   StudyMasteryView,
   StudyTaskView,
+  StudyTierView,
   UseConsumableResult,
 } from "../core/GameClient";
 import {
@@ -50,6 +51,7 @@ import {
   type BackendConceptProficiency,
   type BackendGameSnapshot,
   type BackendLearningTask,
+  type BackendLearningTier,
   type BackendUser,
 } from "./BackendApiClient";
 import { learningCardSummary, learningDescription } from "./learningDescription";
@@ -64,6 +66,7 @@ export class BackendLearningGameClient implements GameClient {
   private snapshotGeneration = 0;
   private readonly catAssetPublicIds = new Map<CatVariant, string>();
   private mastery: StudyMasteryView;
+  private tier: StudyTierView;
 
   private constructor(
     local: GameClient,
@@ -81,6 +84,7 @@ export class BackendLearningGameClient implements GameClient {
     this.stateVersion = snapshot.stateVersion;
     this.syncCatAssetPublicIds(snapshot);
     this.mastery = toStudyMastery(proficiencies);
+    this.tier = defaultStudyTier(snapshot.settings.learningDomain);
   }
 
   /** 서버 연결과 추천 과제 초기화를 마친 원격 학습 클라이언트를 만든다. */
@@ -324,11 +328,13 @@ export class BackendLearningGameClient implements GameClient {
       }
       if (attempt.correct) {
         task.completed = true;
-        const [snapshot, proficiencies] = await Promise.all([
+        const [snapshot, proficiencies, tier] = await Promise.all([
           this.api.getGameSnapshot(),
           this.api.getLearningProficiencies(),
+          this.api.getLearningTier(),
         ]);
         this.mastery = toStudyMastery(proficiencies);
+        this.tier = toStudyTier(tier);
         this.applyServerSnapshot(snapshot);
       }
       return {
@@ -350,11 +356,16 @@ export class BackendLearningGameClient implements GameClient {
   }
 
   async prepareStudy(): Promise<void> {
-    await this.refreshFromServer();
+    const [, tier] = await Promise.all([this.refreshFromServer(), this.api.getLearningTier()]);
+    this.tier = toStudyTier(tier);
   }
 
   getStudyMastery(): StudyMasteryView {
     return this.mastery.map((entry) => ({ ...entry }));
+  }
+
+  getStudyTier(): StudyTierView {
+    return { ...this.tier, unlockedDifficulties: [...this.tier.unlockedDifficulties] };
   }
 
   getCodeChallenge(challengeId: string): CodeChallengeView | null {
@@ -397,11 +408,13 @@ export class BackendLearningGameClient implements GameClient {
       }
       if (attempt.correct) {
         task.completed = true;
-        const [snapshot, proficiencies] = await Promise.all([
+        const [snapshot, proficiencies, tier] = await Promise.all([
           this.api.getGameSnapshot(),
           this.api.getLearningProficiencies(),
+          this.api.getLearningTier(),
         ]);
         this.mastery = toStudyMastery(proficiencies);
+        this.tier = toStudyTier(tier);
         this.applyServerSnapshot(snapshot);
       }
       return {
@@ -516,15 +529,17 @@ export class BackendLearningGameClient implements GameClient {
   async resetLearningProgress(): Promise<LearningResetResult> {
     try {
       const mutation = await this.api.resetGameLearning();
-      const [tasks, proficiencies] = await Promise.all([
+      const [tasks, proficiencies, tier] = await Promise.all([
         this.api.getLearningRecommendations(10),
         this.api.getLearningProficiencies(),
+        this.api.getLearningTier(),
       ]);
       this.tasks.clear();
       for (const task of tasks) {
         this.tasks.set(task.publicId, task);
       }
       this.mastery = toStudyMastery(proficiencies);
+      this.tier = toStudyTier(tier);
       this.applyServerSnapshot(mutation.snapshot);
       return { ok: true };
     } catch (error) {
@@ -609,14 +624,16 @@ export class BackendLearningGameClient implements GameClient {
       this.applyServerSnapshot(mutation.snapshot);
       if (learningDomainChanged) {
         this.tasks.clear();
-        const [tasks, proficiencies] = await Promise.all([
+        const [tasks, proficiencies, tier] = await Promise.all([
           this.api.getLearningRecommendations(10),
           this.api.getLearningProficiencies(),
+          this.api.getLearningTier(),
         ]);
         for (const task of tasks) {
           this.tasks.set(task.publicId, task);
         }
         this.mastery = toStudyMastery(proficiencies);
+        this.tier = toStudyTier(tier);
         this.state = mergeTaskProgress(this.state, this.tasks.values());
         this.emit();
       }
@@ -935,6 +952,30 @@ function toStudyMastery(proficiencies: BackendConceptProficiency[]): StudyMaster
     attempts: proficiency.attempts,
     proficiencyLevel: proficiency.proficiencyLevel,
   }));
+}
+
+function toStudyTier(tier: BackendLearningTier): StudyTierView {
+  return {
+    domain: tier.domain,
+    currentTier: tier.currentTier,
+    unlockedDifficulties: tier.unlockedDifficulties.map(mapDifficulty),
+    nextTier: tier.nextTier,
+    completed: tier.completed,
+    total: tier.total,
+    required: tier.required,
+  };
+}
+
+function defaultStudyTier(domain: "PYTHON" | "SQL"): StudyTierView {
+  return {
+    domain,
+    currentTier: "BRONZE",
+    unlockedDifficulties: ["basic"],
+    nextTier: "SILVER",
+    completed: 0,
+    total: 50,
+    required: 40,
+  };
 }
 
 function mapDifficulty(value: BackendLearningTask["difficulty"]): StudyTaskView["difficulty"] {
