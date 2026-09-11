@@ -1,4 +1,6 @@
+import type { Text } from "pixi.js";
 import { describe, expect, it } from "vitest";
+import { fitWrappedTextHeight } from "../src/game/components/CanvasButton";
 import { formatStudyDetails } from "../src/game/presentation/studyPresentation";
 import { quizChoiceLayout } from "../src/game/scenes/StudyModal";
 
@@ -18,4 +20,38 @@ describe("long multiple-choice layout", () => {
     expect(layout.startY).toBeGreaterThan(155 + 245);
     expect(layout.bottom).toBeLessThanOrEqual(825);
   });
+
+  it("fits long Korean and SQL choice labels inside every button", () => {
+    const koreanLabel = fakeWrappedText(8);
+    const sqlLabel = fakeWrappedText(6);
+
+    fitWrappedTextHeight(koreanLabel, 56, 11, 16, 5);
+    fitWrappedTextHeight(sqlLabel, 56, 11, 16, 5);
+
+    expect(koreanLabel.height).toBeLessThanOrEqual(56);
+    expect(sqlLabel.height).toBeLessThanOrEqual(56);
+  });
+
+  it("fits the full code prompt and revealed hints within their panel regions", () => {
+    const prompt = fakeWrappedText(20);
+    const hints = fakeWrappedText(15);
+
+    fitWrappedTextHeight(prompt, 155, 12, 16, 7);
+    fitWrappedTextHeight(hints, 165, 11, 16, 9);
+
+    expect(prompt.height).toBeLessThanOrEqual(155);
+    expect(hints.height).toBeLessThanOrEqual(165);
+  });
 });
+
+function fakeWrappedText(lineCount: number): Text {
+  let scale = 1;
+  const style = { fontSize: 16, lineHeight: 21 };
+  return {
+    style,
+    scale: { set: (value: number) => (scale = value) },
+    get height() {
+      return lineCount * Number(style.lineHeight) * scale;
+    },
+  } as unknown as Text;
+}
