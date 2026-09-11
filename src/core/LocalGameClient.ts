@@ -454,6 +454,18 @@ export class LocalGameClient implements GameClient {
     });
   }
 
+  getStudyTier(): import("./GameClient").StudyTierView {
+    return {
+      domain: this.state.settings.learningDomain,
+      currentTier: "BRONZE",
+      unlockedDifficulties: ["basic"],
+      nextTier: "SILVER",
+      completed: 0,
+      total: 50,
+      required: 40,
+    };
+  }
+
   getCodeChallenge(challengeId: string): CodeChallengeView | null {
     const challenge = codeChallengeDefinitions[challengeId];
     if (!challenge) {

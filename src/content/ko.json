@@ -512,6 +512,8 @@
   "study.brand": "PYTHON  ·  STUDY",
   "study.dashboardSubtitle": "개념 숙련도를 확인하고 오늘의 맞춤 과제를 시작해 보세요.",
   "study.masteryTitle": "개념별 숙련도",
+  "study.tierProgress": "{tier} · 승급 {completed}/{required}",
+  "study.tierHighest": "{tier} · 최고 티어",
   "study.conceptVariables": "변수/문자열",
   "study.conceptConditionals": "조건문",
   "study.conceptLoops": "반복문",
