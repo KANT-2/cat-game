@@ -6,13 +6,19 @@ import { type ShopItemId, shopItemDefinitions } from "../domain/shop";
 
 const SAVE_KEY = "cozy-code-cat-room-v1";
 
+export type GameStateStoreOptions = {
+  previewAllCats?: boolean;
+};
+
 export class GameStateStore implements GameStateRepository {
+  constructor(private readonly options: GameStateStoreOptions = {}) {}
+
   load(): GameState {
     const fallback = createDefaultState();
     try {
       const raw = localStorage.getItem(SAVE_KEY);
       if (!raw) {
-        return fallback;
+        return this.applyPreviewCats(fallback);
       }
       const saved = JSON.parse(raw) as Omit<Partial<GameState>, "economyVersion"> & {
         economyVersion?: number;
@@ -26,7 +32,7 @@ export class GameStateStore implements GameStateRepository {
       const activeCat = savedActiveCat && ownedCats.includes(savedActiveCat) ? savedActiveCat : ownedCats[0];
       const homeCats = readHomeCats(saved.homeCats, ownedCats, activeCat);
       const clearPreviouslyAppliedThemes = saved.roomAppearanceVersion !== 1;
-      return {
+      return this.applyPreviewCats({
         economyVersion: 3,
         roomAppearanceVersion: 1,
         coins: readUnifiedCoins(saved, fallback.coins),
@@ -51,14 +57,25 @@ export class GameStateStore implements GameStateRepository {
         shopInventory: readShopInventory(saved.shopInventory, inventory),
         activeWallpaper: clearPreviouslyAppliedThemes ? null : readActiveTheme(saved.activeWallpaper, "wallpaper"),
         activeFloor: clearPreviouslyAppliedThemes ? null : readActiveTheme(saved.activeFloor, "floor"),
-      };
+      });
     } catch {
-      return fallback;
+      return this.applyPreviewCats(fallback);
     }
   }
 
   save(state: GameState): void {
     localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  }
+
+  private applyPreviewCats(state: GameState): GameState {
+    if (!this.options.previewAllCats) {
+      return state;
+    }
+    return {
+      ...state,
+      ownedCats: [...catVariants],
+      homeCats: [...catVariants],
+    };
   }
 }
 

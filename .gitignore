@@ -59,7 +59,8 @@ $RECYCLE.BIN/
 *.temp
 .cache/
 
-cat-sprite-project/
+cat-sprite-project/*
+!cat-sprite-project/import_v3_sprites.py
 
 # Local graphic asset sources, drafts, references, and review exports
 asset-workbench/

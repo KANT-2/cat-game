@@ -65,7 +65,7 @@ const CAT_ASSET_IDS: Record<CatVariant, Record<CatAction, string>> = {
     scratch: "cat.tabby-v2.scratch.01",
     sleep: "cat.tabby-v2.sleep.01",
     surprise: "cat.tabby-v2.surprise.01",
-    scruffLift: "cat.tabby-v2.groom.01",
+    scruffLift: "cat.tabby-v2.scruff-lift.01",
   },
   silver: {
     idle: "cat.silver.idle.01",
@@ -80,7 +80,7 @@ const CAT_ASSET_IDS: Record<CatVariant, Record<CatAction, string>> = {
     scratch: "cat.silver.scratch.01",
     sleep: "cat.silver.sleep.01",
     surprise: "cat.silver.surprise.01",
-    scruffLift: "cat.silver.groom.01",
+    scruffLift: "cat.silver.scruff-lift.01",
   },
   calico: {
     idle: "cat.calico.idle.01",
@@ -95,7 +95,7 @@ const CAT_ASSET_IDS: Record<CatVariant, Record<CatAction, string>> = {
     scratch: "cat.calico.scratch.01",
     sleep: "cat.calico.sleep.01",
     surprise: "cat.calico.surprise.01",
-    scruffLift: "cat.calico.groom.01",
+    scruffLift: "cat.calico.scruff-lift.01",
   },
   tuxedo: {
     idle: "cat.tuxedo.idle.01",
@@ -110,7 +110,7 @@ const CAT_ASSET_IDS: Record<CatVariant, Record<CatAction, string>> = {
     scratch: "cat.tuxedo.scratch.01",
     sleep: "cat.tuxedo.sleep.01",
     surprise: "cat.tuxedo.surprise.01",
-    scruffLift: "cat.tuxedo.groom.01",
+    scruffLift: "cat.tuxedo.scruff-lift.01",
   },
   fold: {
     idle: "cat.fold.idle.01",
@@ -125,7 +125,7 @@ const CAT_ASSET_IDS: Record<CatVariant, Record<CatAction, string>> = {
     scratch: "cat.fold.scratch.01",
     sleep: "cat.fold.sleep.01",
     surprise: "cat.fold.surprise.01",
-    scruffLift: "cat.fold.groom.01",
+    scruffLift: "cat.fold.scruff-lift.01",
   },
 };
 

@@ -94,7 +94,7 @@ export const defaultFurniture: PlacedFurniture[] = [
 /**
  * 새 플레이어 또는 복구 불가능한 저장 데이터에 사용할 기본 상태를 만든다.
  *
- * @returns 초기 재화, 빈 퀴즈 완료 이력과 기본 가구 배치를 가진 새 `GameState`.
+ * @returns 초기 재화, 기본 고양이, 빈 퀴즈 완료 이력과 기본 가구 배치를 가진 새 `GameState`.
  *
  * @remarks
  * 호출할 때마다 가구 배열과 각 인스턴스를 새로 복제한다. 반환된 상태를 변경해도

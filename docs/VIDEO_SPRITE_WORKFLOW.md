@@ -170,7 +170,7 @@ PYTHONPATH=cat-sprite-project/.python-deps python3 \
 | `tuxedo` | `tuxedo` | 콩이 |
 | `fold` | `fold` | 도토리 |
 
-신규 아카이브에는 기존 `scruff_lift` 동작이 없으므로, 드래그 중 표시되는 `scruffLift` 슬롯은 각 변형의 `groom` 시트를 재사용한다. 원본 누끼는 chroma-key 제거와 녹색 가장자리 보정이 완료된 `frames-rgba`를 기준으로 패킹한다.
+`cat-sprite-project-complete-20260913.zip`의 04–08 V3 영상은 각 13개 동작을 제공한다. 결함 수정 동작은 가장 늦게 검수한 `v3_fix3`을 우선하고, 05의 `surprise`와 07의 `idle`은 `v3_fix2`를 사용한다. `scruff_lift`는 줄과 고리가 없는 `cat_04_scruff_fluffy_ref`부터 `cat_08_scruff_fluffy_ref`까지의 소스를 사용한다. `cat-sprite-project/import_v3_sprites.py`로 256×256, 8열 시트를 만들며 드래그 중에는 각 변형의 `scruff-lift` 시트를 사용한다. 일반 동작은 25fps다. 긴 드래그 시트는 PWA 사전 캐시 한도를 지키면서 놓을 때 약 0.6초에 복귀하도록 5프레임 간격으로 추출해 14fps로 재생한다. 집기 시트는 `앉음 → 매달림 → 앉음` 왕복 순서로 만들고 런타임이 가운데 매달린 자세에서 정지하도록 한다. 비반복 동작은 준비 자세부터 기본 자세로 돌아오는 프레임까지 포함해 중간 전환이 보이지 않게 한다.
 
 ## 7. 검수
 

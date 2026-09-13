@@ -1093,7 +1093,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 24,
+          "frameCount": 51,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1114,8 +1114,8 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 39,
-          "framesPerSecond": 25,
+          "frameCount": 23,
+          "framesPerSecond": 16,
           "playback": "once"
         },
         "tags": [
@@ -1135,7 +1135,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 46,
+          "frameCount": 71,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1156,7 +1156,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 34,
+          "frameCount": 41,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1177,8 +1177,8 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 41,
-          "framesPerSecond": 25,
+          "frameCount": 25,
+          "framesPerSecond": 16,
           "playback": "once"
         },
         "tags": [
@@ -1198,7 +1198,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 49,
+          "frameCount": 53,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1219,7 +1219,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 33,
+          "frameCount": 67,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1240,7 +1240,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 29,
+          "frameCount": 59,
           "framesPerSecond": 25,
           "playback": "hold"
         },
@@ -1261,7 +1261,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 30,
+          "frameCount": 63,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1345,7 +1345,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 24,
+          "frameCount": 51,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1366,8 +1366,8 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 39,
-          "framesPerSecond": 25,
+          "frameCount": 23,
+          "framesPerSecond": 16,
           "playback": "once"
         },
         "tags": [
@@ -1387,7 +1387,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 46,
+          "frameCount": 71,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1408,7 +1408,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 34,
+          "frameCount": 41,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1429,8 +1429,8 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 41,
-          "framesPerSecond": 25,
+          "frameCount": 25,
+          "framesPerSecond": 16,
           "playback": "once"
         },
         "tags": [
@@ -1450,7 +1450,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 49,
+          "frameCount": 53,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1471,7 +1471,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 33,
+          "frameCount": 67,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1492,7 +1492,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 29,
+          "frameCount": 59,
           "framesPerSecond": 25,
           "playback": "hold"
         },
@@ -1513,7 +1513,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 30,
+          "frameCount": 63,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1597,7 +1597,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 24,
+          "frameCount": 51,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1618,8 +1618,8 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 39,
-          "framesPerSecond": 25,
+          "frameCount": 23,
+          "framesPerSecond": 16,
           "playback": "once"
         },
         "tags": [
@@ -1639,7 +1639,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 46,
+          "frameCount": 71,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1660,7 +1660,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 34,
+          "frameCount": 41,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1681,8 +1681,8 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 41,
-          "framesPerSecond": 25,
+          "frameCount": 25,
+          "framesPerSecond": 16,
           "playback": "once"
         },
         "tags": [
@@ -1702,7 +1702,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 49,
+          "frameCount": 53,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1723,7 +1723,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 33,
+          "frameCount": 67,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1744,7 +1744,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 29,
+          "frameCount": 59,
           "framesPerSecond": 25,
           "playback": "hold"
         },
@@ -1765,7 +1765,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 30,
+          "frameCount": 63,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1849,7 +1849,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 24,
+          "frameCount": 51,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1870,8 +1870,8 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 39,
-          "framesPerSecond": 25,
+          "frameCount": 23,
+          "framesPerSecond": 16,
           "playback": "once"
         },
         "tags": [
@@ -1891,7 +1891,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 46,
+          "frameCount": 71,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1912,7 +1912,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 34,
+          "frameCount": 41,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1933,8 +1933,8 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 41,
-          "framesPerSecond": 25,
+          "frameCount": 25,
+          "framesPerSecond": 16,
           "playback": "once"
         },
         "tags": [
@@ -1954,7 +1954,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 49,
+          "frameCount": 53,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1975,7 +1975,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 33,
+          "frameCount": 67,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -1996,7 +1996,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 29,
+          "frameCount": 59,
           "framesPerSecond": 25,
           "playback": "hold"
         },
@@ -2017,7 +2017,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 30,
+          "frameCount": 63,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -2101,7 +2101,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 24,
+          "frameCount": 51,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -2122,8 +2122,8 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 39,
-          "framesPerSecond": 25,
+          "frameCount": 23,
+          "framesPerSecond": 16,
           "playback": "once"
         },
         "tags": [
@@ -2143,7 +2143,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 46,
+          "frameCount": 71,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -2164,7 +2164,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 34,
+          "frameCount": 41,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -2185,8 +2185,8 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 41,
-          "framesPerSecond": 25,
+          "frameCount": 25,
+          "framesPerSecond": 16,
           "playback": "once"
         },
         "tags": [
@@ -2206,7 +2206,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 49,
+          "frameCount": 53,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -2227,7 +2227,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 33,
+          "frameCount": 67,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -2248,7 +2248,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 29,
+          "frameCount": 59,
           "framesPerSecond": 25,
           "playback": "hold"
         },
@@ -2269,7 +2269,7 @@
           "frameWidth": 256,
           "frameHeight": 256,
           "columns": 8,
-          "frameCount": 30,
+          "frameCount": 63,
           "framesPerSecond": 25,
           "playback": "once"
         },
@@ -2640,6 +2640,13 @@
       { "id": "consumable.tuna-soup.01", "kind": "consumable", "src": "/assets/consumables/tuna-soup-01.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["tuna", "treat", "transparent"] }
     ],
     "study": [],
+    "cats-v3-scruff-lift": [
+      { "id": "cat.tabby-v2.scruff-lift.01", "kind": "cat", "src": "/assets/cats/orange-tabby-v2/orange-tabby-v2-scruff-lift-01.png", "anchor": { "x": 0.5, "y": 0.95 }, "spriteSheet": { "frameWidth": 256, "frameHeight": 256, "columns": 8, "frameCount": 16, "framesPerSecond": 14, "playback": "once" }, "tags": ["tabby-v2", "scruff-lift"] },
+      { "id": "cat.silver.scruff-lift.01", "kind": "cat", "src": "/assets/cats/silver/silver-scruff-lift-01.png", "anchor": { "x": 0.5, "y": 0.95 }, "spriteSheet": { "frameWidth": 256, "frameHeight": 256, "columns": 8, "frameCount": 16, "framesPerSecond": 14, "playback": "once" }, "tags": ["silver", "scruff-lift"] },
+      { "id": "cat.calico.scruff-lift.01", "kind": "cat", "src": "/assets/cats/calico/calico-scruff-lift-01.png", "anchor": { "x": 0.5, "y": 0.95 }, "spriteSheet": { "frameWidth": 256, "frameHeight": 256, "columns": 8, "frameCount": 16, "framesPerSecond": 14, "playback": "once" }, "tags": ["calico", "scruff-lift"] },
+      { "id": "cat.tuxedo.scruff-lift.01", "kind": "cat", "src": "/assets/cats/tuxedo/tuxedo-scruff-lift-01.png", "anchor": { "x": 0.5, "y": 0.95 }, "spriteSheet": { "frameWidth": 256, "frameHeight": 256, "columns": 8, "frameCount": 16, "framesPerSecond": 14, "playback": "once" }, "tags": ["tuxedo", "scruff-lift"] },
+      { "id": "cat.fold.scruff-lift.01", "kind": "cat", "src": "/assets/cats/fold/fold-scruff-lift-01.png", "anchor": { "x": 0.5, "y": 0.95 }, "spriteSheet": { "frameWidth": 256, "frameHeight": 256, "columns": 8, "frameCount": 16, "framesPerSecond": 14, "playback": "once" }, "tags": ["fold", "scruff-lift"] }
+    ],
     "common-ui": [
       {
         "id": "background.loading.cat-study-night.01",

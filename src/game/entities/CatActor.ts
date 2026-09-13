@@ -306,6 +306,7 @@ export class CatActor extends Container {
     const holdFrame = this.getLiftHoldFrame();
     const releaseFrame = Math.max(this.sprite.currentFrame, holdFrame);
     this.liftReleaseStartFrame = releaseFrame;
+    this.sprite.y = -DRAG_LIFT_HEIGHT;
     this.sprite.gotoAndStop(releaseFrame);
     this.sprite.play();
   }

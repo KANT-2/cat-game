@@ -107,6 +107,15 @@ describe("GameStateStore", () => {
     expect(state.ownedCats).toEqual(["fluffy", "ink", "siamese"]);
     expect(state.homeCats).toEqual([]);
   });
+
+  it("shows every cat in the development preview regardless of saved progress", () => {
+    installStorage({ economyVersion: 3, ownedCats: ["fluffy"], homeCats: [], activeCat: "fluffy" });
+
+    const state = new GameStateStore({ previewAllCats: true }).load();
+
+    expect(state.ownedCats).toEqual(["fluffy", "ink", "siamese", "tabby", "silver", "calico", "tuxedo", "fold"]);
+    expect(state.homeCats).toEqual(state.ownedCats);
+  });
 });
 
 function installStorage(savedState: Record<string, unknown>): void {

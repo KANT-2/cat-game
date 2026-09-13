@@ -26,7 +26,7 @@ export type GameClientStart =
 
 /** 환경 설정과 브라우저 세션에 따라 즉시 사용할 클라이언트 또는 로그인 명령을 준비한다. */
 export async function createGameClient(): Promise<GameClientStart> {
-  const local = new LocalGameClient(new GameStateStore());
+  const local = new LocalGameClient(new GameStateStore({ previewAllCats: import.meta.env.DEV }));
   const baseUrl = import.meta.env.VITE_CAT_GAME_API_BASE_URL?.trim();
   if (!baseUrl) {
     return { kind: "ready", client: local, session: null };
