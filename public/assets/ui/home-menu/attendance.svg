@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="출석 달력">
+  <rect x="20" y="27" width="88" height="80" rx="15" fill="#fff1cf" stroke="#593526" stroke-width="7"/>
+  <path d="M20 49h88" fill="none" stroke="#a96538" stroke-width="7"/>
+  <path d="M42 18v20M86 18v20" fill="none" stroke="#593526" stroke-width="8" stroke-linecap="round"/>
+  <path d="m42 77 14 14 31-31" fill="none" stroke="#6f9658" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

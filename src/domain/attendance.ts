@@ -25,6 +25,19 @@ export function activeAttendanceStreak(lastClaimDate: string, currentStreak: num
   return Math.floor(currentStreak);
 }
 
+/** 오늘 문제를 실제로 완료한 경우에만 데일리 화면에 표시할 연속 학습 일수를 반환한다. */
+export function activeLearningStreak(
+  lastClaimDate: string,
+  currentStreak: number,
+  today: string,
+  completedTaskCount: number,
+): number {
+  if (completedTaskCount <= 0) {
+    return 0;
+  }
+  return activeAttendanceStreak(lastClaimDate, currentStreak, today);
+}
+
 /** 연속 출석 주기의 해당 일차에 추가로 지급할 코인을 반환한다. */
 export function attendanceStreakBonus(streak: number): number {
   if (streak <= 0) {

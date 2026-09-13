@@ -194,9 +194,21 @@ export type AttendanceClaimResult =
     }
   | { ok: false; reason: "already-claimed" | "server-unavailable" };
 
+export type PlayerProfileView = {
+  displayName: string | null;
+  email: string | null;
+};
+
+export type GameSaveStatus = {
+  savedAt: string | null;
+  destination: "device" | "server";
+};
+
 export type LearningResetResult = { ok: true } | { ok: false; reason: "server-unavailable" };
 
-export type CatMemoryClearResult = { ok: true; removed: number } | { ok: false; reason: "server-unavailable" };
+export type CatMemoryClearResult =
+  | { ok: true; removed: number }
+  | { ok: false; reason: "cat-not-owned" | "server-unavailable" };
 
 export type CatConversationResult =
   | { ok: true; catVariant: CatVariant; topic: CatConversationTopic; memoryCount: number }
@@ -238,7 +250,10 @@ export interface GameStateRepository {
    * 저장 구현은 전달받은 객체를 이후에 직접 변경하지 않아야 한다. 영속화 실패를
    * 복구할 수 없는 구현은 오류를 호출자에게 전파한다.
    */
-  save(state: GameState): void;
+  save(state: GameState, savedAt?: string): void;
+
+  /** 마지막으로 성공한 저장 시각을 ISO 8601 문자열로 반환한다. */
+  loadSavedAt?(): string | null;
 }
 
 /**
@@ -257,6 +272,12 @@ export interface GameClient {
 
   /** 로그인 연동 학생 프로필 이미지 URL을 반환하며 미연동이면 `null`이다. */
   getProfileImageUrl(): string | null;
+
+  /** 로그인 연동 사용자의 표시 이름과 이메일을 반환하며 미연동 항목은 `null`이다. */
+  getPlayerProfile(): PlayerProfileView;
+
+  /** 마지막으로 성공한 로컬 저장 또는 서버 동기화 시각과 저장 위치를 반환한다. */
+  getSaveStatus(): GameSaveStatus;
 
   /**
    * 성공적으로 커밋된 이후의 상태 변경을 구독한다.
@@ -391,6 +412,9 @@ export interface GameClient {
 
   /** 세션 간 저장된 모든 고양이 기억 문장을 삭제하고 처리 결과를 반환한다. */
   clearCatMemories(): Awaitable<CatMemoryClearResult>;
+
+  /** 지정한 보유 고양이와 사용자 사이의 기억만 삭제한다. */
+  clearCatMemory(catVariant: CatVariant): Awaitable<CatMemoryClearResult>;
 
   /**
    * 보유 고양이와 선택한 주제로 대화한 사실을 해당 고양이의 기억에 남긴다.

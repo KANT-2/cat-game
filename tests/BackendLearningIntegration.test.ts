@@ -4,7 +4,7 @@ import { LocalGameClient } from "../src/core/LocalGameClient";
 import { gachaRewardDefinitions } from "../src/domain/gacha";
 import { createDefaultState, type GameState } from "../src/domain/room";
 import { BackendApiClient } from "../src/services/BackendApiClient";
-import { BackendLearningGameClient } from "../src/services/BackendLearningGameClient";
+import { BackendLearningGameClient, gameDateStamp } from "../src/services/BackendLearningGameClient";
 
 class MemoryRepository implements GameStateRepository {
   private state = createDefaultState();
@@ -27,6 +27,11 @@ const catAssetId = "66666666-6666-4666-8666-666666666666";
 const sqlTaskId = "77777777-7777-4777-8777-777777777777";
 
 describe("backend learning integration", () => {
+  it("changes the attendance date at midnight in the game timezone", () => {
+    expect(gameDateStamp(new Date("2026-09-13T14:59:59Z"))).toBe("2026-09-13");
+    expect(gameDateStamp(new Date("2026-09-13T15:00:00Z"))).toBe("2026-09-14");
+  });
+
   it("parses the selected domain tier and promotion target", async () => {
     const fetcher = vi.fn(async () => json({ ...learningTier("PYTHON"), completed: 39 }));
     const api = new BackendApiClient("http://localhost:8000", userId, fetcher);
@@ -629,6 +634,10 @@ describe("backend learning integration", () => {
         memories.push(body.context_summary);
         return json({ public_id: crypto.randomUUID(), cat_asset_public_id: catAssetId, ...body }, 201);
       }
+      if (pathname === `/api/v1/cats/${catAssetId}/memories` && init?.method === "DELETE") {
+        memories.splice(0);
+        return new Response(null, { status: 204 });
+      }
       return json({ detail: "not found" }, 404);
     });
     const client = await BackendLearningGameClient.create(
@@ -643,6 +652,8 @@ describe("backend learning integration", () => {
       memoryCount: 1,
     });
     expect(client.getSnapshot().catMemories.fluffy).toHaveLength(1);
+    await expect(client.clearCatMemory("fluffy")).resolves.toEqual({ ok: true, removed: 1 });
+    expect(client.getSnapshot().catMemories.fluffy).toBeUndefined();
   });
 
   it("returns guarded server free-chat text and refreshes only remembered conversation", async () => {
@@ -746,6 +757,8 @@ describe("backend learning integration", () => {
 
     await expect(api.connectBrowserSession()).resolves.toMatchObject({
       publicId: userId,
+      username: "{ 냥 } 플레이어",
+      email: "player@local.nyang",
       profileImageUrl: "http://localhost:8000/api/v1/session/me/profile-image",
     });
     await api.updateGameSettings({ reducedMotion: true });

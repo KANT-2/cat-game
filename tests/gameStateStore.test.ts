@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createDefaultState } from "../src/domain/room";
 import { GameStateStore } from "../src/services/gameStateStore";
 
 const SAVE_KEY = "cozy-code-cat-room-v1";
@@ -116,12 +117,24 @@ describe("GameStateStore", () => {
     expect(state.ownedCats).toEqual(["fluffy", "ink", "siamese", "tabby", "silver", "calico", "tuxedo", "fold"]);
     expect(state.homeCats).toEqual(state.ownedCats);
   });
+
+  it("persists and restores the actual save time", () => {
+    const values = installStorage({ economyVersion: 3, coins: 777 });
+    const savedAt = "2026-09-11T06:42:00.000Z";
+    const store = new GameStateStore();
+
+    store.save(createDefaultState(), savedAt);
+
+    expect(values.get(`${SAVE_KEY}-saved-at`)).toBe(savedAt);
+    expect(store.loadSavedAt()).toBe(savedAt);
+  });
 });
 
-function installStorage(savedState: Record<string, unknown>): void {
+function installStorage(savedState: Record<string, unknown>): Map<string, string> {
   const values = new Map([[SAVE_KEY, JSON.stringify(savedState)]]);
   vi.stubGlobal("localStorage", {
     getItem: (key: string) => values.get(key) ?? null,
     setItem: (key: string, value: string) => values.set(key, value),
   });
+  return values;
 }

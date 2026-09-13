@@ -26,11 +26,12 @@ const furnitureGroups = [
   { weight: 0.1, kinds: ["desk", "hideout"] },
   { weight: 0.25, kinds: ["catTree", "scratcher"] },
   { weight: 0.3, kinds: ["plant"] },
-  { weight: 0.26, kinds: ["sofa", "bed", "rug", "litterBox"] },
+  { weight: 0.25, kinds: ["sofa", "bed", "rug", "litterBox"] },
 ];
 
 export const gachaRewardDefinitions: readonly GachaRewardDefinition[] = [
   { id: "cat.ink", weight: 0.05, kind: "cat", catVariant: "ink" },
+  { id: "cat.tabby", weight: 0.01, kind: "cat", catVariant: "tabby" },
   { id: "cat.silver", weight: 0.01, kind: "cat", catVariant: "silver" },
   { id: "cat.calico", weight: 0.01, kind: "cat", catVariant: "calico" },
   { id: "cat.tuxedo", weight: 0.01, kind: "cat", catVariant: "tuxedo" },

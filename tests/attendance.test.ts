@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   activeAttendanceStreak,
+  activeLearningStreak,
   attendanceRewardForCycleDay,
   attendanceStreakBonus,
   nextAttendanceStreak,
@@ -18,6 +19,12 @@ describe("attendance rules", () => {
     expect(activeAttendanceStreak("2026-09-03", 3, "2026-09-04")).toBe(3);
     expect(activeAttendanceStreak("2026-09-02", 3, "2026-09-04")).toBe(0);
     expect(activeAttendanceStreak("", 0, "2026-09-04")).toBe(0);
+  });
+
+  it("shows a learning streak only after completing a task today", () => {
+    expect(activeLearningStreak("2026-09-13", 1, "2026-09-13", 0)).toBe(0);
+    expect(activeLearningStreak("2026-09-13", 1, "2026-09-13", 1)).toBe(1);
+    expect(activeLearningStreak("2026-09-11", 4, "2026-09-13", 1)).toBe(0);
   });
 
   it("adds milestone bonuses on the third and seventh cycle days", () => {

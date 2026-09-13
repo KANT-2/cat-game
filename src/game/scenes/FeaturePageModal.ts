@@ -1,6 +1,6 @@
 import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
-import type { Awaitable } from "../../core/GameClient";
+import type { Awaitable, GameSaveStatus, PlayerProfileView } from "../../core/GameClient";
 import { type CatVariant, catVariants } from "../../domain/cats";
 import type { FurnitureKind, GameSettings, GameState } from "../../domain/room";
 import { type ShopItemId, shopItemDefinitions } from "../../domain/shop";
@@ -33,8 +33,9 @@ type Options = {
   onApplyTheme: (itemId: ShopItemId | null) => Awaitable<boolean>;
   onUseConsumable: (itemId: ShopItemId, catVariant: CatVariant) => Awaitable<boolean>;
   onEnterRoomEdit: () => void;
-  onOpenAttendance: () => void;
   profileImageUrl: string | null;
+  playerProfile: PlayerProfileView;
+  getSaveStatus: () => GameSaveStatus;
   onUpdateSettings: (patch: Partial<GameSettings>) => Awaitable<GameSettings>;
   onLogout: (() => Awaitable<boolean>) | null;
   catAnimations: CatAnimationLibrary;
@@ -148,8 +149,10 @@ export class FeaturePageModal extends Container {
       new SettingsPage({
         mode,
         onStatus: (id) => this.show(id),
-        onOpenAttendance: this.options.onOpenAttendance,
         profileImageUrl: this.options.profileImageUrl,
+        fallbackProfileTexture: this.options.catAnimations.fluffy.idle.textures[0],
+        playerProfile: this.options.playerProfile,
+        getSaveStatus: this.options.getSaveStatus,
         getState: this.options.getState,
         onUpdateSettings: (patch) => this.options.onUpdateSettings(patch),
         onLogout: this.options.onLogout,

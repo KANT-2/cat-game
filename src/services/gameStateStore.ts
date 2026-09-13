@@ -5,6 +5,7 @@ import { createDefaultState, type FurnitureKind, type GameSettings, type GameSta
 import { type ShopItemId, shopItemDefinitions } from "../domain/shop";
 
 const SAVE_KEY = "cozy-code-cat-room-v1";
+const SAVED_AT_KEY = `${SAVE_KEY}-saved-at`;
 
 export type GameStateStoreOptions = {
   previewAllCats?: boolean;
@@ -63,8 +64,14 @@ export class GameStateStore implements GameStateRepository {
     }
   }
 
-  save(state: GameState): void {
+  save(state: GameState, savedAt = new Date().toISOString()): void {
     localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    localStorage.setItem(SAVED_AT_KEY, savedAt);
+  }
+
+  loadSavedAt(): string | null {
+    const savedAt = localStorage.getItem(SAVED_AT_KEY);
+    return savedAt && Number.isFinite(Date.parse(savedAt)) ? savedAt : null;
   }
 
   private applyPreviewCats(state: GameState): GameState {

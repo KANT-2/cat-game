@@ -149,6 +149,7 @@ export class GameApp {
       profile: assetPath(assetCatalog, "ui.home.profile.02"),
       study: assetPath(assetCatalog, "ui.home.study.02"),
       dailyQuest: assetPath(assetCatalog, "ui.home.daily-quest.02"),
+      attendance: assetPath(assetCatalog, "ui.home.attendance.01"),
       gacha: assetPath(assetCatalog, "ui.home.gacha.02"),
       home: assetPath(assetCatalog, "ui.home.house.02"),
       settings: assetPath(assetCatalog, "ui.home.settings.02"),
@@ -160,6 +161,7 @@ export class GameApp {
     };
     await Assets.load(Object.values(iconSources));
     let profileImageUrl = gameClient.getProfileImageUrl();
+    const playerProfile = gameClient.getPlayerProfile();
     if (profileImageUrl) {
       try {
         await Assets.load(profileImageUrl);
@@ -178,6 +180,7 @@ export class GameApp {
       codeEditorFactory,
       textInputFactory,
       profileImageUrl,
+      playerProfile,
       gameSession
         ? async () => {
             try {

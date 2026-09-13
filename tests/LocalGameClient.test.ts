@@ -43,6 +43,18 @@ describe("LocalGameClient", () => {
     expect(listener).toHaveBeenCalledOnce();
   });
 
+  it("records the actual time after a successful local save", () => {
+    const repository = new MemoryRepository();
+    repository.state.furniture = [];
+    const savedAt = new Date("2026-09-11T06:42:00.000Z");
+    const client = new LocalGameClient(repository, () => 0.5, () => savedAt);
+
+    client.placeFurniture({ kind: "plant", x: 3, y: 3, rotation: 0 });
+
+    expect(repository.save).toHaveBeenCalledWith(expect.any(Object), savedAt.toISOString());
+    expect(client.getSaveStatus()).toEqual({ savedAt: savedAt.toISOString(), destination: "device" });
+  });
+
   it("rejects overlapping furniture without saving", () => {
     const repository = new MemoryRepository();
     const client = new LocalGameClient(repository);
@@ -278,7 +290,7 @@ describe("LocalGameClient", () => {
   it("requires the full 300 coins before starting the multi draw", () => {
     const repository = new MemoryRepository();
     repository.state.coins = 299;
-    const client = new LocalGameClient(repository, () => 0.701);
+    const client = new LocalGameClient(repository, () => randomValueForReward("furniture.sofa"));
 
     expect(client.drawGacha(11)).toEqual({ ok: false, reason: "insufficient-coins" });
     expect(client.getSnapshot().coins).toBe(299);
@@ -474,6 +486,21 @@ describe("LocalGameClient", () => {
     expect(client.getSnapshot().catMemories.fluffy?.[0]).toContain("반갑게 인사");
     expect(client.talkToCat("ink", "play")).toEqual({ ok: false, reason: "cat-not-owned" });
     expect(client.getSnapshot().catMemories.ink).toBeUndefined();
+  });
+
+  it("clears only the selected cat's memories", () => {
+    const repository = new MemoryRepository();
+    repository.state.ownedCats = ["fluffy", "ink"];
+    repository.state.catMemories = {
+      fluffy: ["포근이와 나눈 이야기"],
+      ink: ["먹구름과 나눈 이야기"],
+    };
+    const client = new LocalGameClient(repository);
+
+    expect(client.clearCatMemory("fluffy")).toEqual({ ok: true, removed: 1 });
+    expect(client.getSnapshot().catMemories.fluffy).toBeUndefined();
+    expect(client.getSnapshot().catMemories.ink).toEqual(["먹구름과 나눈 이야기"]);
+    expect(client.clearCatMemory("tabby")).toEqual({ ok: false, reason: "cat-not-owned" });
   });
 
   it("keeps free chat useful while rejecting prompt control", () => {

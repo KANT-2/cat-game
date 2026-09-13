@@ -14,11 +14,13 @@ import type {
   GachaDrawResult,
   GachaReward,
   GameClient,
+  GameSaveStatus,
   GameStateListener,
   LearningResetResult,
   MoveFurnitureCommand,
   PlacementCommand,
   PlacementResult,
+  PlayerProfileView,
   PurchaseResult,
   QuizAnswerResult,
   QuizView,
@@ -67,6 +69,7 @@ export class BackendLearningGameClient implements GameClient {
   private readonly catAssetPublicIds = new Map<CatVariant, string>();
   private mastery: StudyMasteryView;
   private tier: StudyTierView;
+  private lastSyncedAt = new Date().toISOString();
 
   private constructor(
     local: GameClient,
@@ -75,6 +78,7 @@ export class BackendLearningGameClient implements GameClient {
     snapshot: BackendGameSnapshot,
     proficiencies: BackendConceptProficiency[],
     private readonly profileImageUrl: string | null,
+    private readonly playerProfile: PlayerProfileView,
   ) {
     for (const task of tasks) {
       this.tasks.set(task.publicId, task);
@@ -104,7 +108,10 @@ export class BackendLearningGameClient implements GameClient {
       api.getGameSnapshot(),
       api.getLearningProficiencies(),
     ]);
-    return new BackendLearningGameClient(local, api, tasks, snapshot, proficiencies, user?.profileImageUrl ?? null);
+    return new BackendLearningGameClient(local, api, tasks, snapshot, proficiencies, user?.profileImageUrl ?? null, {
+      displayName: user?.username ?? null,
+      email: user?.email ?? null,
+    });
   }
 
   getSnapshot(): GameState {
@@ -113,6 +120,14 @@ export class BackendLearningGameClient implements GameClient {
 
   getProfileImageUrl(): string | null {
     return this.profileImageUrl;
+  }
+
+  getPlayerProfile(): PlayerProfileView {
+    return { ...this.playerProfile };
+  }
+
+  getSaveStatus(): GameSaveStatus {
+    return { savedAt: this.lastSyncedAt, destination: "server" };
   }
 
   subscribe(listener: GameStateListener): () => void {
@@ -488,7 +503,7 @@ export class BackendLearningGameClient implements GameClient {
   }
 
   getAttendance(): AttendanceView {
-    const today = utcDateStamp(new Date());
+    const today = gameDateStamp(new Date());
     const canClaim = this.state.attendanceLastClaimDate !== today;
     const nextStreak = nextAttendanceStreak(this.state.attendanceLastClaimDate, this.state.attendanceStreak, today);
     const streakBonus = canClaim ? attendanceStreakBonus(nextStreak) : 0;
@@ -554,6 +569,25 @@ export class BackendLearningGameClient implements GameClient {
       this.applyServerSnapshot(mutation.snapshot);
       return { ok: true, removed: readResultNumber(mutation.result, "removed") };
     } catch (error) {
+      console.warn("Backend cat memory clear failed", error);
+      return { ok: false, reason: "server-unavailable" };
+    }
+  }
+
+  async clearCatMemory(catVariant: CatVariant): Promise<CatMemoryClearResult> {
+    const catAssetPublicId = this.catAssetPublicIds.get(catVariant);
+    if (!catAssetPublicId) {
+      return { ok: false, reason: "cat-not-owned" };
+    }
+    const removed = this.state.catMemories[catVariant]?.length ?? 0;
+    try {
+      await this.api.clearCatMemories(catAssetPublicId);
+      this.applyServerSnapshot(await this.api.getGameSnapshot());
+      return { ok: true, removed };
+    } catch (error) {
+      if (error instanceof BackendApiError && error.status === 404) {
+        return { ok: false, reason: "cat-not-owned" };
+      }
       console.warn("Backend cat memory clear failed", error);
       return { ok: false, reason: "server-unavailable" };
     }
@@ -652,6 +686,7 @@ export class BackendLearningGameClient implements GameClient {
     this.stateVersion = snapshot.stateVersion;
     this.syncCatAssetPublicIds(snapshot);
     this.snapshotGeneration += 1;
+    this.lastSyncedAt = new Date().toISOString();
     this.emit();
   }
 
@@ -912,8 +947,16 @@ function readResultNumber(result: Record<string, unknown>, key: string): number 
   return value;
 }
 
-function utcDateStamp(value: Date): string {
-  return value.toISOString().slice(0, 10);
+export function gameDateStamp(value: Date): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(value);
+  const read = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${read("year")}-${read("month")}-${read("day")}`;
 }
 
 function toStudyTaskView(task: BackendLearningTask): StudyTaskView {
