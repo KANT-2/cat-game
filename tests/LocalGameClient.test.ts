@@ -1,7 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
 import type { GameStateRepository } from "../src/core/GameClient";
 import { LocalGameClient } from "../src/core/LocalGameClient";
+import { type GachaRewardId, gachaRewardDefinitions } from "../src/domain/gacha";
 import { createDefaultState, type GameState } from "../src/domain/room";
+
+function randomValueForReward(id: GachaRewardId): number {
+  let lowerBoundary = 0;
+  for (const reward of gachaRewardDefinitions) {
+    const upperBoundary = lowerBoundary + reward.weight;
+    if (reward.id === id) {
+      return (lowerBoundary + upperBoundary) / 2;
+    }
+    lowerBoundary = upperBoundary;
+  }
+  throw new Error(`unknown gacha reward: ${id}`);
+}
 
 class MemoryRepository implements GameStateRepository {
   state = createDefaultState();
@@ -184,7 +197,7 @@ describe("LocalGameClient", () => {
 
   it("draws a furniture reward and stores the exact product", () => {
     const repository = new MemoryRepository();
-    const client = new LocalGameClient(repository, () => 0.06);
+    const client = new LocalGameClient(repository, () => randomValueForReward("furniture.desk"));
 
     const result = client.drawGacha(1);
 
@@ -249,7 +262,7 @@ describe("LocalGameClient", () => {
 
   it("gives eleven independently drawn rewards for the multi draw", () => {
     const repository = new MemoryRepository();
-    const client = new LocalGameClient(repository, () => 0.701);
+    const client = new LocalGameClient(repository, () => randomValueForReward("furniture.sofa"));
 
     const result = client.drawGacha(11);
 
