@@ -1,10 +1,11 @@
-import { Container, Graphics, Sprite, Text } from "pixi.js";
+import { Container, Graphics, Sprite, Text, type Texture } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
-import type { Awaitable } from "../../core/GameClient";
+import type { Awaitable, GameSaveStatus, PlayerProfileView } from "../../core/GameClient";
 import type { GameSettings, GameState } from "../../domain/room";
 import { CanvasButton } from "../components/CanvasButton";
 import { createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
 import { textStyle } from "../config";
+import { profileImagePresentation } from "../presentation/profileImage";
 
 type SettingsSection = "account" | "sound";
 type SettingsPageMode = "settings" | "account";
@@ -13,8 +14,10 @@ type ConfirmAction = "logout";
 type SettingsPageOptions = {
   mode: SettingsPageMode;
   onStatus: (id: MessageId) => void;
-  onOpenAttendance: () => void;
   profileImageUrl: string | null;
+  fallbackProfileTexture: Texture;
+  playerProfile: PlayerProfileView;
+  getSaveStatus: () => GameSaveStatus;
   getState: () => GameState;
   onUpdateSettings: (patch: Partial<GameSettings>) => Awaitable<GameSettings>;
   onLogout: (() => Awaitable<boolean>) | null;
@@ -92,51 +95,44 @@ export class SettingsPage extends Container {
     description.position.set(x, 187);
     const ornament = createTitleOrnament(x, 214, 180);
     this.addChild(title, description, ornament);
-    if (this.options.mode === "account") {
-      const attendance = new CanvasButton({
-        label: message("attendance.openStatus"),
-        width: 220,
-        height: 54,
-        fontSize: 18,
-        color: 0xe3c49f,
-        onPress: this.options.onOpenAttendance,
-      });
-      attendance.position.set(1290, 155);
-      this.addChild(attendance);
-    }
   }
 
   private renderAccount(): void {
     this.addCard(70, 225, 710, 125);
-    this.addLabel("settings.profileImage", 100, 245, 20);
-    this.addDetail("settings.profileImageDescription", 100, 280);
-    if (this.options.profileImageUrl) {
-      const portrait = Sprite.from(this.options.profileImageUrl);
-      portrait.anchor.set(0.5);
-      portrait.width = 78;
-      portrait.height = 78;
-      portrait.position.set(690, 287);
-      const mask = new Graphics().circle(690, 287, 39).fill(0xffffff);
-      portrait.mask = mask;
-      this.addChild(portrait, mask);
-    } else {
-      const unavailable = new Text({
-        text: message("settings.profileImageUnavailable"),
-        style: textStyle(15, 0x8a6f5c, "700"),
-      });
-      unavailable.anchor.set(1, 0.5);
-      unavailable.position.set(740, 287);
-      this.addChild(unavailable);
-    }
+    const profile = profileImagePresentation(this.options.profileImageUrl);
+    const portrait = this.options.profileImageUrl
+      ? Sprite.from(this.options.profileImageUrl)
+      : new Sprite(this.options.fallbackProfileTexture);
+    portrait.anchor.set(0.5);
+    portrait.width = 78;
+    portrait.height = 78;
+    portrait.position.set(125, 287);
+    const mask = new Graphics().circle(125, 287, 39).fill(0xffffff);
+    portrait.mask = mask;
+    this.addChild(portrait, mask);
+    this.addLabel("settings.profileImage", 180, 245, 20);
+    this.addDetail("settings.profileImageDescription", 180, 280);
+    const connectionStatus = new Text({
+      text: message(profile.statusMessage),
+      style: textStyle(15, profile.isLinked ? 0x537145 : 0x8a6f5c, "700"),
+    });
+    connectionStatus.anchor.set(1, 0.5);
+    connectionStatus.position.set(740, 287);
+    this.addChild(connectionStatus);
 
     this.addCard(810, 225, 710, 125);
-    this.addLabel("settings.nickname", 840, 245, 20);
-    this.addDetail("settings.nicknameValue", 840, 280);
-    this.addActionButton("settings.change", 1330, 253, 160, () => this.notify("settings.accountActionReady"));
+    this.addLabel("settings.name", 840, 245, 20);
+    this.addValue(this.options.playerProfile.displayName, "settings.profileInfoUnavailable", 840, 280);
+    this.addLabel("settings.email", 1120, 245, 20);
+    this.addValue(this.options.playerProfile.email, "settings.profileInfoUnavailable", 1120, 280);
 
     this.addCard(70, 370, 1450, 75);
     this.addLabel("settings.lastSync", 100, 390, 18);
-    this.addDetail("settings.lastSyncValue", 420, 391);
+    const saveStatus = this.options.getSaveStatus();
+    const saveStatusText = formatSaveStatus(saveStatus);
+    const saveDetail = new Text({ text: saveStatusText, style: textStyle(15, 0x76533c, "600") });
+    saveDetail.position.set(420, 391);
+    this.addChild(saveDetail);
 
     const sessionPanel = createCozyPanel(70, 465, 1450, 185, {
       fill: 0xfff8e9,
@@ -249,6 +245,12 @@ export class SettingsPage extends Container {
     this.addChild(detail);
   }
 
+  private addValue(value: string | null, fallback: MessageId, x: number, y: number): void {
+    const detail = new Text({ text: value ?? message(fallback), style: textStyle(15, 0x76533c, "600") });
+    detail.position.set(x, y);
+    this.addChild(detail);
+  }
+
   private addActionButton(
     id: MessageId,
     x: number,
@@ -327,6 +329,30 @@ export class SettingsPage extends Container {
     confirm.position.set(845, 555);
     this.addChild(blocker, panel, warningBadge, warning, title, detail, cancel, confirm);
   }
+}
+
+function formatSaveStatus(status: GameSaveStatus): string {
+  if (!status.savedAt) {
+    return message("settings.lastSyncUnavailable");
+  }
+  const savedAt = new Date(status.savedAt);
+  if (!Number.isFinite(savedAt.getTime())) {
+    return message("settings.lastSyncUnavailable");
+  }
+  const formatted = formatLocalDateTime(savedAt);
+  return message(status.destination === "server" ? "settings.lastSyncServer" : "settings.lastSyncDevice", {
+    time: formatted,
+  });
+}
+
+function formatLocalDateTime(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  const second = String(date.getSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
 }
 
 const sectionMessages: Record<SettingsSection, { tab: MessageId; title: MessageId; description: MessageId }> = {

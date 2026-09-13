@@ -78,7 +78,7 @@ const difficultyMessages: Record<
   challenge: "study.filterChallenge",
 };
 
-/** 학습 대시보드와 퀴즈·함수 작성형 풀이 화면을 한 Canvas 장면에서 전환한다. */
+/** 학습 대시보드와 퀴즈·코드 작성 풀이 화면을 한 Canvas 장면에서 전환한다. */
 export class StudyModal extends Container {
   private readonly background = new Graphics();
   private readonly page = new Container();

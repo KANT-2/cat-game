@@ -1,6 +1,6 @@
 import { Container, Graphics, Rectangle, Sprite, Text } from "pixi.js";
 import { message } from "../../content/messages";
-import type { GameClient } from "../../core/GameClient";
+import type { GameClient, GameSaveStatus, PlayerProfileView } from "../../core/GameClient";
 import type { CatVariant } from "../../domain/cats";
 import type { FurnitureKind, GameState, PlacedFurniture } from "../../domain/room";
 import type { ShopItemId } from "../../domain/shop";
@@ -28,6 +28,7 @@ export type HomeIconSources = {
   profile: string;
   study: string;
   dailyQuest: string;
+  attendance: string;
   gacha: string;
   home: string;
   settings: string;
@@ -81,6 +82,7 @@ export class HomeScene extends Container {
   private screenHeight = BASE_HEIGHT;
   private readonly onLogout: (() => Promise<boolean>) | null;
   private readonly profileImageUrl: string | null;
+  private readonly playerProfile: PlayerProfileView;
 
   constructor(
     gameClient: GameClient,
@@ -90,6 +92,7 @@ export class HomeScene extends Container {
     codeEditorFactory: CodeEditorOverlayFactory,
     textInputFactory: TextInputBridgeFactory,
     profileImageUrl: string | null,
+    playerProfile: PlayerProfileView,
     onLogout: (() => Promise<boolean>) | null = null,
   ) {
     super();
@@ -102,6 +105,7 @@ export class HomeScene extends Container {
     this.codeEditorFactory = codeEditorFactory;
     this.textInputFactory = textInputFactory;
     this.profileImageUrl = profileImageUrl;
+    this.playerProfile = playerProfile;
     this.onLogout = onLogout;
     this.state = gameClient.getSnapshot();
     this.clearing = new ForestClearingView({
@@ -167,7 +171,7 @@ export class HomeScene extends Container {
     );
 
     this.profilePanel.position.set(24, 20);
-    this.sideMenu.position.set(Math.max(24, width - 464), height - 128);
+    this.sideMenu.position.set(Math.max(24, width - 572), height - 128);
     this.settingsMenu.position.set(24, height - 132);
     this.pageBackground.clear().rect(0, 0, width, height).fill(0xf8e7ca);
     this.studyModal?.layout(width, height);
@@ -200,12 +204,19 @@ export class HomeScene extends Container {
     frame.height = profileSize * visualScale;
     frame.position.set((profileSize - frame.width) / 2, (profileSize - frame.height) / 2);
     const activeAnimations = this.catAnimations[this.state.activeCat];
-    const portrait = Sprite.from(this.profileImageUrl ?? activeAnimations.idle.textures[0]);
+    const portrait = Sprite.from(activeAnimations.idle.textures[0]);
     this.profilePortrait = portrait;
     this.fitProfilePortrait();
     const portraitMask = new Graphics().roundRect(40, 36, 76, 68, 16).fill(0xffffff);
     portrait.mask = portraitMask;
-    this.profilePanel.addChild(frame, portrait, portraitMask);
+    const profileLabel = new Text({ text: message("home.profile"), style: textStyle(13, 0x4b3021, "800") });
+    profileLabel.anchor.set(0.5);
+    profileLabel.position.set(profileSize / 2, 116);
+    const labelPlate = new Graphics()
+      .roundRect(profileSize / 2 - profileLabel.width / 2 - 7, 105, profileLabel.width + 14, 22, 8)
+      .fill({ color: 0xffedcd, alpha: 0.84 })
+      .stroke({ color: 0x9a6846, width: 1.5 });
+    this.profilePanel.addChild(frame, portrait, portraitMask, labelPlate, profileLabel);
     this.profilePanel.hitArea = new Rectangle(0, 0, profileSize, profileSize);
     this.profilePanel.eventMode = "static";
     this.profilePanel.cursor = "pointer";
@@ -215,11 +226,22 @@ export class HomeScene extends Container {
   private buildSideMenu(): void {
     this.shopOptions.visible = false;
 
-    const study = this.createIconButton(this.iconSources.study, message("home.study"), true, () => void this.openStudy());
+    const study = this.createIconButton(
+      this.iconSources.study,
+      message("home.study"),
+      true,
+      () => void this.openStudy(),
+    );
     const dailyQuest = this.createIconButton(this.iconSources.dailyQuest, message("home.dailyQuest"), true, () =>
       this.openDailyQuest(),
     );
     const gacha = this.createIconButton(this.iconSources.gacha, message("home.gacha"), true, () => this.openGacha());
+    const attendance = this.createIconButton(
+      this.iconSources.attendance,
+      message("attendance.homeShortcut"),
+      true,
+      () => this.openAttendance(true),
+    );
     const home = this.createIconButton(this.iconSources.home, message("home.shopOwned"), true, () =>
       this.toggleShopOptions(),
     );
@@ -235,8 +257,9 @@ export class HomeScene extends Container {
     });
     placement.position.set(112, 40);
     dailyQuest.x = 108;
-    gacha.x = 216;
-    home.x = 324;
+    attendance.x = 216;
+    gacha.x = 324;
+    home.x = 432;
     const shop = new CanvasButton({
       label: message("shop.title"),
       width: 126,
@@ -252,10 +275,10 @@ export class HomeScene extends Container {
       onPress: () => this.openFeaturePage("owned"),
     });
     owned.y = 56;
-    this.shopOptions.position.set(319, -112);
+    this.shopOptions.position.set(427, -112);
     this.shopOptions.addChild(shop, owned);
 
-    this.sideMenu.addChild(study, dailyQuest, gacha, home, this.shopOptions);
+    this.sideMenu.addChild(study, dailyQuest, attendance, gacha, home, this.shopOptions);
     this.settingsMenu.addChild(settings, placement);
   }
 
@@ -368,6 +391,7 @@ export class HomeScene extends Container {
       variant,
       animations: this.catAnimations[variant],
       memoryCount: this.state.catMemories[variant]?.length ?? 0,
+      onClearMemory: () => this.gameClient.clearCatMemory(variant),
       onTalk: (topic) => this.gameClient.talkToCat(variant, topic),
       onFreeTalk: (userMessage, recentMessages) => this.gameClient.chatWithCat(variant, userMessage, recentMessages),
       textInputFactory: this.textInputFactory,
@@ -514,8 +538,9 @@ export class HomeScene extends Container {
       },
       onUpdateSettings: (patch) => this.gameClient.updateSettings(patch),
       onLogout: this.onLogout,
-      onOpenAttendance: () => this.openAttendance(true),
       profileImageUrl: this.profileImageUrl,
+      playerProfile: this.playerProfile,
+      getSaveStatus: (): GameSaveStatus => this.gameClient.getSaveStatus(),
       catAnimations: this.catAnimations,
       furnitureArt: this.furnitureArt,
       consumableArt: this.consumableArt,
@@ -906,9 +931,6 @@ export class HomeScene extends Container {
   }
 
   private applyActiveCat(variant: CatVariant): void {
-    if (this.profileImageUrl) {
-      return;
-    }
     const animations = this.catAnimations[variant];
     if (this.profilePortrait) {
       this.profilePortrait.texture = animations.idle.textures[0];
@@ -921,16 +943,6 @@ export class HomeScene extends Container {
       return;
     }
 
-    if (this.profileImageUrl) {
-      const portraitScale = Math.max(
-        76 / this.profilePortrait.texture.width,
-        68 / this.profilePortrait.texture.height,
-      );
-      this.profilePortrait.anchor.set(0.5);
-      this.profilePortrait.scale.set(portraitScale);
-      this.profilePortrait.position.set(78, 70);
-      return;
-    }
     const portraitScale = 118 / this.profilePortrait.texture.height;
     this.profilePortrait.anchor.set(0.5, 0);
     this.profilePortrait.scale.set(portraitScale);

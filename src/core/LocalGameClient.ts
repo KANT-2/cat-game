@@ -39,12 +39,14 @@ import type {
   DailyRewardResult,
   GachaDrawResult,
   GameClient,
+  GameSaveStatus,
   GameStateListener,
   GameStateRepository,
   LearningResetResult,
   MoveFurnitureCommand,
   PlacementCommand,
   PlacementResult,
+  PlayerProfileView,
   PurchaseResult,
   QuizAnswerResult,
   QuizView,
@@ -54,6 +56,7 @@ import type {
 
 export class LocalGameClient implements GameClient {
   private state: GameState;
+  private lastSavedAt: string | null;
   private readonly listeners = new Set<GameStateListener>();
 
   constructor(
@@ -62,6 +65,7 @@ export class LocalGameClient implements GameClient {
     private readonly now: () => Date = () => new Date(),
   ) {
     this.state = store.load();
+    this.lastSavedAt = store.loadSavedAt?.() ?? null;
   }
 
   getSnapshot(): GameState {
@@ -70,6 +74,14 @@ export class LocalGameClient implements GameClient {
 
   getProfileImageUrl(): string | null {
     return null;
+  }
+
+  getPlayerProfile(): PlayerProfileView {
+    return { displayName: null, email: null };
+  }
+
+  getSaveStatus(): GameSaveStatus {
+    return { savedAt: this.lastSavedAt, destination: "device" };
   }
 
   subscribe(listener: GameStateListener): () => void {
@@ -644,6 +656,18 @@ export class LocalGameClient implements GameClient {
     return { ok: true, removed };
   }
 
+  clearCatMemory(catVariant: CatVariant): CatMemoryClearResult {
+    if (!this.state.ownedCats.includes(catVariant)) {
+      return { ok: false, reason: "cat-not-owned" };
+    }
+    const removed = this.state.catMemories[catVariant]?.length ?? 0;
+    const catMemories = { ...this.state.catMemories };
+    delete catMemories[catVariant];
+    this.state = { ...this.state, catMemories };
+    this.commit();
+    return { ok: true, removed };
+  }
+
   talkToCat(catVariant: CatVariant, topic: CatConversationTopic): CatConversationResult {
     if (!this.state.ownedCats.includes(catVariant)) {
       return { ok: false, reason: "cat-not-owned" };
@@ -733,7 +757,9 @@ export class LocalGameClient implements GameClient {
   }
 
   private commit(): void {
-    this.store.save(this.state);
+    const savedAt = this.now().toISOString();
+    this.store.save(this.state, savedAt);
+    this.lastSavedAt = savedAt;
     const snapshot = this.getSnapshot();
     for (const listener of this.listeners) {
       listener(snapshot);

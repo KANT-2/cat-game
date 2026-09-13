@@ -381,6 +381,12 @@
         "anchor": { "x": 0.5, "y": 0.5 }
       },
       {
+        "id": "ui.home.attendance.01",
+        "kind": "ui",
+        "src": "/assets/ui/home-menu/attendance.svg",
+        "anchor": { "x": 0.5, "y": 0.5 }
+      },
+      {
         "id": "ui.home.gacha.02",
         "kind": "ui",
         "src": "/assets/ui/home-menu/gacha-v2.webp",

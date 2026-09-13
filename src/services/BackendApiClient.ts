@@ -1,6 +1,7 @@
 export type BackendUser = {
   publicId: string;
   username: string;
+  email: string;
   balance: number;
   profileImageUrl: string | null;
 };
@@ -472,6 +473,13 @@ export class BackendApiClient {
     });
   }
 
+  /** 지정한 보유 고양이와 인증 사용자 사이의 기억을 모두 삭제한다. */
+  async clearCatMemories(catAssetPublicId: string): Promise<void> {
+    await this.request(`/api/v1/cats/${encodeURIComponent(catAssetPublicId)}/memories`, {
+      method: "DELETE",
+    });
+  }
+
   /**
    * 자유 문장을 서버의 입력·출력 가드를 거쳐 보유 고양이에게 전달한다.
    *
@@ -647,6 +655,7 @@ function parseUser(value: unknown, baseUrl: string): BackendUser {
   return {
     publicId: readString(record, "public_id"),
     username: readString(record, "username"),
+    email: readString(record, "email"),
     balance: readNumber(record, "balance"),
     profileImageUrl: hasProfileImage ? `${baseUrl}/api/v1/session/me/profile-image` : null,
   };

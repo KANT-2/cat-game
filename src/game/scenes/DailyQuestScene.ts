@@ -1,7 +1,7 @@
 import { Container, Graphics, Text } from "pixi.js";
 import { message } from "../../content/messages";
 import type { Awaitable, DailyQuestView, DailyRewardResult } from "../../core/GameClient";
-import { activeAttendanceStreak } from "../../domain/attendance";
+import { activeLearningStreak } from "../../domain/attendance";
 import type { DailyQuestId } from "../../domain/dailyQuest";
 import type { GameState } from "../../domain/room";
 import { BackButton } from "../components/BackButton";
@@ -53,7 +53,12 @@ export class DailyQuestScene extends Container {
     this.buildSummary(
       completed,
       quests.length,
-      activeAttendanceStreak(state.attendanceLastClaimDate, state.attendanceStreak, state.dailyQuestDate),
+      activeLearningStreak(
+        state.attendanceLastClaimDate,
+        state.attendanceStreak,
+        state.dailyQuestDate,
+        completed,
+      ),
     );
     this.buildQuestList(quests);
     this.buildBonus(quests, state.dailyBonusClaimed);
@@ -114,7 +119,10 @@ export class DailyQuestScene extends Container {
       .fill(0xffe8bf)
       .stroke({ color: 0xd39b5d, width: 2 });
     const streak = new Text({
-      text: message("daily.streak", { days: attendanceStreak }),
+      text:
+        attendanceStreak > 0
+          ? message("daily.streak", { days: attendanceStreak })
+          : message("daily.streakInactive"),
       style: { ...textStyle(20, 0x67432d, "800"), align: "center", lineHeight: 30 },
     });
     streak.anchor.set(0.5);

@@ -17,6 +17,9 @@ describe("catalog gacha pool", () => {
     expect(new Set(gachaRewardDefinitions.map((r) => r.id)).size).toBe(gachaRewardDefinitions.length);
     expect(gachaRewardDefinitions.reduce((sum, r) => sum + r.weight, 0)).toBeCloseTo(1);
     expect(gachaRewardDefinitions[0]).toMatchObject({ id: "cat.ink", weight: 0.05 });
+    expect(gachaRewardDefinitions).toContainEqual(
+      expect.objectContaining({ id: "cat.tabby", weight: 0.01, catVariant: "tabby" }),
+    );
   });
   it("makes every catalog reward reachable in its weighted interval", () => {
     let boundary = 0;
