@@ -3,6 +3,8 @@ import { join } from "node:path";
 import { chromium } from "playwright";
 
 const screenshotPath = (name) => join(tmpdir(), name);
+const gameUrl = new URL(process.env.GAME_URL ?? "http://127.0.0.1:5173/");
+gameUrl.searchParams.set("previewAllCats", "0");
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
 const errors = [];
@@ -18,14 +20,15 @@ page.on("console", (message) => {
 });
 page.on("pageerror", (error) => errors.push(`page: ${error.message}`));
 
-await page.goto(process.env.GAME_URL ?? "http://127.0.0.1:5173/", { waitUntil: "domcontentloaded" });
+await page.goto(gameUrl.toString(), { waitUntil: "domcontentloaded" });
 await page.locator("canvas").waitFor({ state: "visible" });
 await page.waitForTimeout(800);
 await page.screenshot({ path: screenshotPath("cat-game-loading.png") });
 await page.waitForTimeout(1200);
 await page.screenshot({ path: screenshotPath("cat-game-loading-tip.png") });
-await page.waitForLoadState("networkidle");
-await page.waitForTimeout(2600);
+await page.waitForFunction(() => document.documentElement.dataset.gameReady === "ready", undefined, {
+  timeout: 120_000,
+});
 
 const canvas = page.locator("canvas");
 const box = await canvas.boundingBox();
@@ -316,7 +319,7 @@ if (parsedState.attendanceStreak !== 1 || parsedState.attendanceLastClaimDate.le
 if ("gems" in parsedState) {
   throw new Error("legacy gem currency should not remain in the saved state");
 }
-if (parsedState.shopInventory?.["furniture.alley.hideout-2"] !== 1) {
+if (parsedState.shopInventory?.["furniture.desk"] !== 1) {
   throw new Error("gacha furniture reward was not stored with its exact product id");
 }
 if (parsedState.activeWallpaper !== "wallpaper.cream") {
