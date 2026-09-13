@@ -138,8 +138,8 @@ def main() -> None:
             video = source_video(args.source_root, cat_id, action)
             sheet, frame_count = pack_video(video, selection)
             file_action = action.replace("_", "-")
-            filename = f"{directory_name}-{file_action}-01.png"
-            sheet.save(output_directory / filename, optimize=True)
+            filename = f"{directory_name}-{file_action}-01.webp"
+            sheet.save(output_directory / filename, "WEBP", lossless=True, method=6, exact=True)
             assets.append(
                 {
                     "action": action,

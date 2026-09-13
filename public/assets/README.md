@@ -35,6 +35,7 @@ assets/
 - ID는 `종류.대상.변형.번호` 형식의 소문자 영문으로 작성한다.
 - 원본 작업 파일은 별도 디자인 저장소에서 관리하고 이곳에는 게임용 export만 둔다.
 - 기본 게임용 이미지는 투명 WebP 또는 PNG를 사용한다.
+- 고양이 스프라이트 시트는 투명 픽셀까지 보존하는 무손실 WebP로 내보낸다.
 - 글자는 이미지에 굽지 않는다.
 - 가격, 점유 셀, 충돌, 보상 값은 리소스 카탈로그에 넣지 않는다.
 - PR 전에 `npm run assets:check`를 실행한다.
@@ -62,7 +63,7 @@ assets/
 {
   "id": "cat.fluffy.idle.01",
   "kind": "cat",
-  "src": "/assets/cats/fluffy-white/fluffy-white-idle-01.png",
+  "src": "/assets/cats/fluffy-white/fluffy-white-idle-01.webp",
   "anchor": { "x": 0.5, "y": 0.9 },
   "spriteSheet": {
     "frameWidth": 256,
