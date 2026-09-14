@@ -585,13 +585,17 @@ export class StudyModal extends Container {
       result = await this.options.onAnswer(quiz.id, choiceId);
     } catch (error) {
       console.error("Quiz submission failed", error);
-      this.showFeedback(false, message("study.answerFailed"), [], () => this.renderQuiz(quiz));
+      this.showFeedback(false, message("study.answerFailed"), [], () =>
+        this.renderQuiz(this.options.getQuiz(quiz.id) ?? quiz),
+      );
       return;
     } finally {
       this.submissionPending = false;
     }
     if (!result.ok) {
-      this.showFeedback(false, message("study.answerFailed"), [], () => this.renderQuiz(quiz));
+      this.showFeedback(false, message("study.answerFailed"), [], () =>
+        this.renderQuiz(this.options.getQuiz(quiz.id) ?? quiz),
+      );
       return;
     }
     let detail = message(result.feedbackMessage);
@@ -822,7 +826,7 @@ export class StudyModal extends Container {
     } catch (error) {
       console.error("Code submission failed", error);
       this.showFeedback(false, message("study.serverGradingUnavailable"), [], () =>
-        this.renderCode(challenge, code, this.hintsUsed, true),
+        this.renderCode(this.options.getCodeChallenge(challenge.id) ?? challenge, code, this.hintsUsed, true),
       );
       return;
     } finally {
@@ -833,7 +837,9 @@ export class StudyModal extends Container {
     }
     if (!result.ok) {
       const feedback = result.reason === "empty-code" ? "study.emptyCode" : "study.serverGradingUnavailable";
-      this.showFeedback(false, message(feedback), [], () => this.renderCode(challenge, code, this.hintsUsed, true));
+      this.showFeedback(false, message(feedback), [], () =>
+        this.renderCode(this.options.getCodeChallenge(challenge.id) ?? challenge, code, this.hintsUsed, true),
+      );
       return;
     }
     let detail = message("study.gradingFailed");

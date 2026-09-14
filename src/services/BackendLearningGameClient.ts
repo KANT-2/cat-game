@@ -339,6 +339,7 @@ export class BackendLearningGameClient implements GameClient {
         usedHint: false,
       });
       if (attempt.status !== "COMPLETED" || attempt.correct === null) {
+        await this.refreshTaskPresentation(quizId);
         return { ok: false, reason: "grading-failed" };
       }
       if (attempt.correct) {
@@ -362,7 +363,25 @@ export class BackendLearningGameClient implements GameClient {
       };
     } catch (error) {
       console.warn("Backend quiz grading failed", error);
+      await this.refreshTaskPresentation(quizId);
       return { ok: false, reason: "server-unavailable" };
+    }
+  }
+
+  /** 채점 실패 뒤 다음 재시도가 이미 소모된 presentation을 재사용하지 않도록 새로 발급받는다.
+   *
+   * @remarks 서버는 활성 presentation이 남아있으면 그대로 재사용하므로 오답 재시도에는 영향이 없다.
+   */
+  private async refreshTaskPresentation(taskId: string): Promise<void> {
+    const task = this.tasks.get(taskId);
+    if (!task?.options) {
+      return;
+    }
+    try {
+      const refreshed = await this.api.startLearningPresentation(taskId);
+      this.tasks.set(taskId, refreshed);
+    } catch (error) {
+      console.warn("Backend task presentation refresh failed", error);
     }
   }
 
@@ -419,6 +438,7 @@ export class BackendLearningGameClient implements GameClient {
         usedHint: hintsUsed > 0,
       });
       if (attempt.status !== "COMPLETED" || attempt.correct === null) {
+        await this.refreshTaskPresentation(challengeId);
         return { ok: false, reason: "grading-failed" };
       }
       if (attempt.correct) {
@@ -442,6 +462,7 @@ export class BackendLearningGameClient implements GameClient {
       };
     } catch (error) {
       console.warn("Backend code grading failed", error);
+      await this.refreshTaskPresentation(challengeId);
       return { ok: false, reason: "server-unavailable" };
     }
   }
