@@ -98,7 +98,7 @@ export class SettingsPage extends Container {
   }
 
   private renderAccount(): void {
-    this.addCard(70, 225, 710, 125);
+    this.addCard(70, 225, 600, 125);
     const profile = profileImagePresentation(this.options.profileImageUrl);
     const portrait = this.options.profileImageUrl
       ? Sprite.from(this.options.profileImageUrl)
@@ -117,14 +117,16 @@ export class SettingsPage extends Container {
       style: textStyle(15, profile.isLinked ? 0x537145 : 0x8a6f5c, "700"),
     });
     connectionStatus.anchor.set(1, 0.5);
-    connectionStatus.position.set(740, 287);
+    connectionStatus.position.set(630, 287);
     this.addChild(connectionStatus);
 
-    this.addCard(810, 225, 710, 125);
-    this.addLabel("settings.name", 840, 245, 20);
-    this.addValue(this.options.playerProfile.displayName, "settings.profileInfoUnavailable", 840, 280);
-    this.addLabel("settings.email", 1120, 245, 20);
-    this.addValue(this.options.playerProfile.email, "settings.profileInfoUnavailable", 1120, 280);
+    this.addCard(690, 225, 320, 125);
+    this.addLabel("settings.name", 720, 245, 20);
+    this.addValue(this.options.playerProfile.displayName, "settings.profileInfoUnavailable", 720, 280);
+
+    this.addCard(1030, 225, 490, 125);
+    this.addLabel("settings.email", 1060, 245, 20);
+    this.addValue(this.options.playerProfile.email, "settings.profileInfoUnavailable", 1060, 280);
 
     this.addCard(70, 370, 1450, 75);
     this.addLabel("settings.lastSync", 100, 390, 18);
