@@ -578,7 +578,7 @@ export class StudyModal extends Container {
     fitQuizPromptText(prompt);
     const promptBoxHeight = prompt.height + 34;
     const promptBox = new Graphics()
-      .roundRect(95, 137, 1320, promptBoxHeight, 16)
+      .roundRect(95, 137, 1250, promptBoxHeight, 16)
       .fill(0xfff3d9)
       .stroke({ color: 0xd6ad7c, width: 2 });
     const choiceLayout = quizChoiceLayout(prompt.y + prompt.height, quiz.choices.length);
@@ -586,8 +586,9 @@ export class StudyModal extends Container {
     choicesTitle.position.set(115, choiceLayout.titleY);
     this.body.addChild(problem, promptBox, prompt, choicesTitle);
     if (quiz.rewardCoins > 0) {
+      // Sits to the right of promptBox (which ends at x=1345), never overlapping its background.
       const reward = this.createCoinRewardBadge(quiz.rewardCoins, 125);
-      reward.position.set(1320, 145);
+      reward.position.set(1360, 137);
       this.body.addChild(reward);
     }
     quiz.choices.forEach((choice, index) => {
