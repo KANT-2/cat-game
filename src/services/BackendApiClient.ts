@@ -21,6 +21,7 @@ export type BackendLearningTask = {
   hintText: string | null;
   rewardCoins: number;
   completed: boolean;
+  publicExample: { input: string; output: string } | null;
 };
 
 export type BackendLearningTaskQuery = {
@@ -679,6 +680,15 @@ function parseTask(value: unknown): BackendLearningTask {
       }),
     );
   }
+  const rawPublicExample = record.public_example;
+  let publicExample: { input: string; output: string } | null = null;
+  if (rawPublicExample != null) {
+    const exampleRecord = asRecord(rawPublicExample);
+    publicExample = {
+      input: readString(exampleRecord, "input"),
+      output: readString(exampleRecord, "output"),
+    };
+  }
   return {
     publicId: readString(record, "public_id"),
     presentationPublicId: record.presentation_public_id == null ? null : readString(record, "presentation_public_id"),
@@ -694,6 +704,7 @@ function parseTask(value: unknown): BackendLearningTask {
     hintText: readNullableString(record, "hint_text"),
     rewardCoins: readNumber(record, "reward_coins"),
     completed: readBoolean(record, "completed"),
+    publicExample,
   };
 }
 

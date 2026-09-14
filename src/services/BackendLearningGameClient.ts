@@ -47,6 +47,7 @@ import type { GachaDrawCount } from "../domain/gacha";
 import { gachaRewardDefinitions } from "../domain/gacha";
 import type { FurnitureKind, GameSettings, GameState } from "../domain/room";
 import { type ShopItemId, shopItemDefinitions } from "../domain/shop";
+import { message } from "../content/messages";
 import {
   type BackendApiClient,
   BackendApiError,
@@ -374,7 +375,7 @@ export class BackendLearningGameClient implements GameClient {
    */
   private async refreshTaskPresentation(taskId: string): Promise<void> {
     const task = this.tasks.get(taskId);
-    if (!task?.options) {
+    if (!task) {
       return;
     }
     try {
@@ -414,7 +415,14 @@ export class BackendLearningGameClient implements GameClient {
       editorMode: task.domain === "SQL" ? "query" : "program",
       prompt: { text: learningDescription(task.description) },
       starterCode: task.templateCode,
-      examples: { messageId: "study.serverExamples" },
+      examples: task.publicExample
+        ? {
+            text: message("study.publicExample", {
+              input: task.publicExample.input.replace(/\n/g, " / "),
+              output: task.publicExample.output.replace(/\n/g, " / "),
+            }),
+          }
+        : { messageId: "study.serverExamples" },
       hints: splitHintSteps(task.hintText).map((text) => ({ text })),
       bonusCoins: 0,
     };
