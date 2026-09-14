@@ -529,6 +529,37 @@ export class StudyModal extends Container {
     }
   }
 
+  /** 재발급된 presentation은 CODE/MULTIPLE_CHOICE 중 하나로 무작위 배정되므로,
+   * 재시도 시 원래 화면과 다른 타입이 오면 실제로 발급된 타입을 그대로 열어준다.
+   */
+  private reopenQuizOrCode(taskId: string, fallback: QuizView): void {
+    const quiz = this.options.getQuiz(taskId);
+    if (quiz) {
+      this.renderQuiz(quiz);
+      return;
+    }
+    const challenge = this.options.getCodeChallenge(taskId);
+    if (challenge) {
+      this.renderCode(challenge);
+      return;
+    }
+    this.renderQuiz(fallback);
+  }
+
+  private reopenCodeOrQuiz(taskId: string, fallback: CodeChallengeView, draftCode: string, hintsUsed: number): void {
+    const challenge = this.options.getCodeChallenge(taskId);
+    if (challenge) {
+      this.renderCode(challenge, draftCode, hintsUsed, true);
+      return;
+    }
+    const quiz = this.options.getQuiz(taskId);
+    if (quiz) {
+      this.renderQuiz(quiz);
+      return;
+    }
+    this.renderCode(fallback, draftCode, hintsUsed, true);
+  }
+
   private renderQuiz(quiz: QuizView): void {
     this.clearBody();
     this.drawBaseHeader(resolveGameText(quiz.title), resolveGameText(quiz.summary), () => this.renderDashboard());
@@ -586,7 +617,7 @@ export class StudyModal extends Container {
     } catch (error) {
       console.error("Quiz submission failed", error);
       this.showFeedback(false, message("study.answerFailed"), [], () =>
-        this.renderQuiz(this.options.getQuiz(quiz.id) ?? quiz),
+        this.reopenQuizOrCode(quiz.id, quiz),
       );
       return;
     } finally {
@@ -594,7 +625,7 @@ export class StudyModal extends Container {
     }
     if (!result.ok) {
       this.showFeedback(false, message("study.answerFailed"), [], () =>
-        this.renderQuiz(this.options.getQuiz(quiz.id) ?? quiz),
+        this.reopenQuizOrCode(quiz.id, quiz),
       );
       return;
     }
@@ -826,7 +857,7 @@ export class StudyModal extends Container {
     } catch (error) {
       console.error("Code submission failed", error);
       this.showFeedback(false, message("study.serverGradingUnavailable"), [], () =>
-        this.renderCode(this.options.getCodeChallenge(challenge.id) ?? challenge, code, this.hintsUsed, true),
+        this.reopenCodeOrQuiz(challenge.id, challenge, code, this.hintsUsed),
       );
       return;
     } finally {
@@ -838,7 +869,7 @@ export class StudyModal extends Container {
     if (!result.ok) {
       const feedback = result.reason === "empty-code" ? "study.emptyCode" : "study.serverGradingUnavailable";
       this.showFeedback(false, message(feedback), [], () =>
-        this.renderCode(this.options.getCodeChallenge(challenge.id) ?? challenge, code, this.hintsUsed, true),
+        this.reopenCodeOrQuiz(challenge.id, challenge, code, this.hintsUsed),
       );
       return;
     }
