@@ -109,7 +109,7 @@ export class BackendLearningGameClient implements GameClient {
       api.getGameSnapshot(),
       api.getLearningProficiencies(),
     ]);
-    const catalog = await api.getLearningTaskCatalog({ domain: snapshot.settings.learningDomain });
+    const catalog = await api.getLearningTaskCatalog();
     return new BackendLearningGameClient(
       local,
       api,
@@ -158,7 +158,7 @@ export class BackendLearningGameClient implements GameClient {
       this.api.getGameSnapshot(),
       this.api.getLearningProficiencies(),
     ]);
-    const catalog = await this.api.getLearningTaskCatalog({ domain: snapshot.settings.learningDomain });
+    const catalog = await this.api.getLearningTaskCatalog();
     if (generation !== this.snapshotGeneration || snapshot.stateVersion < this.stateVersion) {
       return false;
     }
@@ -608,7 +608,7 @@ export class BackendLearningGameClient implements GameClient {
       const mutation = await this.api.resetGameLearning();
       const [recommendations, catalog, proficiencies, tier] = await Promise.all([
         this.api.getLearningRecommendations(10),
-        this.api.getLearningTaskCatalog({ domain: mutation.snapshot.settings.learningDomain }),
+        this.api.getLearningTaskCatalog(),
         this.api.getLearningProficiencies(),
         this.api.getLearningTier(),
       ]);
@@ -719,7 +719,7 @@ export class BackendLearningGameClient implements GameClient {
       if (learningDomainChanged) {
         const [recommendations, catalog, proficiencies, tier] = await Promise.all([
           this.api.getLearningRecommendations(10),
-          this.api.getLearningTaskCatalog({ domain: mutation.snapshot.settings.learningDomain }),
+          this.api.getLearningTaskCatalog(),
           this.api.getLearningProficiencies(),
           this.api.getLearningTier(),
         ]);

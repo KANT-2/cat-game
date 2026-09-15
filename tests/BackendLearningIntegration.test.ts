@@ -751,6 +751,39 @@ describe("backend learning integration", () => {
     expect(presentationStarts).toBe(1);
   });
 
+  it("loads both subject catalogs when the preferred learning domain is SQL", async () => {
+    const pythonTaskId = "77777777-7777-4777-8777-777777777777";
+    const sqlTaskId = "88888888-8888-4888-8888-888888888888";
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname === "/api/v1/learning/recommendations") {
+        return json([]);
+      }
+      if (url.pathname === "/api/v1/learning/tasks") {
+        expect(url.searchParams.has("domain")).toBe(false);
+        return json([learningTask(pythonTaskId, "PYTHON"), learningTask(sqlTaskId, "SQL")]);
+      }
+      if (url.pathname === "/api/v1/game/snapshot") {
+        return json(gameSnapshot(1_000, 0, { learningDomain: "SQL" }));
+      }
+      if (url.pathname === "/api/v1/learning/proficiencies") {
+        return json([]);
+      }
+      return json({ detail: "not found" }, 404);
+    });
+    const client = await BackendLearningGameClient.createConnected(
+      new LocalGameClient(new MemoryRepository()),
+      new BackendApiClient("http://localhost:8000", userId, fetcher),
+    );
+
+    expect(client.getStudyTasks()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: pythonTaskId, language: "python" }),
+        expect.objectContaining({ id: sqlTaskId, language: "sql" }),
+      ]),
+    );
+  });
+
   it("normalizes non-breaking spaces before submitting SQL code", async () => {
     const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const pathname = new URL(String(input)).pathname;
