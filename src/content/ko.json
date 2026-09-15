@@ -42,7 +42,6 @@
   "auth.working": "잠시만요…",
   "auth.enteringGame": "문이 열렸어요! 고양이를 만나러 가요.",
   "home.decorate": "▦  꾸미기",
-  "home.install": "앱 설치",
   "home.coinMark": "C",
   "home.settings": "설정",
   "home.profile": "프로필",
@@ -923,7 +922,7 @@
   "settings.effectsDescription": "버튼과 고양이 행동 효과음을 재생합니다.",
   "settings.effectsVolume": "효과음 음량",
   "settings.effectsVolumeDescription": "효과음 크기를 10% 단위로 조절합니다.",
-  "settings.vibrationNotice": "진동은 모바일 PWA 지원이 확인된 기기에만 추후 제공됩니다.",
+  "settings.vibrationNotice": "진동은 지원이 확인된 모바일 기기에만 추후 제공됩니다.",
   "settings.decrease": "−",
   "settings.increase": "+",
   "settings.percent": "{value}%",
@@ -1064,8 +1063,5 @@
   "sidebar.addFriend": "친구 추가",
   "sidebar.visitGarden": "방 방문",
   "page.close": "홈으로 돌아가기",
-  "page.back": "←",
-  "pwa.installStarted": "앱 설치를 시작했어요.",
-  "pwa.installed": "{ 냥 }이 설치되었어요.",
-  "pwa.offlineReady": "오프라인에서도 게임 화면을 열 수 있어요."
+  "page.back": "←"
 }

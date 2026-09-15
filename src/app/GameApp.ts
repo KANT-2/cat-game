@@ -250,10 +250,6 @@ export class GameApp {
     this.home.notify(message);
   }
 
-  setInstallHandler(handler: (() => void) | null): void {
-    this.home.setInstallHandler(handler);
-  }
-
   private layout(): void {
     this.home.layout(this.renderer.screen.width, this.renderer.screen.height);
   }

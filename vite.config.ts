@@ -1,10 +1,6 @@
 import { defineConfig } from "vite";
-import { VitePWA } from "vite-plugin-pwa";
 
 const basePath = normalizeBasePath(process.env.CAT_GAME_BASE_PATH ?? "/");
-const imageAssetPattern = new RegExp(
-  `${escapeRegularExpression(basePath)}assets/.*\\.(?:avif|gif|jpe?g|png|svg|webp)`,
-);
 
 export default defineConfig({
   base: basePath,
@@ -24,55 +20,6 @@ export default defineConfig({
       ignored: ["**/src-tauri/**"],
     },
   },
-  plugins: [
-    VitePWA({
-      base: basePath,
-      scope: basePath,
-      registerType: "autoUpdate",
-      includeAssets: ["icons/app-icon.svg"],
-      manifest: {
-        id: basePath,
-        name: "{ 냥 }",
-        short_name: "{ 냥 }",
-        description: "Python을 연습하고 고양이 방을 꾸미는 학습 게임",
-        lang: "ko",
-        start_url: basePath,
-        scope: basePath,
-        display: "standalone",
-        orientation: "landscape",
-        background_color: "#3b251c",
-        theme_color: "#6b4932",
-        categories: ["education", "games"],
-        icons: [
-          {
-            src: `${basePath}icons/app-icon.svg`,
-            sizes: "any",
-            type: "image/svg+xml",
-            purpose: "any maskable",
-          },
-        ],
-      },
-      workbox: {
-        navigateFallback: `${basePath}index.html`,
-        globPatterns: ["**/*.{js,css,html,json,woff2}"],
-        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
-        runtimeCaching: [
-          {
-            urlPattern: imageAssetPattern,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "game-images-v1",
-              cacheableResponse: { statuses: [0, 200] },
-              expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 30 },
-            },
-          },
-        ],
-        cleanupOutdatedCaches: true,
-        clientsClaim: true,
-        skipWaiting: true,
-      },
-    }),
-  ],
 });
 
 function normalizeBasePath(value: string): string {
@@ -81,8 +28,4 @@ function normalizeBasePath(value: string): string {
     return "/";
   }
   return `/${trimmed.replace(/^\/+|\/+$/g, "")}/`;
-}
-
-function escapeRegularExpression(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

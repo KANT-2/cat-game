@@ -62,7 +62,7 @@ npm run assets:check
 npm run build
 ```
 
-화면 흐름 변경은 개발 서버를 띄운 뒤 `npm run smoke`로 메인화면, Study, 배치 흐름을 확인한다. PWA 설정이나 앱 셸이 바뀌면 프로덕션 미리보기에서 `npm run smoke:pwa`도 실행한다.
+화면 흐름 변경은 개발 서버를 띄운 뒤 `npm run smoke`로 메인화면, Study, 배치 흐름을 확인한다. 운영 셸이나 캐시 설정이 바뀌면 프로덕션 미리보기와 `npm run smoke:integration`으로 확인한다.
 
 ## 리뷰 기준
 

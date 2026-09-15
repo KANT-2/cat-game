@@ -193,9 +193,6 @@ export class HomeScene extends Container {
     this.toastLayer.show(message, this.screenWidth);
   }
 
-  /** 홈 HUD에 설치 버튼을 표시하지 않는 현재 구성에서는 PWA 설치 핸들러를 보관하지 않는다. */
-  setInstallHandler(_handler: (() => void) | null): void {}
-
   private buildProfile(): void {
     const profileSize = 156;
     const visualScale = 0.75;

@@ -152,10 +152,17 @@ try {
   await page.locator("canvas").waitFor({ state: "visible" });
   await anonymousSessionResponse;
   await page.waitForTimeout(400);
+  const pwaState = await page.evaluate(async () => ({
+    hasManifest: document.querySelector('link[rel="manifest"]') !== null,
+    registrations: "serviceWorker" in navigator ? (await navigator.serviceWorker.getRegistrations()).length : 0,
+  }));
+  if (pwaState.hasManifest || pwaState.registrations !== 0) {
+    throw new Error(`production web app must not install as a PWA: ${JSON.stringify(pwaState)}`);
+  }
   page.on("console", (message) => {
     if (message.type() === "error") {
       const text = message.text();
-      if (tolerateOfflineErrors && (text.includes("ERR_INTERNET_DISCONNECTED") || text.includes("service worker"))) {
+      if (tolerateOfflineErrors && text.includes("ERR_INTERNET_DISCONNECTED")) {
         return;
       }
       if (tolerateAuth401 && text.includes("401")) {
@@ -182,7 +189,6 @@ try {
   });
   await verifyBrowserCatChat(page);
   await verifyBrowserSqlGrading(page);
-  await page.evaluate(() => navigator.serviceWorker.ready);
   const attendanceResponse = page.waitForResponse(
     (response) => response.url().includes("/api/v1/game/attendance/claims") && response.status() === 200,
   );
@@ -193,10 +199,6 @@ try {
   );
   await page.reload({ waitUntil: "domcontentloaded" });
   await resumedSessionResponse;
-  const controlledByServiceWorker = await page.evaluate(() => navigator.serviceWorker.controller !== null);
-  if (!controlledByServiceWorker) {
-    throw new Error("service worker does not control the reloaded app");
-  }
   await page.waitForTimeout(4_000);
   await page.mouse.click(1220, 733);
 
@@ -270,11 +272,6 @@ try {
   await anonymousAfterSecondLogout;
   await page.waitForTimeout(500);
 
-  tolerateOfflineErrors = true;
-  await page.context().setOffline(true);
-  await page.reload({ waitUntil: "domcontentloaded" });
-  await page.locator("canvas").waitFor({ state: "visible" });
-  await page.waitForFunction(() => document.documentElement.dataset.gameReady === "error");
   await page.screenshot({ path: screenshotPath });
 } finally {
   await browser.close();
@@ -304,7 +301,7 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `Integration smoke passed: production shell headers and offline PWA reload, browser registration/invalid login/login/session/reconnect/logout, CSRF, API quiz and Python/SQL sandbox grading, ${backendResponses.length} browser API responses, screenshot ${screenshotPath}`,
+  `Integration smoke passed: production shell headers without PWA registration, browser registration/invalid login/login/session/reconnect/logout, CSRF, API quiz and Python/SQL sandbox grading, ${backendResponses.length} browser API responses, screenshot ${screenshotPath}`,
 );
 
 async function verifyProductionShellHeaders(url) {

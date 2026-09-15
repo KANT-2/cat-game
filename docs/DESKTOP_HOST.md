@@ -1,6 +1,6 @@
 # 데스크톱 오버레이 호스트
 
-데스크톱 호스트는 PWA와 같은 PixiJS 렌더링 기반과 고양이 리소스를 재사용하되 별도 화면으로 구성하고,
+데스크톱 호스트는 웹 앱과 같은 PixiJS 렌더링 기반과 고양이 리소스를 재사용하되 별도 화면으로 구성하고,
 Tauri 2 WebView로 감싼다. 운영체제 창 기능은 `src-tauri/`와 `src/app/desktopWidgetHost.ts`에만 두며
 `src/game/`, `src/domain/`, `src/core/`에서는 Tauri API를 사용하지 않는다.
 

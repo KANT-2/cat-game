@@ -102,7 +102,7 @@ async function fetchFreshCatalog(url: string): Promise<Response> {
       return response;
     }
   } catch {
-    // The stable URL remains precached by the service worker for offline startup.
+    // Fall back to the stable URL when the cache-busting catalog request fails.
   }
   return fetch(url);
 }

@@ -38,13 +38,12 @@ curl -fsS https://nyang.example.com/ready
 SQL 채점의 연결·statement timeout과 행·출력 상한은 `CAT_GAME_SQL_GRADING_*` 값으로 제한하며, 해당
 데이터베이스에는 운영 데이터나 다른 서비스의 테이블을 두지 않는다.
 
-PWA와 `/api`, `/health`, `/ready`는 같은 공개 호스트를 사용한다. 따라서 운영의 `__Host-nyang_session`
+웹 앱과 `/api`, `/health`, `/ready`는 같은 공개 호스트를 사용한다. 따라서 운영의 `__Host-nyang_session`
 쿠키와 CSRF 쿠키를 다른 서브도메인으로 넓힐 필요가 없다. nginx는 API 본문 크기와 proxy timeout을 제한하고,
-정적 해시 자산만 장기 캐시한다. 앱 셸과 service worker는 `no-store`로 갱신하며, CSP를 포함한 보안 헤더는
-캐시 정책과 관계없이 모든 응답에 유지한다. 이미 설치된 PWA를 오프라인에서 다시 열면 캐시된 Canvas 셸이
-연결 오류 화면을 유지하며, 온라인 복귀 후 새로고침하면 서버 세션과 상태를 다시 읽는다.
-이미지는 service worker 설치 목록에 포함하지 않고 nginx에서 최초 응답한 뒤 런타임 캐시에 저장한다. 파일을
-교체할 때는 장기 `immutable` HTTP 캐시와 충돌하지 않도록 새 파일명을 사용하고 `catalog.json`을 갱신한다.
+정적 해시 자산만 장기 캐시한다. 앱 셸과 카탈로그는 `no-store`로 갱신하며, CSP를 포함한 보안 헤더는
+캐시 정책과 관계없이 모든 응답에 유지한다. 이미지는 nginx가 `immutable`로 응답하고 브라우저 HTTP 캐시가
+재사용한다. 파일을 교체할 때는 새 파일명을 사용하고 `catalog.json`을 갱신한다. `sw.js`는 과거 PWA 설치본을
+해제하는 전환 파일이므로 `no-store`로 유지하며 새 클라이언트에서는 등록하지 않는다.
 
 ## 백업과 복구
 

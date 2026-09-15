@@ -22,7 +22,7 @@ let interactionRegionTimer: number | null = null;
  *
  * @returns Tauri 호스트가 아니면 아무 작업도 하지 않으며, 호스트 명령이 끝나면 완료되는 Promise다.
  *
- * @remarks 일반 웹/PWA에서는 안전한 no-op이다. 호출 실패는 상위 조립 코드가 개발자 로그로 처리한다.
+ * @remarks 일반 웹에서는 안전한 no-op이다. 호출 실패는 상위 조립 코드가 개발자 로그로 처리한다.
  */
 export async function focusDesktopWidget(): Promise<void> {
   if (!isTauri()) {
@@ -36,7 +36,7 @@ export async function focusDesktopWidget(): Promise<void> {
  *
  * @param regions - 위젯 WebView 왼쪽 위를 원점으로 하는 고양이별 CSS 픽셀 영역.
  *
- * @remarks 연속 이동 중에는 마지막 좌표만 50ms 간격으로 전송한다. Tauri가 아닌 웹/PWA에서는 no-op이다.
+ * @remarks 연속 이동 중에는 마지막 좌표만 50ms 간격으로 전송한다. Tauri가 아닌 웹에서는 no-op이다.
  */
 export function updateDesktopWidgetInteractionRegions(regions: DesktopWidgetInteractionRegion[]): void {
   if (!isTauri()) {

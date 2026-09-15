@@ -10,19 +10,17 @@
 - 계층 사이에서 전달되는 복잡한 데이터 계약은 목적과 의도적으로 제외한 정보를 설명한다.
 - 변수, 단순 상수, 클래스 이름을 다시 읽어 주는 주석은 작성하지 않는다.
 - 구현 방법보다 계약이 보장하는 결과와 제한을 기록한다.
-- Canvas 런타임 문구는 주석이나 TypeScript 문자열이 아니라 `src/content/ko.json`에 둔다. PWA manifest와 HTML 제목 같은 플랫폼 메타데이터는 빌드 설정에 둔다.
+- Canvas 런타임 문구는 주석이나 TypeScript 문자열이 아니라 `src/content/ko.json`에 둔다. HTML 제목 같은 플랫폼 메타데이터는 빌드 설정에 둔다.
 
 ## 실행 시작점
 
 ```text
 src/main.ts
-  ├─ GameApp.create()
-  │   ├─ PixiJS Application 생성
-  │   ├─ GameStateStore 생성
-  │   ├─ 환경에 따라 LocalGameClient 또는 BackendLearningGameClient 생성
-  │   └─ HomeScene에 GameClient 주입
-  └─ registerPwa()
-      └─ 설치 가능 상태와 service worker 이벤트 연결
+  └─ GameApp.create()
+      ├─ PixiJS Application 생성
+      ├─ GameStateStore 생성
+      ├─ 환경에 따라 LocalGameClient 또는 BackendLearningGameClient 생성
+      └─ HomeScene에 GameClient 주입
 ```
 
 `src/app/GameApp.ts`만 구체적인 게임 클라이언트와 저장소 구현을 조립한다. 장면 코드에서 `LocalGameClient` 또는 `localStorage`를 직접 import하지 않는다.
@@ -296,7 +294,7 @@ message("furniture.placed", { item: message("furniture.bed") });
 
 ## 이미지 리소스
 
-게임 장면용 이미지 경로는 `public/assets/catalog.json`에만 등록한다. 코드에는 카탈로그 ID를 전달하고 파일 경로를 직접 넣지 않는다. PWA 앱 아이콘은 게임 리소스가 아니므로 `vite.config.ts`에서 별도로 등록한다.
+게임 장면용 이미지 경로는 `public/assets/catalog.json`에만 등록한다. 코드에는 카탈로그 ID를 전달하고 파일 경로를 직접 넣지 않는다.
 
 앱 시작 시 `src/assets/AssetCatalog.ts`가 카탈로그를 읽고 `src/assets/SpriteSheetLoader.ts`가
 행 우선 시트를 PixiJS 프레임으로 자른다. `src/app`은 파일 경로 대신 고정 asset ID로 필요한
@@ -311,8 +309,8 @@ message("furniture.placed", { item: message("furniture.bed") });
 크기와 저장 좌표는 바뀌지 않는다. 사용자가 상점에서 구매한 숲·골목·실내·책상·바다 배경을 보관함에서
 적용하면 `activeWallpaper`의 안정적인 이전 저장 필드는 유지한 채 실제 장소 이미지가 교체된다. 배경이
 달라져도 `10 × 8` 논리 격자와 가구 배치 판정은 동일하지만 화면상의 격자 위치는 배경별 프로필로 바뀐다. 시작할 때는 기본 배경과 현재 적용된
-배경만 불러오고, 나머지는 상점의 배경 탭을 열 때 지연 로드한다. PWA도 장소 배경을 앱 셸 선캐시에서
-제외하고 요청된 이미지만 별도 런타임 캐시에 보관한다.
+배경만 불러오고, 나머지는 상점의 배경 탭을 열 때 지연 로드한다. 요청된 이미지는 nginx가 장기 캐시
+헤더와 함께 제공하며 브라우저 HTTP 캐시가 재사용한다.
 
 상점은 가구·간식·배경·장식의 네 카테고리를 노출하고, 상품이 많은 가구·배경·장식은 숲·골목·실내·서재·바다
 테마 필터로 좁힌다. 야외 장소에서 사용하지 않는 바닥 상품은 기존 저장 데이터 호환을 위해 도메인 ID와 보유 상태는
@@ -384,11 +382,9 @@ Canvas 초기화 전에는 `src/style.css`의 짙은 갈색 앱 셸 배경이 �
 장면의 즉시 표시용 fallback과 맞춰 두며, HTML/DOM UI를 로딩 화면으로 사용하지 않는다. 로딩 장면의
 게임 이름은 Canvas 텍스트 대신 카탈로그의 투명 `{ 냥 }` 로고 이미지를 사용한다.
 
-설치형 PWA는 앱 셸과 `catalog.json`만 service worker에 미리 저장한다. 스프라이트·배경·UI 이미지는 최초 요청을
-nginx에서 받은 뒤 `game-images-v1` 런타임 캐시에 최대 30일 동안 저장한다. 따라서 설치 시 전체 이미지 묶음을
-다운로드하지 않으며, 한 번 표시한 메인 화면과 획득한 고양이 이미지는 오프라인 재실행에도 사용할 수 있다.
-service worker 등록은 게임 리소스 로딩보다 먼저 시작하며, 설치 버튼과 준비 알림만 게임 화면이 만들어질 때까지
-보류한다. 따라서 느린 최초 로딩이나 인증 오류가 발생해도 다음 접속을 위한 캐시 등록은 완료할 수 있다.
+웹 앱은 service worker와 설치 manifest를 사용하지 않는다. 해시가 포함된 JavaScript·CSS·이미지는 nginx의
+`immutable` 응답을 브라우저 HTTP 캐시에 저장하고, `index.html`과 `catalog.json`은 매 접속 시 다시 확인한다.
+따라서 새 파일은 파일명을 바꾸고 카탈로그를 갱신해야 하며, 오프라인 재실행은 지원하지 않는다.
 공터에 새로 나타나는 고양이는 가구와 다른 고양이를 피한 임의의 셀에서 시작하며,
 좌우 방향과 첫 행동도 무작위로 정한다. 데스크톱 위젯은 `desktop-widget.html`과 `DesktopWidgetApp`에서
 게임 상태 없이 흰 고양이 한 마리만 만들고, Windows 호스트가 전달하는 CSS 픽셀 좌표를 격자 변환 없이
@@ -403,7 +399,7 @@ service worker 등록은 게임 리소스 로딩보다 먼저 시작하며, 설�
 | 사용자 문구 | `src/content/ko.json` |
 | 이미지와 앵커 | `public/assets/catalog.json` |
 | 브라우저 저장 | `src/services` |
-| 앱 설치와 service worker | `src/pwa` |
+| 정적 파일 HTTP 캐시 | `infra/nginx` |
 | 구현체 연결 | `src/app` |
 
 공개 함수의 동작이나 `GameClient` JSON 형태가 바뀌면 같은 변경에서 TSDoc과 이 문서의 예시도 함께 갱신한다.

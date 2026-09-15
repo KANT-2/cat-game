@@ -66,7 +66,7 @@ for (const [layer, background] of Object.entries({
   }
 }
 if (presentation.serviceWorkerRegistrations !== 0) {
-  throw new Error("desktop widget must not register the PWA service worker");
+  throw new Error("desktop widget must not register a service worker");
 }
 if (presentation.storageAccesses.length > 0) {
   throw new Error(`desktop widget must not access game storage: ${presentation.storageAccesses.join(", ")}`);
