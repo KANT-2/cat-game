@@ -236,6 +236,133 @@ describe("backend learning integration", () => {
     });
   });
 
+  it("requests the same presentation type when preparing a completed task replay", async () => {
+    const fetcher = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      expect(JSON.parse(String(init?.body))).toEqual({
+        task_public_id: taskId,
+        preferred_presentation_type: "MULTIPLE_CHOICE",
+      });
+      return json({
+        presentation_public_id: presentationId,
+        task: {
+          ...learningTask(taskId, "PYTHON"),
+          type: "MULTIPLE_CHOICE",
+          options: { A: "3", B: "4" },
+          presentation_public_id: presentationId,
+          presentation_required: false,
+        },
+      });
+    });
+    const api = new BackendApiClient("http://localhost:8000", userId, fetcher);
+
+    await expect(api.startLearningPresentation(taskId, "MULTIPLE_CHOICE")).resolves.toMatchObject({
+      publicId: taskId,
+      type: "MULTIPLE_CHOICE",
+      presentationPublicId: presentationId,
+    });
+  });
+
+  it("replays a completed quiz with a fresh presentation and no duplicate reward", async () => {
+    const presentationIds = [
+      "88888888-8888-4888-8888-888888888881",
+      "88888888-8888-4888-8888-888888888882",
+      "88888888-8888-4888-8888-888888888883",
+    ];
+    const attemptIds = [
+      "33333333-3333-4333-8333-333333333331",
+      "33333333-3333-4333-8333-333333333332",
+    ];
+    const submittedPresentationIds: string[] = [];
+    const presentationBodies: Record<string, unknown>[] = [];
+    let presentationReads = 0;
+    let attemptWrites = 0;
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = new URL(String(input)).pathname;
+      if (path === "/api/v1/learning/recommendations") {
+        return json([
+          {
+            ...learningTask(taskId, "PYTHON"),
+            type: "CODE",
+            options: null,
+            completed: true,
+            presentation_required: true,
+          },
+        ]);
+      }
+      if (path === "/api/v1/attempts/presentations") {
+        presentationBodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+        const currentPresentationId = presentationIds[presentationReads++];
+        return json({
+          presentation_public_id: currentPresentationId,
+          task: {
+            ...learningTask(taskId, "PYTHON"),
+            type: "MULTIPLE_CHOICE",
+            options: { A: "정답", B: "오답" },
+            completed: false,
+            presentation_public_id: currentPresentationId,
+            presentation_required: false,
+          },
+        });
+      }
+      if (path === "/api/v1/game/snapshot") {
+        return json(gameSnapshot(1_000, 0, { completedTaskIds: [taskId] }));
+      }
+      if (path === "/api/v1/learning/proficiencies") {
+        return json([]);
+      }
+      if (path === "/api/v1/learning/tier") {
+        return json(learningTier("PYTHON"));
+      }
+      if (path === "/api/v1/attempts" && init?.method === "POST") {
+        const body = JSON.parse(String(init.body)) as { presentation_public_id: string };
+        submittedPresentationIds.push(body.presentation_public_id);
+        return json({ public_id: attemptIds[attemptWrites++], status: "PENDING" }, 202);
+      }
+      const attemptIndex = attemptIds.indexOf(path.split("/").at(-1) ?? "");
+      if (attemptIndex >= 0) {
+        return json({
+          public_id: attemptIds[attemptIndex],
+          task_public_id: taskId,
+          context_type: "LEARNING",
+          status: "COMPLETED",
+          is_correct: true,
+          used_hint: false,
+          attempted_at: "2026-09-15T00:00:00Z",
+          result_detail: { verdict: "ACCEPTED", passed: 1, total: 1 },
+          coins_awarded: 0,
+        });
+      }
+      return json({ detail: "not found" }, 404);
+    });
+    const api = new BackendApiClient("http://localhost:8000", userId, fetcher);
+    const client = await BackendLearningGameClient.createConnected(
+      new LocalGameClient(new MemoryRepository()),
+      api,
+    );
+
+    expect(client.getStudyTasks()[0]).toMatchObject({ completed: true, type: "quiz" });
+    await expect(client.answerQuiz(taskId, "A")).resolves.toMatchObject({
+      ok: true,
+      correct: true,
+      firstCompletion: false,
+      coinsAwarded: 0,
+    });
+    await expect(client.answerQuiz(taskId, "A")).resolves.toMatchObject({
+      ok: true,
+      correct: true,
+      firstCompletion: false,
+      coinsAwarded: 0,
+    });
+
+    expect(submittedPresentationIds).toEqual(presentationIds.slice(0, 2));
+    expect(presentationBodies).toEqual([
+      { task_public_id: taskId },
+      { task_public_id: taskId, preferred_presentation_type: "MULTIPLE_CHOICE" },
+      { task_public_id: taskId, preferred_presentation_type: "MULTIPLE_CHOICE" },
+    ]);
+    expect(client.getStudyTasks()[0]).toMatchObject({ completed: true, type: "quiz" });
+  });
+
   it("calls the browser fetch implementation with its required global receiver", async () => {
     const originalFetch = globalThis.fetch;
     const browserFetch = vi.fn(function (this: unknown, input: RequestInfo | URL) {

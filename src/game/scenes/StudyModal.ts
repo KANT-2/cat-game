@@ -15,7 +15,7 @@ import type { StudyConcept, StudyDifficulty, StudyTaskType } from "../../domain/
 import { BackButton } from "../components/BackButton";
 import { CanvasButton, fitWrappedTextHeight } from "../components/CanvasButton";
 import { createCozyPageBackground, createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
-import { createCoinAmount } from "../components/CurrencyBar";
+import { createCoinAmount, createCurrencyBar } from "../components/CurrencyBar";
 import { layoutToFillViewport } from "../components/fullscreenLayout";
 import { BASE_HEIGHT, BASE_WIDTH, textStyle } from "../config";
 import type { CodeEditorOverlay, CodeEditorOverlayFactory } from "../ports/CodeEditorOverlay";
@@ -32,6 +32,7 @@ type StudyModalOptions = {
   learningDomain: LearningDomain;
   getMastery: () => StudyMasteryView;
   getTier: () => StudyTierView;
+  getCoins: () => number;
   getQuiz: (quizId: string) => QuizView | null;
   getCodeChallenge: (challengeId: string) => CodeChallengeView | null;
   onAnswer: (quizId: string, choiceId: string) => Awaitable<QuizAnswerResult>;
@@ -118,6 +119,7 @@ export class StudyModal extends Container {
   private renderDashboard(): void {
     this.clearBody();
     this.drawBaseHeader(message("study.dashboardTitle"), message("study.dashboardSubtitle"), this.options.onClose);
+    this.buildCurrencyBar();
     this.buildLearningDomainSelector();
     this.buildMasteryPanel();
     this.buildRecommendation();
@@ -178,6 +180,12 @@ export class StudyModal extends Container {
     subtitle.position.set(126, 66);
     const ornament = createTitleOrnament(126, 93, 190);
     this.body.addChild(back, title, subtitle, ornament);
+  }
+
+  private buildCurrencyBar(): void {
+    const currency = createCurrencyBar(this.options.coinIcon, this.options.getCoins(), 220);
+    currency.container.position.set(940, 20);
+    this.body.addChild(currency.container);
   }
 
   private buildMasteryPanel(): void {
@@ -631,13 +639,13 @@ export class StudyModal extends Container {
       return;
     }
     let detail = message(result.feedbackMessage);
-    if (result.correct && result.serverAuthoritative) {
-      detail = message("study.serverGradingComplete", { feedback: message(result.feedbackMessage) });
-    } else if (result.correct && result.firstCompletion) {
+    if (result.correct && result.firstCompletion) {
       detail = message("study.rewardAwarded", {
         feedback: message(result.feedbackMessage),
         amount: result.coinsAwarded,
       });
+    } else if (result.correct && result.serverAuthoritative) {
+      detail = message("study.rewardAlreadyClaimed", { feedback: message(result.feedbackMessage) });
     } else if (result.correct) {
       detail = message("study.rewardAlreadyClaimed", { feedback: message(result.feedbackMessage) });
     }
@@ -875,8 +883,10 @@ export class StudyModal extends Container {
       return;
     }
     let detail = message("study.gradingFailed");
-    if (result.passed && result.serverAuthoritative) {
-      detail = message("study.serverGradingPassed");
+    if (result.passed && result.firstCompletion) {
+      detail = `${message(result.serverAuthoritative ? "study.serverGradingPassed" : "study.gradingPassed")}\n${message("study.gradingReward", { amount: result.coinsAwarded })}`;
+    } else if (result.passed && result.serverAuthoritative) {
+      detail = message("study.rewardAlreadyClaimed", { feedback: message("study.serverGradingPassed") });
     } else if (result.passed) {
       detail = `${message("study.gradingPassed")}\n${result.firstCompletion ? message("study.gradingReward", { amount: result.coinsAwarded }) : message("study.taskCompleted")}`;
     }

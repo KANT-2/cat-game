@@ -15,6 +15,9 @@ FastAPI는 호스트 포트를 열지 않고, nginx만 `127.0.0.1:8080`에 노�
    endpoint와 클라이언트 인증서 디렉터리를 `CAT_GAME_GRADING_DOCKER_*`에 지정한다.
 5. SQL 채점은 운영 애플리케이션 DB와 분리된 빈 PostgreSQL을 준비하고, superuser가 아닌 전용 계정 URL을
    `CAT_GAME_SQL_GRADING_DATABASE_URL`에 지정한다. 이 계정은 자신의 임시 스키마를 생성·삭제할 수 있어야 한다.
+6. 고양이 자유 대화용 `CAT_GAME_GEMINI_API_KEY`와 문제 관리용 `CAT_GAME_TASKS_API_KEY`는 저장소에
+   커밋하지 않고 서버 Secret 또는 저장소 밖의 `production.env`에만 등록한다. Compose는 두 값을 각각
+   백엔드의 `GEMINI_API_KEY`, `TASKS_API_KEY`로 전달하며, 값이 없으면 안전하게 배포를 중단한다.
 
 운영 설정을 렌더링하고 시작한다.
 
