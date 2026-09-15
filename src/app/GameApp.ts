@@ -209,11 +209,7 @@ export class GameApp {
     renderer.stage.removeChild(loading);
     loading.destroy({ children: true });
 
-<<<<<<< HEAD
     renderer.renderer.on("resize", () => game.layout());
-=======
-    window.addEventListener("resize", () => window.requestAnimationFrame(() => game.layout()));
->>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
     window.removeEventListener("offline", rememberOffline);
     if (gameSession) {
       gameSession.onExpired(() => window.location.reload());

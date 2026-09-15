@@ -443,15 +443,7 @@ export class BackendLearningGameClient implements GameClient {
     return {
       ...toStudyTaskView(task),
       type: "code",
-<<<<<<< HEAD
       language,
-      prompt: { text: task.description },
-      signature: "",
-      starterBody: task.templateCode,
-      examples: { messageId: "study.serverExamples" },
-      hints: task.hintText ? [{ text: task.hintText }] : [],
-=======
-      language: task.domain === "SQL" ? "sql" : "python",
       editorMode: task.domain === "SQL" ? "query" : "program",
       prompt: { text: learningDescription(task.description) },
       starterCode: task.templateCode,
@@ -464,7 +456,6 @@ export class BackendLearningGameClient implements GameClient {
           }
         : { messageId: "study.serverExamples" },
       hints: splitHintSteps(task.hintText).map((text) => ({ text })),
->>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
       bonusCoins: 0,
     };
   }
@@ -1053,7 +1044,6 @@ function toStudyTaskView(task: BackendLearningTask): StudyTaskView {
   };
 }
 
-<<<<<<< HEAD
 function mapStudyLanguage(domain: BackendLearningTask["domain"]): StudyTaskView["language"] {
   if (domain === "SQL") {
     return "sql";
@@ -1062,7 +1052,8 @@ function mapStudyLanguage(domain: BackendLearningTask["domain"]): StudyTaskView[
     return "machine-learning";
   }
   return "python";
-=======
+}
+
 function splitHintSteps(hintText: string | null): string[] {
   return hintText
     ? hintText
@@ -1070,7 +1061,6 @@ function splitHintSteps(hintText: string | null): string[] {
         .map((step) => step.trim())
         .filter(Boolean)
     : [];
->>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
 }
 
 function mapConcept(value: string): StudyTaskView["concept"] {

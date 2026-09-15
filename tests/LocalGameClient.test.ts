@@ -53,7 +53,11 @@ describe("LocalGameClient", () => {
     const repository = new MemoryRepository();
     repository.state.furniture = [];
     const savedAt = new Date("2026-09-11T06:42:00.000Z");
-    const client = new LocalGameClient(repository, () => 0.5, () => savedAt);
+    const client = new LocalGameClient(
+      repository,
+      () => 0.5,
+      () => savedAt,
+    );
 
     client.placeFurniture({ kind: "plant", x: 3, y: 3, rotation: 0 });
 
@@ -513,7 +517,7 @@ describe("LocalGameClient", () => {
       learningDomain: "PYTHON",
     });
     expect(client.updateSettings({ learningDomain: "SQL" })).toMatchObject({ learningDomain: "SQL" });
-    expect(client.getStudyTasks()).toEqual([]);
+    expect(client.getStudyTasks().filter((task) => task.language === "sql")).toHaveLength(7);
     expect(client.clearCatMemories()).toEqual({ ok: true, removed: 1 });
     expect(client.getSnapshot().ownedCats).toContain("fluffy");
     expect(client.getSnapshot().catMemories).toEqual({});

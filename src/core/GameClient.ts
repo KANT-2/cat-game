@@ -136,12 +136,8 @@ export type StudyTierView = {
 
 export type CodeChallengeView = StudyTaskView & {
   type: "code";
-<<<<<<< HEAD
   language: StudyCodeLanguage;
-=======
-  language: "python" | "sql";
   editorMode: "program" | "function" | "query";
->>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
   prompt: GameText;
   starterCode: string;
   examples: GameText;

@@ -377,18 +377,6 @@ describe("backend learning integration", () => {
     }
   });
 
-<<<<<<< HEAD
-  it.each(["PYTHON", "SQL", "MACHINE_LEARNING"])(
-    "loads %s tasks and keeps game mutations authoritative",
-    async (domain) => {
-      let snapshotReads = 0;
-      const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = new URL(String(input));
-        const headers = new Headers(init?.headers);
-        if (url.pathname === "/health") {
-          expect(headers.has("X-User-Public-ID")).toBe(false);
-          return json({ status: "ok" });
-=======
   it("persists the selected learning domain and immediately reloads matching recommendations", async () => {
     let recommendationReads = 0;
     let proficiencyReads = 0;
@@ -523,161 +511,14 @@ describe("backend learning integration", () => {
         const body = JSON.parse(String(init.body)) as { item_catalog_key: string };
         if (body.item_catalog_key === "wallpaper.cream") {
           return json({ detail: "already-owned" }, 409);
->>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
+        }
+        if (body.item_catalog_key === "consumable.salmon-cubes") {
+          return json({ snapshot: gameSnapshot(320, 1, { consumableQuantity: 1 }), result: {} });
         }
         if (url.pathname === "/api/v1/session/development") {
           expect(init?.method).toBe("POST");
           return json(userPayload());
         }
-<<<<<<< HEAD
-        expect(headers.get("X-User-Public-ID")).toBe(userId);
-        if (url.pathname === "/api/v1/session/me") {
-          return json(userPayload());
-        }
-        if (url.pathname === "/api/v1/learning/recommendations") {
-          return json([
-            {
-              public_id: taskId,
-              concept_public_id: "44444444-4444-4444-8444-444444444444",
-              concept_name: "PYTHON:variables",
-              title: "[SAMPLE:PYTHON:BRONZE:001] 두 수의 합",
-              type: "MULTIPLE_CHOICE",
-              domain,
-              difficulty: "BRONZE",
-              description: "가장 올바른 설명을 고르세요.",
-              template_code: "",
-              options: { A: "두 값을 더합니다.", B: "고정값만 출력합니다." },
-              hint_text: null,
-              reward_coins: 30,
-              is_active: true,
-              completed: false,
-            },
-          ]);
-        }
-        if (url.pathname === "/api/v1/game/snapshot") {
-          snapshotReads += 1;
-          return json(
-            snapshotReads === 1
-              ? gameSnapshot(1_000, 0, { memories: ["반복문을 연습했어요"] })
-              : gameSnapshot(1_030, 0, { completedTaskIds: [taskId], hasCodeCompletion: false }),
-          );
-        }
-        if (url.pathname === "/api/v1/game/cat-memories" && init?.method === "DELETE") {
-          return json({ snapshot: gameSnapshot(1_000, 0), result: { removed: 1 } });
-        }
-        if (url.pathname === "/api/v1/game/daily-rewards/claims" && init?.method === "POST") {
-          expect(JSON.parse(String(init.body))).toEqual({ reward_key: "solve-one" });
-          return json({
-            snapshot: gameSnapshot(1_080, 0, {
-              completedTaskIds: [taskId],
-              claimedQuestIds: ["solve-one"],
-              hasCodeCompletion: false,
-            }),
-            result: { reward_key: "solve-one", coins_awarded: 50 },
-          });
-        }
-        if (url.pathname === "/api/v1/game/shop/purchases" && init?.method === "POST") {
-          const body = JSON.parse(String(init.body)) as { item_catalog_key: string };
-          if (body.item_catalog_key === "wallpaper.cream") {
-            return json({ detail: "already-owned" }, 409);
-          }
-          if (body.item_catalog_key === "consumable.salmon-cubes") {
-            return json({ snapshot: gameSnapshot(320, 1, { consumableQuantity: 1 }), result: {} });
-          }
-          expect(body).toMatchObject({ item_catalog_key: "furniture.sofa" });
-          return json({ snapshot: gameSnapshot(500, 1), result: {} });
-        }
-        if (url.pathname === "/api/v1/game/consumables/use" && init?.method === "POST") {
-          expect(JSON.parse(String(init.body))).toMatchObject({
-            item_catalog_key: "consumable.salmon-cubes",
-            cat_catalog_key: "fluffy",
-          });
-          return json({
-            snapshot: gameSnapshot(320, 1, { consumableQuantity: 0 }),
-            result: { effect: "happy", remaining_quantity: 0 },
-          });
-        }
-        if (url.pathname === "/api/v1/game/learning/reset" && init?.method === "POST") {
-          return json({
-            snapshot: gameSnapshot(1_080, 0, { claimedQuestIds: ["solve-one"] }),
-            result: { reset_at: "2026-09-05T23:50:00Z", removed_proficiencies: 1 },
-          });
-        }
-        if (url.pathname === "/api/v1/attempts" && init?.method === "POST") {
-          expect(JSON.parse(String(init.body))).toMatchObject({
-            task_public_id: taskId,
-            selected_option: "A",
-            context_type: "LEARNING",
-          });
-          return json({ public_id: attemptId, status: "PENDING" }, 202);
-        }
-        if (url.pathname === `/api/v1/attempts/${attemptId}`) {
-          return json({
-            public_id: attemptId,
-            task_public_id: taskId,
-            context_type: "LEARNING",
-            status: "COMPLETED",
-            is_correct: true,
-            used_hint: false,
-            attempted_at: "2026-09-04T00:00:00Z",
-            result_detail: { verdict: "ACCEPTED", passed: 1, total: 1 },
-            coins_awarded: 30,
-          });
-        }
-        return json({ detail: "not found" }, 404);
-      });
-      const local = new LocalGameClient(new MemoryRepository());
-      const api = new BackendApiClient("http://localhost:8000", null, fetcher);
-      const client = await BackendLearningGameClient.create(local, api);
-
-      expect(client.getStudyTasks()).toMatchObject([
-        { id: taskId, type: "quiz", concept: "variables", title: { text: "두 수의 합" }, completed: false },
-      ]);
-      expect(client.getStudyTasks()[0].language).toBe(
-        domain === "MACHINE_LEARNING" ? "machine-learning" : domain.toLowerCase(),
-      );
-      expect(client.getSnapshot().catMemories.fluffy).toEqual(["반복문을 연습했어요"]);
-      await expect(client.clearCatMemories()).resolves.toEqual({ ok: true, removed: 1 });
-      expect(client.getSnapshot().catMemories).toEqual({});
-      expect(client.getQuiz(taskId)?.choices).toHaveLength(2);
-      await expect(client.answerQuiz(taskId, "A")).resolves.toMatchObject({
-        ok: true,
-        correct: true,
-        firstCompletion: true,
-        coinsAwarded: 30,
-        serverAuthoritative: true,
-      });
-      expect(client.getStudyTasks()[0].completed).toBe(true);
-      expect(client.getSnapshot().coins).toBe(1_030);
-      expect(client.getDailyQuests()[0]).toMatchObject({ progress: 1, complete: true, claimed: false });
-      await expect(client.claimDailyQuest("solve-one")).resolves.toEqual({ ok: true, coinsAwarded: 50 });
-      expect(client.getDailyQuests()[0].claimed).toBe(true);
-      expect(client.getSnapshot().coins).toBe(1_080);
-      await expect(client.resetLearningProgress()).resolves.toEqual({ ok: true });
-      expect(client.getStudyTasks()[0].completed).toBe(false);
-      expect(client.getSnapshot().coins).toBe(1_080);
-      expect(client.getDailyQuests()[0]).toMatchObject({ progress: 0, claimed: true });
-      await expect(client.buyShopItem("furniture.sofa")).resolves.toMatchObject({ ok: true });
-      expect(client.getSnapshot()).toMatchObject({ coins: 500, shopInventory: { "furniture.sofa": 1 } });
-      await expect(client.buyShopItem("wallpaper.cream")).resolves.toEqual({ ok: false, reason: "already-owned" });
-      await expect(client.buyShopItem("consumable.salmon-cubes")).resolves.toMatchObject({
-        ok: true,
-        itemType: "consumable",
-      });
-      await expect(client.useConsumable("consumable.salmon-cubes", "fluffy")).resolves.toEqual({
-        ok: true,
-        itemId: "consumable.salmon-cubes",
-        effect: "happy",
-        remainingQuantity: 0,
-      });
-      const refreshed = vi.fn();
-      client.subscribe(refreshed);
-      await expect(client.refreshFromServer()).resolves.toBe(true);
-      expect(refreshed).toHaveBeenCalledOnce();
-      expect(client.getSnapshot().coins).toBe(1_030);
-    },
-  );
-=======
         expect(body).toMatchObject({ item_catalog_key: "furniture.sofa" });
         return json({ snapshot: gameSnapshot(500, 1), result: {} });
       }
@@ -770,7 +611,6 @@ describe("backend learning integration", () => {
     expect(refreshed).toHaveBeenCalledOnce();
     expect(client.getSnapshot().coins).toBe(1_030);
   });
->>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
 
   it("rejects malformed server task data instead of leaking it into the UI", async () => {
     const fetcher = vi.fn(async (input: RequestInfo | URL) => {

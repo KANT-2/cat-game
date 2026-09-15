@@ -326,26 +326,12 @@ export class HomeScene extends Container {
     this.enterPage();
     this.studyModal = new StudyModal({
       tasks: this.gameClient.getStudyTasks(),
-<<<<<<< HEAD
       mascot: this.iconSources.studyMascot,
-=======
-      learningDomain: this.gameClient.getSnapshot().settings.learningDomain,
-      getMastery: () => this.gameClient.getStudyMastery(),
-      getTier: () => this.gameClient.getStudyTier(),
-      getCoins: () => this.gameClient.getSnapshot().coins,
       onPrepareTask: (taskId) => this.gameClient.prepareStudyTask(taskId),
->>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
       getQuiz: (quizId) => this.gameClient.getQuiz(quizId),
       getCodeChallenge: (challengeId) => this.gameClient.getCodeChallenge(challengeId),
       onAnswer: (quizId, choiceId) => this.gameClient.answerQuiz(quizId, choiceId),
       onSubmitCode: (challengeId, code, hintsUsed) => this.gameClient.submitCodeChallenge(challengeId, code, hintsUsed),
-      onChangeLearningDomain: async (learningDomain) => {
-        const settings = await this.gameClient.updateSettings({ learningDomain });
-        return {
-          learningDomain: settings.learningDomain,
-          tasks: this.gameClient.getStudyTasks(),
-        };
-      },
       onClose: () => this.closeStudy(),
       backIcon: this.iconSources.back,
       coinIcon: this.iconSources.coin,

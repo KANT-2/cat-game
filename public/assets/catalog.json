@@ -2645,7 +2645,6 @@
       { "id": "consumable.catnip-biscuits.01", "kind": "consumable", "src": "/assets/consumables/catnip-biscuits-01.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["catnip", "treat", "transparent"] },
       { "id": "consumable.tuna-soup.01", "kind": "consumable", "src": "/assets/consumables/tuna-soup-01.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["tuna", "treat", "transparent"] }
     ],
-<<<<<<< HEAD
     "study": [
       {
         "id": "ui.scene.study-forest-board.03",
@@ -2672,15 +2671,13 @@
         "kind": "ui",
         "src": "/assets/ui/scenes/study-siamese-leaning-01.png"
       }
-=======
-    "study": [],
+    ],
     "cats-v3-scruff-lift": [
       { "id": "cat.tabby-v2.scruff-lift.01", "kind": "cat", "src": "/assets/cats/orange-tabby-v2/orange-tabby-v2-scruff-lift-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "spriteSheet": { "frameWidth": 256, "frameHeight": 256, "columns": 8, "frameCount": 16, "framesPerSecond": 14, "playback": "once" }, "tags": ["tabby-v2", "scruff-lift"] },
       { "id": "cat.silver.scruff-lift.01", "kind": "cat", "src": "/assets/cats/silver/silver-scruff-lift-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "spriteSheet": { "frameWidth": 256, "frameHeight": 256, "columns": 8, "frameCount": 16, "framesPerSecond": 14, "playback": "once" }, "tags": ["silver", "scruff-lift"] },
       { "id": "cat.calico.scruff-lift.01", "kind": "cat", "src": "/assets/cats/calico/calico-scruff-lift-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "spriteSheet": { "frameWidth": 256, "frameHeight": 256, "columns": 8, "frameCount": 16, "framesPerSecond": 14, "playback": "once" }, "tags": ["calico", "scruff-lift"] },
       { "id": "cat.tuxedo.scruff-lift.01", "kind": "cat", "src": "/assets/cats/tuxedo/tuxedo-scruff-lift-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "spriteSheet": { "frameWidth": 256, "frameHeight": 256, "columns": 8, "frameCount": 16, "framesPerSecond": 14, "playback": "once" }, "tags": ["tuxedo", "scruff-lift"] },
       { "id": "cat.fold.scruff-lift.01", "kind": "cat", "src": "/assets/cats/fold/fold-scruff-lift-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "spriteSheet": { "frameWidth": 256, "frameHeight": 256, "columns": 8, "frameCount": 16, "framesPerSecond": 14, "playback": "once" }, "tags": ["fold", "scruff-lift"] }
->>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
     ],
     "common-ui": [
       {

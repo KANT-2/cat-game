@@ -7,15 +7,13 @@ import type {
   GameText,
   QuizAnswerResult,
   QuizView,
-  StudyMasteryView,
   StudyTaskView,
-  StudyTierView,
 } from "../../core/GameClient";
 import type { StudyConcept, StudyDifficulty, StudyTaskType } from "../../domain/study";
 import { BackButton } from "../components/BackButton";
 import { CanvasButton, fitWrappedTextHeight } from "../components/CanvasButton";
 import { createCozyPageBackground, createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
-import { createCoinAmount, createCurrencyBar } from "../components/CurrencyBar";
+import { createCoinAmount } from "../components/CurrencyBar";
 import { layoutToFillViewport } from "../components/fullscreenLayout";
 import { StudySubjectButton } from "../components/StudyLandingUi";
 import { applySmoothTextureSampling } from "../components/smoothSprite";
@@ -45,25 +43,14 @@ const subjectColors: Record<StudySubject, number> = {
 const subjectPageSize = 3;
 
 type FeedbackTest = { label: string; passed: boolean };
-type LearningDomain = "PYTHON" | "SQL";
-type LearningDomainChange = { learningDomain: LearningDomain; tasks: StudyTaskView[] };
-
 type StudyModalOptions = {
   tasks: StudyTaskView[];
-<<<<<<< HEAD
   mascot: string;
-=======
-  learningDomain: LearningDomain;
-  getMastery: () => StudyMasteryView;
-  getTier: () => StudyTierView;
-  getCoins: () => number;
   onPrepareTask: (taskId: string) => Awaitable<StudyTaskView | null>;
->>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
   getQuiz: (quizId: string) => QuizView | null;
   getCodeChallenge: (challengeId: string) => CodeChallengeView | null;
   onAnswer: (quizId: string, choiceId: string) => Awaitable<QuizAnswerResult>;
   onSubmitCode: (challengeId: string, code: string, hintsUsed: number) => Awaitable<CodeSubmissionResult>;
-  onChangeLearningDomain: (learningDomain: LearningDomain) => Awaitable<LearningDomainChange>;
   onClose: () => void;
   backIcon: string;
   coinIcon: string;
@@ -86,24 +73,6 @@ const conceptMessages: Record<StudyConcept, MessageId> = {
   other: "study.conceptOther",
 };
 
-const masteryConceptMessages: Record<string, MessageId> = {
-  basics: "study.masteryConceptBasics",
-  conditionals: "study.masteryConceptConditionals",
-  loops: "study.masteryConceptLoops",
-  strings: "study.masteryConceptStrings",
-  collections: "study.masteryConceptCollections",
-  functions: "study.masteryConceptFunctions",
-  exceptions: "study.masteryConceptExceptions",
-  filtering: "study.masteryConceptFiltering",
-  aggregation: "study.masteryConceptAggregation",
-  joins: "study.masteryConceptJoins",
-  subqueries: "study.masteryConceptSubqueries",
-  advanced_queries: "study.masteryConceptAdvancedQueries",
-  data_manipulation: "study.masteryConceptDataManipulation",
-  schema: "study.masteryConceptSchema",
-  transactions: "study.masteryConceptTransactions",
-};
-
 const difficultyMessages: Record<
   StudyDifficulty,
   "study.filterBasic" | "study.filterApplied" | "study.filterChallenge"
@@ -122,12 +91,7 @@ export class StudyModal extends Container {
   private readonly feedbackLayer = new Container();
   private readonly options: StudyModalOptions;
   private tasks: StudyTaskView[];
-<<<<<<< HEAD
   private selectedSubject: StudySubject | null = null;
-=======
-  private learningDomain: LearningDomain;
-  private domainChangePending = false;
->>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
   private typeFilter: FilterValue<StudyTaskType> = "all";
   private conceptFilter: FilterValue<StudyConcept> = "all";
   private difficultyFilter: FilterValue<StudyDifficulty> = "all";
@@ -149,7 +113,6 @@ export class StudyModal extends Container {
     this.landingMascot.anchor.set(0.5, 0.85);
     this.landingMascot.eventMode = "none";
     this.tasks = options.tasks.map((task) => ({ ...task }));
-    this.learningDomain = options.learningDomain;
     this.background.eventMode = "static";
     this.body.sortableChildren = true;
     this.addChild(this.background, this.page);
@@ -167,7 +130,6 @@ export class StudyModal extends Container {
 
   private renderDashboard(): void {
     this.clearBody();
-<<<<<<< HEAD
     if (!this.selectedSubject) {
       this.body.addChild(createCozyPageBackground(BASE_WIDTH, BASE_HEIGHT));
       this.buildLandingHeader();
@@ -182,19 +144,11 @@ export class StudyModal extends Container {
       this.openFilterSelect = null;
       this.renderDashboard();
     });
-=======
-    this.drawBaseHeader(message("study.dashboardTitle"), message("study.dashboardSubtitle"), this.options.onClose);
-    this.buildCurrencyBar();
-    this.buildLearningDomainSelector();
-    this.buildMasteryPanel();
-    this.buildRecommendation();
->>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
     this.buildFilters();
     this.buildTaskList();
     this.layout(this.viewportWidth, this.viewportHeight);
   }
 
-<<<<<<< HEAD
   private buildLandingHeader(): void {
     this.landingMascot.visible = true;
     const back = new BackButton({ iconSrc: this.options.backIcon, size: 72, onPress: this.options.onClose });
@@ -252,49 +206,6 @@ export class StudyModal extends Container {
   }
 
   private drawBaseHeader(titleValue: string, subtitleValue: string | null, onBack: () => void): void {
-=======
-  private buildLearningDomainSelector(): void {
-    const label = new Text({ text: message("settings.subject"), style: textStyle(15, 0x604333, "800") });
-    label.anchor.set(1, 0.5);
-    label.position.set(1260, 51);
-    const domains: readonly LearningDomain[] = ["PYTHON", "SQL"];
-    const buttons = domains.map((domain, index) => {
-      const active = domain === this.learningDomain;
-      const button = new CanvasButton({
-        label: message(domain === "PYTHON" ? "settings.subjectPython" : "settings.subjectSql"),
-        width: 120,
-        height: 50,
-        color: active ? 0xf0ad55 : 0xe9c9a4,
-        onPress: () => void this.changeLearningDomain(domain),
-      });
-      button.position.set(1280 + index * 135, 26);
-      return button;
-    });
-    this.body.addChild(label, ...buttons);
-  }
-
-  private async changeLearningDomain(domain: LearningDomain): Promise<void> {
-    if (this.domainChangePending || domain === this.learningDomain) {
-      return;
-    }
-    this.domainChangePending = true;
-    try {
-      const result = await this.options.onChangeLearningDomain(domain);
-      this.learningDomain = result.learningDomain;
-      this.tasks = result.tasks.map((task) => ({ ...task }));
-      this.typeFilter = "all";
-      this.conceptFilter = "all";
-      this.difficultyFilter = "all";
-      this.openFilterSelect = null;
-      this.taskPage = 0;
-      this.renderDashboard();
-    } finally {
-      this.domainChangePending = false;
-    }
-  }
-
-  private drawBaseHeader(titleValue: string, subtitleValue: string, onBack: () => void): void {
->>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
     this.body.addChild(createCozyPageBackground(BASE_WIDTH, BASE_HEIGHT));
     const back = new BackButton({ iconSrc: this.options.backIcon, size: 72, onPress: onBack });
     back.position.set(28, 24);
@@ -313,14 +224,7 @@ export class StudyModal extends Container {
     }
   }
 
-  private buildCurrencyBar(): void {
-    const currency = createCurrencyBar(this.options.coinIcon, this.options.getCoins(), 220);
-    currency.container.position.set(940, 20);
-    this.body.addChild(currency.container);
-  }
-
   private buildMasteryPanel(): void {
-<<<<<<< HEAD
     const panel = createCozyPanel(55, 125, 360, 710, { fill: 0xfff4df, border: 0xa66b43, radius: 28 });
     const title = new Text({ text: message("study.subjectMasteryTitle"), style: textStyle(23, 0x493022, "800") });
     title.anchor.set(0.5);
@@ -354,52 +258,6 @@ export class StudyModal extends Container {
       });
       value.anchor.set(1, 0);
       value.position.set(380, y);
-=======
-    const panel = createCozyPanel(45, 120, 430, 245, { fill: 0xfff7e8, border: 0xb47950, radius: 22 });
-    const title = new Text({ text: message("study.masteryTitle"), style: textStyle(21, 0x493022, "800") });
-    title.position.set(78, 142);
-    const tier = this.options.getTier();
-    const tierText = new Text({
-      text:
-        tier.nextTier === null
-          ? message("study.tierHighest", { tier: tier.currentTier })
-          : message("study.tierProgress", {
-              tier: tier.currentTier,
-              completed: tier.completed,
-              required: tier.required,
-            }),
-      style: textStyle(13, 0x744a31, "800"),
-    });
-    tierText.anchor.set(1, 0);
-    tierText.position.set(450, 147);
-    this.body.addChild(panel, title, tierText);
-    const masteryEntries = this.options.getMastery();
-    masteryEntries.forEach((entry, index) => {
-      const column = Math.floor(index / 5);
-      const row = index % 5;
-      const x = 68 + column * 202;
-      const y = 180 + row * 32;
-      const mastery = entry.proficiencyLevel;
-      const isUnassessed = entry.attempts === 0;
-      const labelId = masteryConceptMessages[entry.conceptName];
-      const label = new Text({
-        text: labelId ? message(labelId) : entry.conceptName,
-        style: textStyle(12, 0x4a3023, "700"),
-      });
-      label.position.set(x, y - 4);
-      const trackX = x + 82;
-      const track = new Graphics().roundRect(trackX, y, 73, 14, 7).fill(0xe4ccb0);
-      const fillWidth = mastery === 0 ? 0 : Math.max(6, (73 * mastery) / 100);
-      if (fillWidth > 0) {
-        track.roundRect(trackX, y, fillWidth, 14, 7).fill(entry.conceptName === "loops" ? 0xe69b4d : 0x82a768);
-      }
-      const value = new Text({
-        text: isUnassessed ? message("study.masteryUnassessed") : message("study.masteryValue", { value: mastery }),
-        style: textStyle(isUnassessed ? 12 : 14, isUnassessed ? 0x9a806e : 0x604333, "800"),
-      });
-      value.anchor.set(1, 0);
-      value.position.set(x + 194, y - 3);
->>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
       this.body.addChild(label, track, value);
     });
     const pageCount = Math.max(1, Math.ceil(studySubjects.length / subjectPageSize));
@@ -444,7 +302,6 @@ export class StudyModal extends Container {
       text: message("study.masteryNotice"),
       style: { ...textStyle(15, 0x76533c, "600"), align: "center", wordWrap: true, wordWrapWidth: 248, lineHeight: 22 },
     });
-<<<<<<< HEAD
     notice.anchor.set(0.5);
     notice.position.set(235, 687);
     this.body.addChild(previous, page, next, noticePanel, notice);
@@ -455,23 +312,6 @@ export class StudyModal extends Container {
     const panel = createCozyPanel(445, 125, 1110, 300, { fill: 0xfff8e9, border: 0x95603d, radius: 28 });
     const heading = new Text({ text: message("study.recommendedTitle"), style: textStyle(25, 0x493022, "800") });
     heading.position.set(490, 155);
-=======
-    notice.position.set(78, 340);
-    this.body.addChild(notice);
-  }
-
-  private buildRecommendation(): void {
-    const taggedRecommendations = this.tasks.filter((task) => task.recommended);
-    const recommendationPool = taggedRecommendations.length > 0 ? taggedRecommendations : this.tasks;
-    const recommended = recommendationPool.find((task) => !task.completed) ?? recommendationPool[0];
-    if (!recommended) {
-      return;
-    }
-    const panel = createCozyPanel(500, 120, 1055, 245, { fill: 0xfff0cf, border: 0xd58438, radius: 22 });
-    const heading = new Text({ text: message("study.recommendedTitle"), style: textStyle(20, 0x5a3725, "800") });
-    heading.position.set(540, 143);
-    const badge = new Graphics().roundRect(775, 140, 150, 30, 11).fill(0xd9783c);
->>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
     const completedCount = this.tasks.filter((task) => task.completed).length;
     const badge = new Graphics().roundRect(1360, 151, 150, 38, 19).fill(0xf2e7cf);
     if (completedCount > 0) {
@@ -519,18 +359,11 @@ export class StudyModal extends Container {
     reward?.position.set(490 + metadata.width + 20, 380);
     const start = new CanvasButton({
       label: message(recommended.completed ? "study.reviewTask" : "study.quickStart"),
-<<<<<<< HEAD
       width: 225,
       height: 62,
       fontSize: 25,
       color: 0xeeaa58,
       onPress: () => this.openTask(recommended),
-=======
-      width: 210,
-      height: 56,
-      color: 0xe99b45,
-      onPress: () => void this.openTask(recommended),
->>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
     });
     start.position.set(1275, 346);
     this.body.addChild(title, summary, metadata);
@@ -546,12 +379,7 @@ export class StudyModal extends Container {
   }
 
   private buildFilters(): void {
-<<<<<<< HEAD
     const panel = createCozyPanel(45, 120, 1510, 112, { fill: 0xfff6e5, border: 0xb68a61, radius: 18 });
-=======
-    const tier = this.options.getTier();
-    const panel = createCozyPanel(45, 390, 1510, 112, { fill: 0xfff6e5, border: 0xb68a61, radius: 18 });
->>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
     const title = new Text({ text: message("study.filterTitle"), style: textStyle(20, 0x493022, "800") });
     title.position.set(72, 155);
     const resultCount = new Text({
@@ -597,14 +425,12 @@ export class StudyModal extends Container {
       160,
       295,
       "study.filterDifficultyLabel",
-      (
-        [
-          ["all", "study.filterAll"],
-          ["basic", "study.filterBasic"],
-          ["applied", "study.filterApplied"],
-          ["challenge", "study.filterChallenge"],
-        ] as const
-      ).filter(([value]) => value === "all" || tier.unlockedDifficulties.includes(value)),
+      [
+        ["all", "study.filterAll"],
+        ["basic", "study.filterBasic"],
+        ["applied", "study.filterApplied"],
+        ["challenge", "study.filterChallenge"],
+      ],
       this.difficultyFilter,
       (value) => {
         this.difficultyFilter = value;

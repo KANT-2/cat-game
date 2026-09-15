@@ -53,12 +53,7 @@ export class DailyQuestScene extends Container {
     this.buildSummary(
       completed,
       quests.length,
-      activeLearningStreak(
-        state.attendanceLastClaimDate,
-        state.attendanceStreak,
-        state.dailyQuestDate,
-        completed,
-      ),
+      activeLearningStreak(state.attendanceLastClaimDate, state.attendanceStreak, state.dailyQuestDate, completed),
     );
     this.buildQuestList(quests);
     this.buildBonus(quests, state.dailyBonusClaimed);
@@ -120,9 +115,7 @@ export class DailyQuestScene extends Container {
       .stroke({ color: 0xd39b5d, width: 2 });
     const streak = new Text({
       text:
-        attendanceStreak > 0
-          ? message("daily.streak", { days: attendanceStreak })
-          : message("daily.streakInactive"),
+        attendanceStreak > 0 ? message("daily.streak", { days: attendanceStreak }) : message("daily.streakInactive"),
       style: { ...textStyle(20, 0x67432d, "800"), align: "center", lineHeight: 30 },
     });
     streak.anchor.set(0.5);

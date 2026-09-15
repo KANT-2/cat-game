@@ -199,13 +199,9 @@ await page.mouse.click(1194, 820);
 await page.waitForTimeout(150);
 await page.mouse.click(640, 697);
 await page.waitForTimeout(150);
-<<<<<<< HEAD
 await page.mouse.click(1450, 569);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-study-code.png") });
-=======
-await page.mouse.click(1450, 665);
->>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
 const codeEditor = page.locator(".nyang-code-editor-overlay .cm-content");
 await codeEditor.waitFor({ state: "visible" });
 const initialCode = await codeEditor.textContent();

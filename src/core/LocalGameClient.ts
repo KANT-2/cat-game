@@ -419,9 +419,6 @@ export class LocalGameClient implements GameClient {
 
   getStudyTasks(): StudyTaskView[] {
     this.ensureDailyState();
-    if (this.state.settings.learningDomain === "SQL") {
-      return [];
-    }
     return studyTaskDefinitions.map((task) => ({
       id: task.id,
       type: task.type,
@@ -491,12 +488,8 @@ export class LocalGameClient implements GameClient {
     return {
       id: challenge.id,
       type: challenge.type,
-<<<<<<< HEAD
       language: challenge.language,
-=======
-      language: "python",
-      editorMode: "function",
->>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
+      editorMode: challenge.language === "sql" ? "query" : "function",
       concept: challenge.concept,
       difficulty: challenge.difficulty,
       title: { messageId: challenge.titleMessage },
@@ -520,11 +513,7 @@ export class LocalGameClient implements GameClient {
     if (code.trim().length === 0) {
       return { ok: false, reason: "empty-code" };
     }
-<<<<<<< HEAD
-    const grade = gradeCodeChallenge(challenge.grader, body);
-=======
-    const grade = gradeSumChallenge(code);
->>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
+    const grade = gradeCodeChallenge(challenge.grader, code);
     if (!grade.passed) {
       return { ok: true, passed: false, tests: grade.tests, firstCompletion: false, coinsAwarded: 0 };
     }
