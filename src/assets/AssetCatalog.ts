@@ -49,7 +49,9 @@ export type AssetCatalogData = {
  * 개별 ID 중복, 파일 존재 여부, anchor 범위와 금지된 게임 규칙 필드는 빌드 전에
  * `npm run assets:check`로 검증한다.
  */
-export async function loadAssetCatalog(url = "/assets/catalog.json"): Promise<AssetCatalogData> {
+export async function loadAssetCatalog(
+  url = `${import.meta.env.BASE_URL}assets/catalog.json`,
+): Promise<AssetCatalogData> {
   const response = await fetchFreshCatalog(url);
   if (!response.ok) {
     throw new Error(`Asset catalog request failed: ${response.status}`);
@@ -58,7 +60,37 @@ export async function loadAssetCatalog(url = "/assets/catalog.json"): Promise<As
   if (catalog.version !== 1 || typeof catalog.bundles !== "object") {
     throw new Error("Unsupported asset catalog format");
   }
-  return catalog;
+  return applyDeploymentBase(catalog);
+}
+
+function applyDeploymentBase(catalog: AssetCatalogData): AssetCatalogData {
+  const basePath = import.meta.env.BASE_URL;
+  if (basePath === "/") {
+    return catalog;
+  }
+  return {
+    ...catalog,
+    bundles: Object.fromEntries(
+      Object.entries(catalog.bundles).map(([bundle, entries]) => [
+        bundle,
+        entries.map((entry) => ({
+          ...entry,
+          src: withDeploymentBase(entry.src, basePath),
+          frames: entry.frames?.map((frame) => ({
+            ...frame,
+            src: withDeploymentBase(frame.src, basePath),
+          })),
+        })),
+      ]),
+    ),
+  };
+}
+
+function withDeploymentBase(path: string, basePath: string): string {
+  if (!path.startsWith("/")) {
+    return path;
+  }
+  return `${basePath.replace(/\/+$/, "")}${path}`;
 }
 
 async function fetchFreshCatalog(url: string): Promise<Response> {
