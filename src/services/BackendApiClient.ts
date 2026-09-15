@@ -256,9 +256,13 @@ export class BackendApiClient {
       throw new Error("Backend recommendations response is invalid");
     }
     return Promise.all(
-      payload
-        .map(parseTask)
-        .map((task) => (task.presentationRequired ? this.startLearningPresentation(task.publicId) : task)),
+      payload.map(parseTask).map(async (task) => {
+        if (!task.presentationRequired) {
+          return task;
+        }
+        const presented = await this.startLearningPresentation(task.publicId);
+        return { ...presented, completed: task.completed };
+      }),
     );
   }
 
@@ -284,19 +288,29 @@ export class BackendApiClient {
       throw new Error("Backend learning tasks response is invalid");
     }
     return Promise.all(
-      payload
-        .map(parseTask)
-        .map((task) => (task.presentationRequired ? this.startLearningPresentation(task.publicId) : task)),
+      payload.map(parseTask).map(async (task) => {
+        if (!task.presentationRequired) {
+          return task;
+        }
+        const presented = await this.startLearningPresentation(task.publicId);
+        return { ...presented, completed: task.completed };
+      }),
     );
   }
 
   /** 한 논리 문제의 표시 방식과 객관식 보기 순서를 서버에 고정한다. */
-  async startLearningPresentation(taskPublicId: string): Promise<BackendLearningTask> {
+  async startLearningPresentation(
+    taskPublicId: string,
+    preferredPresentationType?: "CODE" | "MULTIPLE_CHOICE",
+  ): Promise<BackendLearningTask> {
     const payload = asRecord(
       await this.request("/api/v1/attempts/presentations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task_public_id: taskPublicId }),
+        body: JSON.stringify({
+          task_public_id: taskPublicId,
+          preferred_presentation_type: preferredPresentationType,
+        }),
       }),
     );
     const task = parseTask(payload.task);
