@@ -5,7 +5,7 @@ import type { GameSettings, GameState } from "../../domain/room";
 import { CanvasButton } from "../components/CanvasButton";
 import { createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
 import { textStyle } from "../config";
-import { profileImagePresentation } from "../presentation/profileImage";
+import { cachedProfileImageTexture, profileImagePresentation } from "../presentation/profileImage";
 
 type SettingsSection = "account" | "sound";
 type SettingsPageMode = "settings" | "account";
@@ -99,10 +99,9 @@ export class SettingsPage extends Container {
 
   private renderAccount(): void {
     this.addCard(70, 225, 600, 125);
-    const profile = profileImagePresentation(this.options.profileImageUrl);
-    const portrait = this.options.profileImageUrl
-      ? Sprite.from(this.options.profileImageUrl)
-      : new Sprite(this.options.fallbackProfileTexture);
+    const profileTexture = cachedProfileImageTexture(this.options.profileImageUrl);
+    const profile = profileImagePresentation(profileTexture ? this.options.profileImageUrl : null);
+    const portrait = new Sprite(profileTexture ?? this.options.fallbackProfileTexture);
     portrait.anchor.set(0.5);
     portrait.width = 78;
     portrait.height = 78;

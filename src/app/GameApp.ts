@@ -6,6 +6,7 @@ import type { GameClient } from "../core/GameClient";
 import { type CatVariant, catVariants } from "../domain/cats";
 import type { CatAnimationLibrary, CatAnimationSet } from "../game/entities/CatAnimations";
 import type { ForestArt } from "../game/forest/ForestArt";
+import { loadProfileImageTexture } from "../game/presentation/profileImage";
 import { type AuthMode, AuthScene, type AuthSubmitResult } from "../game/scenes/AuthScene";
 import { HomeScene } from "../game/scenes/HomeScene";
 import { LoadingScene } from "../game/scenes/LoadingScene";
@@ -165,7 +166,10 @@ export class GameApp {
     const playerProfile = gameClient.getPlayerProfile();
     if (profileImageUrl) {
       try {
-        await Assets.load(profileImageUrl);
+        const profileTexture = await loadProfileImageTexture(profileImageUrl);
+        if (!profileTexture) {
+          throw new Error("Profile image response did not produce a texture");
+        }
       } catch (error) {
         console.warn("Student profile image could not be loaded", error);
         profileImageUrl = null;
