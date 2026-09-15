@@ -3,6 +3,8 @@ import { join } from "node:path";
 import { chromium } from "playwright";
 
 const screenshotPath = (name) => join(tmpdir(), name);
+const gameUrl = new URL(process.env.GAME_URL ?? "http://127.0.0.1:5173/");
+gameUrl.searchParams.set("previewAllCats", "0");
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
 const errors = [];
@@ -18,14 +20,15 @@ page.on("console", (message) => {
 });
 page.on("pageerror", (error) => errors.push(`page: ${error.message}`));
 
-await page.goto(process.env.GAME_URL ?? "http://127.0.0.1:5173/", { waitUntil: "domcontentloaded" });
+await page.goto(gameUrl.toString(), { waitUntil: "domcontentloaded" });
 await page.locator("canvas").waitFor({ state: "visible" });
 await page.waitForTimeout(800);
 await page.screenshot({ path: screenshotPath("cat-game-loading.png") });
 await page.waitForTimeout(1200);
 await page.screenshot({ path: screenshotPath("cat-game-loading-tip.png") });
-await page.waitForLoadState("networkidle");
-await page.waitForTimeout(2600);
+await page.waitForFunction(() => document.documentElement.dataset.gameReady === "ready", undefined, {
+  timeout: 120_000,
+});
 
 const canvas = page.locator("canvas");
 const box = await canvas.boundingBox();
@@ -172,8 +175,20 @@ await page.mouse.click(1200, 265);
 await page.mouse.click(680, 395);
 await page.waitForTimeout(150);
 await page.screenshot({ path: screenshotPath("cat-game-study-task.png") });
-await page.mouse.click(800, 524);
-await page.waitForTimeout(200);
+for (let attempt = 0; attempt < 4; attempt += 1) {
+  await page.mouse.click(800, 398);
+  await page.waitForTimeout(250);
+  const quizCompleted = await page.evaluate(() => {
+    const saved = localStorage.getItem("cozy-code-cat-room-v1");
+    return saved ? JSON.parse(saved).completedQuizIds?.length > 0 : false;
+  });
+  if (quizCompleted) {
+    break;
+  }
+  if (attempt === 3) {
+    throw new Error("quiz answer did not reach the game client");
+  }
+}
 await page.screenshot({ path: screenshotPath("cat-game-study-feedback.png") });
 await page.mouse.click(800, 510);
 await page.waitForTimeout(150);
@@ -184,14 +199,23 @@ await page.mouse.click(1194, 820);
 await page.waitForTimeout(150);
 await page.mouse.click(640, 697);
 await page.waitForTimeout(150);
+<<<<<<< HEAD
 await page.mouse.click(1450, 569);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-study-code.png") });
+=======
+await page.mouse.click(1450, 665);
+>>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
 const codeEditor = page.locator(".nyang-code-editor-overlay .cm-content");
 await codeEditor.waitFor({ state: "visible" });
+const initialCode = await codeEditor.textContent();
+if (!initialCode?.includes("def sum_to(n):")) {
+  throw new Error(`code editor did not preload the full function: ${JSON.stringify(initialCode)}`);
+}
+await page.screenshot({ path: screenshotPath("cat-game-study-code.png") });
 await codeEditor.click();
 await page.keyboard.press("Control+A");
-await page.keyboard.type("    return 0");
+await page.keyboard.type("def sum_to(n):\n    return 0");
 await page.mouse.click(1380, 780);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-study-code-failed.png") });
@@ -201,7 +225,7 @@ await page.screenshot({ path: screenshotPath("cat-game-study-code-restored.png")
 await codeEditor.waitFor({ state: "visible" });
 await codeEditor.click();
 await page.keyboard.press("Control+A");
-await page.keyboard.type("    return n * (n + 1) // 2");
+await page.keyboard.type("def sum_to(n):\n    return n * (n + 1) // 2");
 await page.mouse.click(294, 601);
 await page.waitForTimeout(100);
 await page.screenshot({ path: screenshotPath("cat-game-study-hint-2.png") });
@@ -308,7 +332,15 @@ await page.waitForTimeout(200);
 await page.mouse.click(900, 218);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-owned-wallpaper.png") });
+await page.mouse.click(850, 423);
+await page.waitForTimeout(150);
 await page.mouse.click(432, 423);
+await page.waitForTimeout(150);
+const defaultBackgroundState = JSON.parse(await page.evaluate(() => localStorage.getItem("cozy-code-cat-room-v1")));
+if (defaultBackgroundState.activeWallpaper !== null) {
+  throw new Error("default background did not clear the active wallpaper");
+}
+await page.mouse.click(850, 423);
 await page.waitForTimeout(150);
 await page.mouse.click(285, 218);
 await page.waitForTimeout(200);

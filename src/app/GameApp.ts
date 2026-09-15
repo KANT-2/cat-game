@@ -133,6 +133,10 @@ export class GameApp {
         ink: requireAnimations("ink"),
         siamese: requireAnimations("siamese"),
         tabby: requireAnimations("tabby"),
+        silver: requireAnimations("silver"),
+        calico: requireAnimations("calico"),
+        tuxedo: requireAnimations("tuxedo"),
+        fold: requireAnimations("fold"),
       };
       forestArt = await loadForestArt(assetCatalog, gameClient.getSnapshot().activeWallpaper);
       loading.setProgress(0.98);
@@ -145,6 +149,7 @@ export class GameApp {
       profile: assetPath(assetCatalog, "ui.home.profile.02"),
       study: assetPath(assetCatalog, "ui.home.study.02"),
       dailyQuest: assetPath(assetCatalog, "ui.home.daily-quest.02"),
+      attendance: assetPath(assetCatalog, "ui.home.attendance.01"),
       gacha: assetPath(assetCatalog, "ui.home.gacha.02"),
       home: assetPath(assetCatalog, "ui.home.house.02"),
       settings: assetPath(assetCatalog, "ui.home.settings.02"),
@@ -156,6 +161,16 @@ export class GameApp {
       gachaMachine: assetPath(assetCatalog, "ui.scene.gacha-machine-cutout.01"),
     };
     await Assets.load(Object.values(iconSources));
+    let profileImageUrl = gameClient.getProfileImageUrl();
+    const playerProfile = gameClient.getPlayerProfile();
+    if (profileImageUrl) {
+      try {
+        await Assets.load(profileImageUrl);
+      } catch (error) {
+        console.warn("Student profile image could not be loaded", error);
+        profileImageUrl = null;
+      }
+    }
     const codeEditorFactory = new CodeMirrorEditorOverlayFactory(mount);
     const textInputFactory = new BrowserTextInputBridgeFactory(mount);
     const home = new HomeScene(
@@ -165,6 +180,8 @@ export class GameApp {
       forestArt,
       codeEditorFactory,
       textInputFactory,
+      profileImageUrl,
+      playerProfile,
       gameSession
         ? async () => {
             try {
@@ -192,7 +209,11 @@ export class GameApp {
     renderer.stage.removeChild(loading);
     loading.destroy({ children: true });
 
+<<<<<<< HEAD
     renderer.renderer.on("resize", () => game.layout());
+=======
+    window.addEventListener("resize", () => window.requestAnimationFrame(() => game.layout()));
+>>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
     window.removeEventListener("offline", rememberOffline);
     if (gameSession) {
       gameSession.onExpired(() => window.location.reload());

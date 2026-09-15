@@ -7,13 +7,15 @@ import type {
   GameText,
   QuizAnswerResult,
   QuizView,
+  StudyMasteryView,
   StudyTaskView,
+  StudyTierView,
 } from "../../core/GameClient";
 import type { StudyConcept, StudyDifficulty, StudyTaskType } from "../../domain/study";
 import { BackButton } from "../components/BackButton";
-import { CanvasButton } from "../components/CanvasButton";
+import { CanvasButton, fitWrappedTextHeight } from "../components/CanvasButton";
 import { createCozyPageBackground, createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
-import { createCoinAmount } from "../components/CurrencyBar";
+import { createCoinAmount, createCurrencyBar } from "../components/CurrencyBar";
 import { layoutToFillViewport } from "../components/fullscreenLayout";
 import { StudySubjectButton } from "../components/StudyLandingUi";
 import { applySmoothTextureSampling } from "../components/smoothSprite";
@@ -43,14 +45,25 @@ const subjectColors: Record<StudySubject, number> = {
 const subjectPageSize = 3;
 
 type FeedbackTest = { label: string; passed: boolean };
+type LearningDomain = "PYTHON" | "SQL";
+type LearningDomainChange = { learningDomain: LearningDomain; tasks: StudyTaskView[] };
 
 type StudyModalOptions = {
   tasks: StudyTaskView[];
+<<<<<<< HEAD
   mascot: string;
+=======
+  learningDomain: LearningDomain;
+  getMastery: () => StudyMasteryView;
+  getTier: () => StudyTierView;
+  getCoins: () => number;
+  onPrepareTask: (taskId: string) => Awaitable<StudyTaskView | null>;
+>>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
   getQuiz: (quizId: string) => QuizView | null;
   getCodeChallenge: (challengeId: string) => CodeChallengeView | null;
   onAnswer: (quizId: string, choiceId: string) => Awaitable<QuizAnswerResult>;
-  onSubmitCode: (challengeId: string, body: string, hintsUsed: number) => Awaitable<CodeSubmissionResult>;
+  onSubmitCode: (challengeId: string, code: string, hintsUsed: number) => Awaitable<CodeSubmissionResult>;
+  onChangeLearningDomain: (learningDomain: LearningDomain) => Awaitable<LearningDomainChange>;
   onClose: () => void;
   backIcon: string;
   coinIcon: string;
@@ -73,6 +86,24 @@ const conceptMessages: Record<StudyConcept, MessageId> = {
   other: "study.conceptOther",
 };
 
+const masteryConceptMessages: Record<string, MessageId> = {
+  basics: "study.masteryConceptBasics",
+  conditionals: "study.masteryConceptConditionals",
+  loops: "study.masteryConceptLoops",
+  strings: "study.masteryConceptStrings",
+  collections: "study.masteryConceptCollections",
+  functions: "study.masteryConceptFunctions",
+  exceptions: "study.masteryConceptExceptions",
+  filtering: "study.masteryConceptFiltering",
+  aggregation: "study.masteryConceptAggregation",
+  joins: "study.masteryConceptJoins",
+  subqueries: "study.masteryConceptSubqueries",
+  advanced_queries: "study.masteryConceptAdvancedQueries",
+  data_manipulation: "study.masteryConceptDataManipulation",
+  schema: "study.masteryConceptSchema",
+  transactions: "study.masteryConceptTransactions",
+};
+
 const difficultyMessages: Record<
   StudyDifficulty,
   "study.filterBasic" | "study.filterApplied" | "study.filterChallenge"
@@ -82,7 +113,7 @@ const difficultyMessages: Record<
   challenge: "study.filterChallenge",
 };
 
-/** 학습 대시보드와 퀴즈·함수 작성형 풀이 화면을 한 Canvas 장면에서 전환한다. */
+/** 학습 대시보드와 퀴즈·코드 작성 풀이 화면을 한 Canvas 장면에서 전환한다. */
 export class StudyModal extends Container {
   private readonly background = new Graphics();
   private readonly landingMascot: Sprite;
@@ -91,7 +122,12 @@ export class StudyModal extends Container {
   private readonly feedbackLayer = new Container();
   private readonly options: StudyModalOptions;
   private tasks: StudyTaskView[];
+<<<<<<< HEAD
   private selectedSubject: StudySubject | null = null;
+=======
+  private learningDomain: LearningDomain;
+  private domainChangePending = false;
+>>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
   private typeFilter: FilterValue<StudyTaskType> = "all";
   private conceptFilter: FilterValue<StudyConcept> = "all";
   private difficultyFilter: FilterValue<StudyDifficulty> = "all";
@@ -103,6 +139,7 @@ export class StudyModal extends Container {
   private codeEditor: CodeEditorOverlay | null = null;
   private hintsUsed = 0;
   private submissionPending = false;
+  private taskOpening = false;
 
   constructor(options: StudyModalOptions) {
     super();
@@ -112,6 +149,7 @@ export class StudyModal extends Container {
     this.landingMascot.anchor.set(0.5, 0.85);
     this.landingMascot.eventMode = "none";
     this.tasks = options.tasks.map((task) => ({ ...task }));
+    this.learningDomain = options.learningDomain;
     this.background.eventMode = "static";
     this.body.sortableChildren = true;
     this.addChild(this.background, this.page);
@@ -129,6 +167,7 @@ export class StudyModal extends Container {
 
   private renderDashboard(): void {
     this.clearBody();
+<<<<<<< HEAD
     if (!this.selectedSubject) {
       this.body.addChild(createCozyPageBackground(BASE_WIDTH, BASE_HEIGHT));
       this.buildLandingHeader();
@@ -143,11 +182,19 @@ export class StudyModal extends Container {
       this.openFilterSelect = null;
       this.renderDashboard();
     });
+=======
+    this.drawBaseHeader(message("study.dashboardTitle"), message("study.dashboardSubtitle"), this.options.onClose);
+    this.buildCurrencyBar();
+    this.buildLearningDomainSelector();
+    this.buildMasteryPanel();
+    this.buildRecommendation();
+>>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
     this.buildFilters();
     this.buildTaskList();
     this.layout(this.viewportWidth, this.viewportHeight);
   }
 
+<<<<<<< HEAD
   private buildLandingHeader(): void {
     this.landingMascot.visible = true;
     const back = new BackButton({ iconSrc: this.options.backIcon, size: 72, onPress: this.options.onClose });
@@ -205,6 +252,49 @@ export class StudyModal extends Container {
   }
 
   private drawBaseHeader(titleValue: string, subtitleValue: string | null, onBack: () => void): void {
+=======
+  private buildLearningDomainSelector(): void {
+    const label = new Text({ text: message("settings.subject"), style: textStyle(15, 0x604333, "800") });
+    label.anchor.set(1, 0.5);
+    label.position.set(1260, 51);
+    const domains: readonly LearningDomain[] = ["PYTHON", "SQL"];
+    const buttons = domains.map((domain, index) => {
+      const active = domain === this.learningDomain;
+      const button = new CanvasButton({
+        label: message(domain === "PYTHON" ? "settings.subjectPython" : "settings.subjectSql"),
+        width: 120,
+        height: 50,
+        color: active ? 0xf0ad55 : 0xe9c9a4,
+        onPress: () => void this.changeLearningDomain(domain),
+      });
+      button.position.set(1280 + index * 135, 26);
+      return button;
+    });
+    this.body.addChild(label, ...buttons);
+  }
+
+  private async changeLearningDomain(domain: LearningDomain): Promise<void> {
+    if (this.domainChangePending || domain === this.learningDomain) {
+      return;
+    }
+    this.domainChangePending = true;
+    try {
+      const result = await this.options.onChangeLearningDomain(domain);
+      this.learningDomain = result.learningDomain;
+      this.tasks = result.tasks.map((task) => ({ ...task }));
+      this.typeFilter = "all";
+      this.conceptFilter = "all";
+      this.difficultyFilter = "all";
+      this.openFilterSelect = null;
+      this.taskPage = 0;
+      this.renderDashboard();
+    } finally {
+      this.domainChangePending = false;
+    }
+  }
+
+  private drawBaseHeader(titleValue: string, subtitleValue: string, onBack: () => void): void {
+>>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
     this.body.addChild(createCozyPageBackground(BASE_WIDTH, BASE_HEIGHT));
     const back = new BackButton({ iconSrc: this.options.backIcon, size: 72, onPress: onBack });
     back.position.set(28, 24);
@@ -223,7 +313,14 @@ export class StudyModal extends Container {
     }
   }
 
+  private buildCurrencyBar(): void {
+    const currency = createCurrencyBar(this.options.coinIcon, this.options.getCoins(), 220);
+    currency.container.position.set(940, 20);
+    this.body.addChild(currency.container);
+  }
+
   private buildMasteryPanel(): void {
+<<<<<<< HEAD
     const panel = createCozyPanel(55, 125, 360, 710, { fill: 0xfff4df, border: 0xa66b43, radius: 28 });
     const title = new Text({ text: message("study.subjectMasteryTitle"), style: textStyle(23, 0x493022, "800") });
     title.anchor.set(0.5);
@@ -257,6 +354,52 @@ export class StudyModal extends Container {
       });
       value.anchor.set(1, 0);
       value.position.set(380, y);
+=======
+    const panel = createCozyPanel(45, 120, 430, 245, { fill: 0xfff7e8, border: 0xb47950, radius: 22 });
+    const title = new Text({ text: message("study.masteryTitle"), style: textStyle(21, 0x493022, "800") });
+    title.position.set(78, 142);
+    const tier = this.options.getTier();
+    const tierText = new Text({
+      text:
+        tier.nextTier === null
+          ? message("study.tierHighest", { tier: tier.currentTier })
+          : message("study.tierProgress", {
+              tier: tier.currentTier,
+              completed: tier.completed,
+              required: tier.required,
+            }),
+      style: textStyle(13, 0x744a31, "800"),
+    });
+    tierText.anchor.set(1, 0);
+    tierText.position.set(450, 147);
+    this.body.addChild(panel, title, tierText);
+    const masteryEntries = this.options.getMastery();
+    masteryEntries.forEach((entry, index) => {
+      const column = Math.floor(index / 5);
+      const row = index % 5;
+      const x = 68 + column * 202;
+      const y = 180 + row * 32;
+      const mastery = entry.proficiencyLevel;
+      const isUnassessed = entry.attempts === 0;
+      const labelId = masteryConceptMessages[entry.conceptName];
+      const label = new Text({
+        text: labelId ? message(labelId) : entry.conceptName,
+        style: textStyle(12, 0x4a3023, "700"),
+      });
+      label.position.set(x, y - 4);
+      const trackX = x + 82;
+      const track = new Graphics().roundRect(trackX, y, 73, 14, 7).fill(0xe4ccb0);
+      const fillWidth = mastery === 0 ? 0 : Math.max(6, (73 * mastery) / 100);
+      if (fillWidth > 0) {
+        track.roundRect(trackX, y, fillWidth, 14, 7).fill(entry.conceptName === "loops" ? 0xe69b4d : 0x82a768);
+      }
+      const value = new Text({
+        text: isUnassessed ? message("study.masteryUnassessed") : message("study.masteryValue", { value: mastery }),
+        style: textStyle(isUnassessed ? 12 : 14, isUnassessed ? 0x9a806e : 0x604333, "800"),
+      });
+      value.anchor.set(1, 0);
+      value.position.set(x + 194, y - 3);
+>>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
       this.body.addChild(label, track, value);
     });
     const pageCount = Math.max(1, Math.ceil(studySubjects.length / subjectPageSize));
@@ -301,6 +444,7 @@ export class StudyModal extends Container {
       text: message("study.masteryNotice"),
       style: { ...textStyle(15, 0x76533c, "600"), align: "center", wordWrap: true, wordWrapWidth: 248, lineHeight: 22 },
     });
+<<<<<<< HEAD
     notice.anchor.set(0.5);
     notice.position.set(235, 687);
     this.body.addChild(previous, page, next, noticePanel, notice);
@@ -311,6 +455,23 @@ export class StudyModal extends Container {
     const panel = createCozyPanel(445, 125, 1110, 300, { fill: 0xfff8e9, border: 0x95603d, radius: 28 });
     const heading = new Text({ text: message("study.recommendedTitle"), style: textStyle(25, 0x493022, "800") });
     heading.position.set(490, 155);
+=======
+    notice.position.set(78, 340);
+    this.body.addChild(notice);
+  }
+
+  private buildRecommendation(): void {
+    const taggedRecommendations = this.tasks.filter((task) => task.recommended);
+    const recommendationPool = taggedRecommendations.length > 0 ? taggedRecommendations : this.tasks;
+    const recommended = recommendationPool.find((task) => !task.completed) ?? recommendationPool[0];
+    if (!recommended) {
+      return;
+    }
+    const panel = createCozyPanel(500, 120, 1055, 245, { fill: 0xfff0cf, border: 0xd58438, radius: 22 });
+    const heading = new Text({ text: message("study.recommendedTitle"), style: textStyle(20, 0x5a3725, "800") });
+    heading.position.set(540, 143);
+    const badge = new Graphics().roundRect(775, 140, 150, 30, 11).fill(0xd9783c);
+>>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
     const completedCount = this.tasks.filter((task) => task.completed).length;
     const badge = new Graphics().roundRect(1360, 151, 150, 38, 19).fill(0xf2e7cf);
     if (completedCount > 0) {
@@ -358,11 +519,18 @@ export class StudyModal extends Container {
     reward?.position.set(490 + metadata.width + 20, 380);
     const start = new CanvasButton({
       label: message(recommended.completed ? "study.reviewTask" : "study.quickStart"),
+<<<<<<< HEAD
       width: 225,
       height: 62,
       fontSize: 25,
       color: 0xeeaa58,
       onPress: () => this.openTask(recommended),
+=======
+      width: 210,
+      height: 56,
+      color: 0xe99b45,
+      onPress: () => void this.openTask(recommended),
+>>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
     });
     start.position.set(1275, 346);
     this.body.addChild(title, summary, metadata);
@@ -378,7 +546,12 @@ export class StudyModal extends Container {
   }
 
   private buildFilters(): void {
+<<<<<<< HEAD
     const panel = createCozyPanel(45, 120, 1510, 112, { fill: 0xfff6e5, border: 0xb68a61, radius: 18 });
+=======
+    const tier = this.options.getTier();
+    const panel = createCozyPanel(45, 390, 1510, 112, { fill: 0xfff6e5, border: 0xb68a61, radius: 18 });
+>>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
     const title = new Text({ text: message("study.filterTitle"), style: textStyle(20, 0x493022, "800") });
     title.position.set(72, 155);
     const resultCount = new Text({
@@ -424,12 +597,14 @@ export class StudyModal extends Container {
       160,
       295,
       "study.filterDifficultyLabel",
-      [
-        ["all", "study.filterAll"],
-        ["basic", "study.filterBasic"],
-        ["applied", "study.filterApplied"],
-        ["challenge", "study.filterChallenge"],
-      ],
+      (
+        [
+          ["all", "study.filterAll"],
+          ["basic", "study.filterBasic"],
+          ["applied", "study.filterApplied"],
+          ["challenge", "study.filterChallenge"],
+        ] as const
+      ).filter(([value]) => value === "all" || tier.unlockedDifficulties.includes(value)),
       this.difficultyFilter,
       (value) => {
         this.difficultyFilter = value;
@@ -569,7 +744,7 @@ export class StudyModal extends Container {
         width: 145,
         height: 44,
         color: task.completed ? 0xa9b699 : 0xe8a451,
-        onPress: () => this.openTask(task),
+        onPress: () => void this.openTask(task),
       });
       start.position.set(x + 560, y + 112);
       this.body.addChild(card, typeBadge, type, title, summary, meta);
@@ -636,66 +811,110 @@ export class StudyModal extends Container {
     );
   }
 
-  private openTask(task: StudyTaskView): void {
-    if (task.type === "quiz") {
+  private async openTask(task: StudyTaskView): Promise<void> {
+    if (this.taskOpening) {
+      return;
+    }
+    this.taskOpening = true;
+    try {
+      const prepared = await this.options.onPrepareTask(task.id);
+      if (!prepared) {
+        return;
+      }
+      const index = this.tasks.findIndex((candidate) => candidate.id === task.id);
+      if (index >= 0) {
+        this.tasks[index] = { ...prepared };
+      }
       const quiz = this.options.getQuiz(task.id);
       if (quiz) {
         this.renderQuiz(quiz);
+        return;
       }
+      const challenge = this.options.getCodeChallenge(task.id);
+      if (challenge) {
+        this.renderCode(challenge);
+      }
+    } catch (error) {
+      console.warn("Study task preparation failed", error);
+    } finally {
+      this.taskOpening = false;
+    }
+  }
+
+  /** 재발급된 presentation은 CODE/MULTIPLE_CHOICE 중 하나로 무작위 배정되므로,
+   * 재시도 시 원래 화면과 다른 타입이 오면 실제로 발급된 타입을 그대로 열어준다.
+   */
+  private reopenQuizOrCode(taskId: string, fallback: QuizView): void {
+    const quiz = this.options.getQuiz(taskId);
+    if (quiz) {
+      this.renderQuiz(quiz);
       return;
     }
-    const challenge = this.options.getCodeChallenge(task.id);
+    const challenge = this.options.getCodeChallenge(taskId);
     if (challenge) {
       this.renderCode(challenge);
+      return;
     }
+    this.renderQuiz(fallback);
+  }
+
+  private reopenCodeOrQuiz(taskId: string, fallback: CodeChallengeView, draftCode: string, hintsUsed: number): void {
+    const challenge = this.options.getCodeChallenge(taskId);
+    if (challenge) {
+      this.renderCode(challenge, draftCode, hintsUsed, true);
+      return;
+    }
+    const quiz = this.options.getQuiz(taskId);
+    if (quiz) {
+      this.renderQuiz(quiz);
+      return;
+    }
+    this.renderCode(fallback, draftCode, hintsUsed, true);
   }
 
   private renderQuiz(quiz: QuizView): void {
     this.clearBody();
     this.drawBaseHeader(resolveGameText(quiz.title), resolveGameText(quiz.summary), () => this.renderDashboard());
     const problem = createCozyPanel(70, 115, 1460, 750, { fill: 0xfff9ec, border: 0xb77a4f, radius: 28 });
-    const promptValue = resolveGameText(quiz.prompt);
-    const [firstLine, ...codeLines] = promptValue.split(/\r?\n/);
-    const prompt = new Text({ text: firstLine, style: textStyle(23, 0x493022, "800") });
-    prompt.position.set(115, 160);
-    const codeBox = new Graphics()
-      .roundRect(115, 220, 1370, 180, 16)
-      .fill(0x252b35)
-      .stroke({ color: 0x5c6674, width: 2 });
-    const code = new Text({
-      text: codeLines.join("\n").trim(),
+    const prompt = new Text({
+      text: formatStudyDetails(resolveGameText(quiz.prompt)),
       style: {
-        ...textStyle(20, 0xdce99a, "600"),
-        fontFamily: "Consolas, monospace",
-        lineHeight: 30,
+        ...textStyle(19, 0x493022, "600"),
+        lineHeight: 27,
+        breakWords: true,
         wordWrap: true,
-        wordWrapWidth: 1310,
+        wordWrapWidth: 1160,
       },
     });
-    code.position.set(145, 245);
+    prompt.position.set(115, 155);
+    fitQuizPromptText(prompt);
+    const promptBoxHeight = prompt.height + 34;
+    const promptBox = new Graphics()
+      .roundRect(95, 137, 1250, promptBoxHeight, 16)
+      .fill(0xfff3d9)
+      .stroke({ color: 0xd6ad7c, width: 2 });
+    const choiceLayout = quizChoiceLayout(prompt.y + prompt.height, quiz.choices.length);
     const choicesTitle = new Text({ text: message("study.choicesTitle"), style: textStyle(20, 0x493022, "800") });
-    choicesTitle.position.set(115, 425);
-    this.body.addChild(problem, prompt, codeBox, code, choicesTitle);
+    choicesTitle.position.set(115, choiceLayout.titleY);
+    this.body.addChild(problem, promptBox, prompt, choicesTitle);
     if (quiz.rewardCoins > 0) {
+      // Sits to the right of promptBox (which ends at x=1345), never overlapping its background.
       const reward = this.createCoinRewardBadge(quiz.rewardCoins, 125);
-      reward.position.set(1320, 145);
+      reward.position.set(1360, 137);
       this.body.addChild(reward);
     }
-    const choiceGap = 12;
-    const choiceAreaHeight = 370;
-    const choiceCount = Math.max(1, quiz.choices.length);
-    const choiceHeight = Math.min(68, Math.floor((choiceAreaHeight - choiceGap * (choiceCount - 1)) / choiceCount));
     quiz.choices.forEach((choice, index) => {
       const button = new CanvasButton({
         label: `${String.fromCharCode(65 + index)}   ${resolveGameText(choice.label)}`,
         width: 1370,
-        height: choiceHeight,
+        height: choiceLayout.height,
         fontSize: 16,
+        wrapLabel: true,
         color: 0xffefd2,
         borderColor: 0xc18a5b,
         onPress: () => this.answerQuiz(quiz, choice.id),
       });
-      button.position.set(115, 465 + index * (choiceHeight + choiceGap));
+      button.position.set(115, choiceLayout.startY + index * (choiceLayout.height + choiceLayout.gap));
       this.body.addChild(button);
     });
   }
@@ -710,23 +929,23 @@ export class StudyModal extends Container {
       result = await this.options.onAnswer(quiz.id, choiceId);
     } catch (error) {
       console.error("Quiz submission failed", error);
-      this.showFeedback(false, message("study.answerFailed"), [], () => this.renderQuiz(quiz));
+      this.showFeedback(false, message("study.answerFailed"), [], () => this.reopenQuizOrCode(quiz.id, quiz));
       return;
     } finally {
       this.submissionPending = false;
     }
     if (!result.ok) {
-      this.showFeedback(false, message("study.answerFailed"), [], () => this.renderQuiz(quiz));
+      this.showFeedback(false, message("study.answerFailed"), [], () => this.reopenQuizOrCode(quiz.id, quiz));
       return;
     }
     let detail = message(result.feedbackMessage);
-    if (result.correct && result.serverAuthoritative) {
-      detail = message("study.serverGradingComplete", { feedback: message(result.feedbackMessage) });
-    } else if (result.correct && result.firstCompletion) {
+    if (result.correct && result.firstCompletion) {
       detail = message("study.rewardAwarded", {
         feedback: message(result.feedbackMessage),
         amount: result.coinsAwarded,
       });
+    } else if (result.correct && result.serverAuthoritative) {
+      detail = message("study.rewardAlreadyClaimed", { feedback: message(result.feedbackMessage) });
     } else if (result.correct) {
       detail = message("study.rewardAlreadyClaimed", { feedback: message(result.feedbackMessage) });
     }
@@ -744,7 +963,7 @@ export class StudyModal extends Container {
 
   private renderCode(
     challenge: CodeChallengeView,
-    draftBody = challenge.starterBody,
+    draftCode = challenge.starterCode,
     initialHintsUsed = 0,
     restored = false,
   ): void {
@@ -759,31 +978,59 @@ export class StudyModal extends Container {
     problemTitle.position.set(92, 155);
     const prompt = new Text({
       text: formatStudyDetails(resolveGameText(challenge.prompt)),
-      style: { ...textStyle(16, 0x5f4434, "600"), wordWrap: true, wordWrapWidth: 420, lineHeight: 23 },
+      style: {
+        ...textStyle(16, 0x5f4434, "600"),
+        breakWords: true,
+        wordWrap: true,
+        wordWrapWidth: 420,
+        lineHeight: 23,
+      },
     });
     prompt.position.set(92, 198);
-    const examplesTitleY = Math.max(350, prompt.y + prompt.height + 18);
+    fitWrappedTextHeight(prompt, 155, 12, 16, 7);
+    const examplesTitleY = 368;
     const examplesTitle = new Text({ text: message("study.examplesTitle"), style: textStyle(20, 0x493022, "800") });
     examplesTitle.position.set(92, examplesTitleY);
-    const examplesBoxY = examplesTitleY + 38;
+    const examplesBoxY = 402;
     const examplesBox = new Graphics().roundRect(92, examplesBoxY, 425, 92, 16).fill(0xefe2ce);
     const examples = new Text({
       text: resolveGameText(challenge.examples),
-      style: { ...textStyle(16, 0x52382a, "700"), lineHeight: 27, wordWrap: true, wordWrapWidth: 365 },
+      style: {
+        ...textStyle(16, 0x52382a, "700"),
+        breakWords: true,
+        lineHeight: 27,
+        wordWrap: true,
+        wordWrapWidth: 365,
+      },
     });
     examples.position.set(118, examplesBoxY + 22);
-    const hintNoticeY = examplesBoxY + 112;
+    fitWrappedTextHeight(examples, 52, 11, 16, 7);
+    const hintNoticeY = 512;
     const hintNotice = new Text({
       text: message("study.hintRewardNotice"),
-      style: { ...textStyle(15, 0x77523d, "600"), wordWrap: true, wordWrapWidth: 420, lineHeight: 23 },
+      style: {
+        ...textStyle(15, 0x77523d, "600"),
+        breakWords: true,
+        wordWrap: true,
+        wordWrapWidth: 420,
+        lineHeight: 23,
+      },
     });
     hintNotice.position.set(92, hintNoticeY);
+    fitWrappedTextHeight(hintNotice, 46, 12, 15, 8);
     const hintText = new Text({
       text: this.formatRevealedHints(challenge, initialHintsUsed),
-      style: { ...textStyle(16, 0x4f663d, "700"), wordWrap: true, wordWrapWidth: 420, lineHeight: 25 },
+      style: {
+        ...textStyle(16, 0x4f663d, "700"),
+        breakWords: true,
+        wordWrap: true,
+        wordWrapWidth: 420,
+        lineHeight: 25,
+      },
     });
-    const hintButtonY = hintNoticeY + 67;
-    hintText.position.set(92, hintButtonY + 70);
+    const hintButtonY = 572;
+    hintText.position.set(92, 642);
+    fitWrappedTextHeight(hintText, 165, 11, 16, 9);
     const revealedHints = new Set<number>(Array.from({ length: initialHintsUsed }, (_, index) => index));
     const hintButtons = challenge.hints.map((_, index) => {
       const hintButton = new CanvasButton({
@@ -797,6 +1044,7 @@ export class StudyModal extends Container {
           }
           this.hintsUsed = revealedHints.size;
           hintText.text = this.formatRevealedHints(challenge, this.hintsUsed);
+          fitWrappedTextHeight(hintText, 165, 11, 16, 9);
         },
       });
       hintButton.position.set(92 + index * 140, hintButtonY);
@@ -808,7 +1056,7 @@ export class StudyModal extends Container {
     });
     editorTitle.position.set(625, 155);
     const editorHelp = new Text({
-      text: message(challenge.language === "sql" ? "study.sqlEditorHelp" : "study.editorHelp"),
+      text: message(editorHelpMessage(challenge.editorMode)),
       style: { ...textStyle(15, 0x76533c, "600"), wordWrap: true, wordWrapWidth: 470 },
     });
     editorHelp.position.set(625, 193);
@@ -819,8 +1067,7 @@ export class StudyModal extends Container {
     editorStatus.position.set(625, 708);
     this.codeEditor = this.options.codeEditorFactory.create({
       language: challenge.language,
-      signature: challenge.signature,
-      initialValue: draftBody,
+      initialValue: draftCode,
       ariaLabel: message("study.codeEditorAriaLabel"),
       onFocusChange: (focused) => {
         if (!editorStatus.destroyed) {
@@ -841,7 +1088,7 @@ export class StudyModal extends Container {
       fontSize: 14,
       color: 0xd9c5aa,
       onPress: () => {
-        this.codeEditor?.setValue(challenge.starterBody);
+        this.codeEditor?.setValue(challenge.starterCode);
         this.codeEditor?.focus();
         editorStatus.text = message("study.codeReset");
       },
@@ -910,16 +1157,16 @@ export class StudyModal extends Container {
     if (this.submissionPending) {
       return;
     }
-    const body = this.codeEditor?.getValue() ?? "";
+    const code = this.codeEditor?.getValue() ?? "";
     this.submissionPending = true;
     status.text = message("study.gradingInProgress");
     let result: CodeSubmissionResult;
     try {
-      result = await this.options.onSubmitCode(challenge.id, body, this.hintsUsed);
+      result = await this.options.onSubmitCode(challenge.id, code, this.hintsUsed);
     } catch (error) {
       console.error("Code submission failed", error);
       this.showFeedback(false, message("study.serverGradingUnavailable"), [], () =>
-        this.renderCode(challenge, body, this.hintsUsed, true),
+        this.reopenCodeOrQuiz(challenge.id, challenge, code, this.hintsUsed),
       );
       return;
     } finally {
@@ -930,12 +1177,16 @@ export class StudyModal extends Container {
     }
     if (!result.ok) {
       const feedback = result.reason === "empty-code" ? "study.emptyCode" : "study.serverGradingUnavailable";
-      this.showFeedback(false, message(feedback), [], () => this.renderCode(challenge, body, this.hintsUsed, true));
+      this.showFeedback(false, message(feedback), [], () =>
+        this.reopenCodeOrQuiz(challenge.id, challenge, code, this.hintsUsed),
+      );
       return;
     }
     let detail = message("study.gradingFailed");
-    if (result.passed && result.serverAuthoritative) {
-      detail = message("study.serverGradingPassed");
+    if (result.passed && result.firstCompletion) {
+      detail = `${message(result.serverAuthoritative ? "study.serverGradingPassed" : "study.gradingPassed")}\n${message("study.gradingReward", { amount: result.coinsAwarded })}`;
+    } else if (result.passed && result.serverAuthoritative) {
+      detail = message("study.rewardAlreadyClaimed", { feedback: message("study.serverGradingPassed") });
     } else if (result.passed) {
       detail = `${message("study.gradingPassed")}\n${result.firstCompletion ? message("study.gradingReward", { amount: result.coinsAwarded }) : message("study.taskCompleted")}`;
     }
@@ -955,7 +1206,7 @@ export class StudyModal extends Container {
         this.renderDashboard();
         return;
       }
-      this.renderCode(challenge, body, this.hintsUsed, true);
+      this.renderCode(challenge, code, this.hintsUsed, true);
     });
   }
 
@@ -1104,6 +1355,39 @@ export class StudyModal extends Container {
   }
 }
 
+/** Shrink a wrapped quiz prompt only as much as needed to reserve space for all four choices. */
+export function fitQuizPromptText(text: Text): void {
+  const maximumHeight = 245;
+  const minimumFontSize = 14;
+  let fontSize = Number(text.style.fontSize);
+  while (text.height > maximumHeight && fontSize > minimumFontSize) {
+    fontSize -= 1;
+    text.style.fontSize = fontSize;
+    text.style.lineHeight = fontSize + 7;
+  }
+  if (text.height > maximumHeight) {
+    text.scale.set(maximumHeight / text.height);
+  }
+}
+
+/** Place quiz choices after the measured prompt and keep them inside the logical Canvas page. */
+export function quizChoiceLayout(promptBottom: number, choiceCountValue: number) {
+  const count = Math.max(1, choiceCountValue);
+  const gap = 10;
+  const titleY = promptBottom + 34;
+  const startY = titleY + 38;
+  const availableHeight = 825 - startY;
+  const height = Math.min(72, Math.floor((availableHeight - gap * (count - 1)) / count));
+  return { titleY, startY, height, gap, bottom: startY + count * height + (count - 1) * gap };
+}
+
 function resolveGameText(value: GameText): string {
   return "text" in value ? value.text : message(value.messageId);
+}
+
+function editorHelpMessage(mode: CodeChallengeView["editorMode"]): MessageId {
+  if (mode === "function") {
+    return "study.functionEditorHelp";
+  }
+  return mode === "query" ? "study.sqlEditorHelp" : "study.editorHelp";
 }

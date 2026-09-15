@@ -1,3 +1,4 @@
+import { message } from "../content/messages";
 import type {
   ApplyRoomThemeResult,
   AttendanceClaimResult,
@@ -14,15 +15,19 @@ import type {
   GachaDrawResult,
   GachaReward,
   GameClient,
+  GameSaveStatus,
   GameStateListener,
   LearningResetResult,
   MoveFurnitureCommand,
   PlacementCommand,
   PlacementResult,
+  PlayerProfileView,
   PurchaseResult,
   QuizAnswerResult,
   QuizView,
+  StudyMasteryView,
   StudyTaskView,
+  StudyTierView,
   UseConsumableResult,
 } from "../core/GameClient";
 import {
@@ -31,7 +36,11 @@ import {
   attendanceStreakBonus,
   nextAttendanceStreak,
 } from "../domain/attendance";
-import { type CatConversationTopic, catConversationMemorySummary } from "../domain/catConversation";
+import {
+  type CatConversationTopic,
+  catConversationMemorySummary,
+  classifyLocalCatChat,
+} from "../domain/catConversation";
 import type { CatVariant } from "../domain/cats";
 import { catVariants } from "../domain/cats";
 import { type DailyQuestId, dailyQuestDefinitions } from "../domain/dailyQuest";
@@ -42,49 +51,94 @@ import { type ShopItemId, shopItemDefinitions } from "../domain/shop";
 import {
   type BackendApiClient,
   BackendApiError,
+  type BackendConceptProficiency,
   type BackendGameSnapshot,
   type BackendLearningTask,
+  type BackendLearningTier,
+  type BackendUser,
 } from "./BackendApiClient";
+import { learningCardSummary, learningDescription } from "./learningDescription";
 
 /** FastAPI 상태와 명령을 권위 있게 사용하며 로컬 클라이언트는 초기 상태 형태에만 사용한다. */
 export class BackendLearningGameClient implements GameClient {
   private readonly tasks = new Map<string, BackendLearningTask>();
+  private readonly recommendedTaskIds = new Set<string>();
   private readonly listeners = new Set<GameStateListener>();
   private state: GameState;
   private dailyHasCodeCompletion: boolean;
   private stateVersion: number;
   private snapshotGeneration = 0;
   private readonly catAssetPublicIds = new Map<CatVariant, string>();
+  private mastery: StudyMasteryView;
+  private tier: StudyTierView;
+  private lastSyncedAt = new Date().toISOString();
 
   private constructor(
     local: GameClient,
     private readonly api: BackendApiClient,
-    tasks: BackendLearningTask[],
+    recommendations: BackendLearningTask[],
+    catalog: BackendLearningTask[],
     snapshot: BackendGameSnapshot,
+    proficiencies: BackendConceptProficiency[],
+    private readonly profileImageUrl: string | null,
+    private readonly playerProfile: PlayerProfileView,
   ) {
-    for (const task of tasks) {
-      this.tasks.set(task.publicId, task);
-    }
+    this.replaceStudyTasks(recommendations, catalog);
     this.state = mergeTaskProgress(mergeServerSnapshot(local.getSnapshot(), snapshot), this.tasks.values());
     this.dailyHasCodeCompletion = snapshot.dailyHasCodeCompletion;
     this.stateVersion = snapshot.stateVersion;
     this.syncCatAssetPublicIds(snapshot);
+    this.mastery = toStudyMastery(proficiencies);
+    this.tier = defaultStudyTier(snapshot.settings.learningDomain);
   }
 
   /** 서버 연결과 추천 과제 초기화를 마친 원격 학습 클라이언트를 만든다. */
   static async create(local: GameClient, api: BackendApiClient): Promise<BackendLearningGameClient> {
-    await api.connect();
-    return BackendLearningGameClient.createConnected(local, api);
+    const user = await api.connect();
+    return BackendLearningGameClient.createConnected(local, api, user);
   }
 
   /** 인증이 끝난 HTTP 어댑터에서 서버 스냅샷과 추천 과제를 병렬로 읽어 원격 클라이언트를 만든다. */
-  static async createConnected(local: GameClient, api: BackendApiClient): Promise<BackendLearningGameClient> {
-    const [tasks, snapshot] = await Promise.all([api.getLearningRecommendations(10), api.getGameSnapshot()]);
-    return new BackendLearningGameClient(local, api, tasks, snapshot);
+  static async createConnected(
+    local: GameClient,
+    api: BackendApiClient,
+    user: BackendUser | null = null,
+  ): Promise<BackendLearningGameClient> {
+    const [recommendations, snapshot, proficiencies] = await Promise.all([
+      api.getLearningRecommendations(10),
+      api.getGameSnapshot(),
+      api.getLearningProficiencies(),
+    ]);
+    const catalog = await api.getLearningTaskCatalog({ domain: snapshot.settings.learningDomain });
+    return new BackendLearningGameClient(
+      local,
+      api,
+      recommendations,
+      catalog,
+      snapshot,
+      proficiencies,
+      user?.profileImageUrl ?? null,
+      {
+        displayName: user?.username ?? null,
+        email: user?.email ?? null,
+      },
+    );
   }
 
   getSnapshot(): GameState {
     return cloneState(this.state);
+  }
+
+  getProfileImageUrl(): string | null {
+    return this.profileImageUrl;
+  }
+
+  getPlayerProfile(): PlayerProfileView {
+    return { ...this.playerProfile };
+  }
+
+  getSaveStatus(): GameSaveStatus {
+    return { savedAt: this.lastSyncedAt, destination: "server" };
   }
 
   subscribe(listener: GameStateListener): () => void {
@@ -99,14 +153,17 @@ export class BackendLearningGameClient implements GameClient {
    */
   async refreshFromServer(): Promise<boolean> {
     const generation = this.snapshotGeneration;
-    const [tasks, snapshot] = await Promise.all([this.api.getLearningRecommendations(10), this.api.getGameSnapshot()]);
+    const [recommendations, snapshot, proficiencies] = await Promise.all([
+      this.api.getLearningRecommendations(10),
+      this.api.getGameSnapshot(),
+      this.api.getLearningProficiencies(),
+    ]);
+    const catalog = await this.api.getLearningTaskCatalog({ domain: snapshot.settings.learningDomain });
     if (generation !== this.snapshotGeneration || snapshot.stateVersion < this.stateVersion) {
       return false;
     }
-    this.tasks.clear();
-    for (const task of tasks) {
-      this.tasks.set(task.publicId, task);
-    }
+    this.replaceStudyTasks(recommendations, catalog);
+    this.mastery = toStudyMastery(proficiencies);
     this.applyServerSnapshot(snapshot);
     return true;
   }
@@ -189,7 +246,16 @@ export class BackendLearningGameClient implements GameClient {
     }
   }
 
-  async applyRoomTheme(itemId: ShopItemId): Promise<ApplyRoomThemeResult> {
+  async applyRoomTheme(itemId: ShopItemId | null): Promise<ApplyRoomThemeResult> {
+    if (itemId === null) {
+      try {
+        const mutation = await this.api.applyGameTheme(null);
+        this.applyServerSnapshot(mutation.snapshot);
+        return { ok: true, itemId: null, itemType: "wallpaper" };
+      } catch {
+        return { ok: false, reason: "server-unavailable" };
+      }
+    }
     const item = shopItemDefinitions[itemId];
     if (item.kind !== "wallpaper" && item.kind !== "floor") {
       return { ok: false, reason: "not-theme" };
@@ -213,6 +279,9 @@ export class BackendLearningGameClient implements GameClient {
       this.applyServerSnapshot(mutation.snapshot);
       return { ok: true, rewards, remainingCoins: mutation.snapshot.balance };
     } catch (error) {
+      if (isBackendReason(error, "resource-not-found")) {
+        return { ok: false, reason: "catalog-updating" };
+      }
       return {
         ok: false,
         reason: isBackendReason(error, "insufficient-coins") ? "insufficient-coins" : "server-unavailable",
@@ -254,8 +323,8 @@ export class BackendLearningGameClient implements GameClient {
     return {
       id: task.publicId,
       title: { text: cleanTaskTitle(task.title) },
-      summary: { text: task.description },
-      prompt: { text: task.description },
+      summary: { text: learningCardSummary(task.description) },
+      prompt: { text: learningDescription(task.description) },
       choices: Object.entries(task.options).map(([id, text]) => ({ id, label: { text } })),
       rewardCoins: task.rewardCoins,
       completed: task.completed,
@@ -271,13 +340,28 @@ export class BackendLearningGameClient implements GameClient {
       return { ok: false, reason: "choice-not-found" };
     }
     try {
-      const attempt = await this.api.grade({ taskPublicId: quizId, selectedOption: choiceId, usedHint: false });
+      const attempt = await this.api.grade({
+        requestId: createRequestId(),
+        taskPublicId: quizId,
+        presentationPublicId: task.presentationPublicId ?? undefined,
+        selectedOption: choiceId,
+        usedHint: false,
+      });
       if (attempt.status !== "COMPLETED" || attempt.correct === null) {
+        await this.refreshTaskPresentation(quizId, "MULTIPLE_CHOICE");
         return { ok: false, reason: "grading-failed" };
       }
       if (attempt.correct) {
         task.completed = true;
-        this.applyServerSnapshot(await this.api.getGameSnapshot());
+        const [snapshot, proficiencies, tier] = await Promise.all([
+          this.api.getGameSnapshot(),
+          this.api.getLearningProficiencies(),
+          this.api.getLearningTier(),
+        ]);
+        this.mastery = toStudyMastery(proficiencies);
+        this.tier = toStudyTier(tier);
+        this.applyServerSnapshot(snapshot);
+        await this.refreshTaskPresentation(quizId, "MULTIPLE_CHOICE");
       }
       return {
         ok: true,
@@ -289,12 +373,62 @@ export class BackendLearningGameClient implements GameClient {
       };
     } catch (error) {
       console.warn("Backend quiz grading failed", error);
+      await this.refreshTaskPresentation(quizId, "MULTIPLE_CHOICE");
       return { ok: false, reason: "server-unavailable" };
     }
   }
 
+  /** 채점 완료·실패 뒤 재시도가 소모된 presentation을 재사용하지 않도록 새로 발급받는다.
+   *
+   * @remarks 서버는 활성 presentation이 남아있으면 그대로 재사용하므로 오답 재시도에는 영향이 없다.
+   */
+  private async refreshTaskPresentation(
+    taskId: string,
+    preferredPresentationType: "CODE" | "MULTIPLE_CHOICE",
+  ): Promise<void> {
+    const task = this.tasks.get(taskId);
+    if (!task?.presentationPublicId) {
+      return;
+    }
+    try {
+      const refreshed = await this.api.startLearningPresentation(taskId, preferredPresentationType);
+      this.tasks.set(taskId, { ...refreshed, completed: task.completed });
+    } catch (error) {
+      console.warn("Backend task presentation refresh failed", error);
+    }
+  }
+
   getStudyTasks(): StudyTaskView[] {
-    return [...this.tasks.values()].map(toStudyTaskView);
+    return [...this.tasks.values()].map((task) => ({
+      ...toStudyTaskView(task),
+      recommended: this.recommendedTaskIds.has(task.publicId),
+    }));
+  }
+
+  async prepareStudy(): Promise<void> {
+    const [, tier] = await Promise.all([this.refreshFromServer(), this.api.getLearningTier()]);
+    this.tier = toStudyTier(tier);
+  }
+
+  async prepareStudyTask(taskId: string): Promise<StudyTaskView | null> {
+    const task = this.tasks.get(taskId);
+    if (!task) {
+      return null;
+    }
+    if (task.presentationRequired) {
+      const presented = await this.api.startLearningPresentation(taskId);
+      this.tasks.set(taskId, { ...presented, completed: task.completed });
+    }
+    const prepared = this.tasks.get(taskId);
+    return prepared ? { ...toStudyTaskView(prepared), recommended: this.recommendedTaskIds.has(taskId) } : null;
+  }
+
+  getStudyMastery(): StudyMasteryView {
+    return this.mastery.map((entry) => ({ ...entry }));
+  }
+
+  getStudyTier(): StudyTierView {
+    return { ...this.tier, unlockedDifficulties: [...this.tier.unlockedDifficulties] };
   }
 
   getCodeChallenge(challengeId: string): CodeChallengeView | null {
@@ -309,36 +443,64 @@ export class BackendLearningGameClient implements GameClient {
     return {
       ...toStudyTaskView(task),
       type: "code",
+<<<<<<< HEAD
       language,
       prompt: { text: task.description },
       signature: "",
       starterBody: task.templateCode,
       examples: { messageId: "study.serverExamples" },
       hints: task.hintText ? [{ text: task.hintText }] : [],
+=======
+      language: task.domain === "SQL" ? "sql" : "python",
+      editorMode: task.domain === "SQL" ? "query" : "program",
+      prompt: { text: learningDescription(task.description) },
+      starterCode: task.templateCode,
+      examples: task.publicExample
+        ? {
+            text: message("study.publicExample", {
+              input: task.publicExample.input.replace(/\n/g, " / "),
+              output: task.publicExample.output.replace(/\n/g, " / "),
+            }),
+          }
+        : { messageId: "study.serverExamples" },
+      hints: splitHintSteps(task.hintText).map((text) => ({ text })),
+>>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
       bonusCoins: 0,
     };
   }
 
-  async submitCodeChallenge(challengeId: string, body: string, hintsUsed: number): Promise<CodeSubmissionResult> {
+  async submitCodeChallenge(challengeId: string, code: string, hintsUsed: number): Promise<CodeSubmissionResult> {
     const task = this.tasks.get(challengeId);
     if (task?.type !== "CODE") {
       return { ok: false, reason: "challenge-not-found" };
     }
-    if (!body.trim()) {
+    if (!code.trim()) {
       return { ok: false, reason: "empty-code" };
     }
+    const submittedCode = task.domain === "SQL" ? normalizeSqlWhitespace(code) : code;
     try {
       const attempt = await this.api.grade({
+        requestId: createRequestId(),
         taskPublicId: challengeId,
-        submittedCode: body,
+        presentationPublicId: task.presentationPublicId ?? undefined,
+        submittedCode,
         usedHint: hintsUsed > 0,
       });
       if (attempt.status !== "COMPLETED" || attempt.correct === null) {
+        await this.refreshTaskPresentation(challengeId, "CODE");
         return { ok: false, reason: "grading-failed" };
       }
       if (attempt.correct) {
         task.completed = true;
-        this.applyServerSnapshot(await this.api.getGameSnapshot());
+        const [snapshot, proficiencies, tier] = await Promise.all([
+          this.api.getGameSnapshot(),
+          this.api.getLearningProficiencies(),
+          this.api.getLearningTier(),
+        ]);
+        this.mastery = toStudyMastery(proficiencies);
+        this.tier = toStudyTier(tier);
+        this.applyServerSnapshot(snapshot);
+        await this.refreshTaskPresentation(challengeId, "CODE");
       }
       return {
         ok: true,
@@ -350,6 +512,7 @@ export class BackendLearningGameClient implements GameClient {
       };
     } catch (error) {
       console.warn("Backend code grading failed", error);
+      await this.refreshTaskPresentation(challengeId, "CODE");
       return { ok: false, reason: "server-unavailable" };
     }
   }
@@ -411,7 +574,7 @@ export class BackendLearningGameClient implements GameClient {
   }
 
   getAttendance(): AttendanceView {
-    const today = utcDateStamp(new Date());
+    const today = gameDateStamp(new Date());
     const canClaim = this.state.attendanceLastClaimDate !== today;
     const nextStreak = nextAttendanceStreak(this.state.attendanceLastClaimDate, this.state.attendanceStreak, today);
     const streakBonus = canClaim ? attendanceStreakBonus(nextStreak) : 0;
@@ -452,11 +615,15 @@ export class BackendLearningGameClient implements GameClient {
   async resetLearningProgress(): Promise<LearningResetResult> {
     try {
       const mutation = await this.api.resetGameLearning();
-      const tasks = await this.api.getLearningRecommendations(10);
-      this.tasks.clear();
-      for (const task of tasks) {
-        this.tasks.set(task.publicId, task);
-      }
+      const [recommendations, catalog, proficiencies, tier] = await Promise.all([
+        this.api.getLearningRecommendations(10),
+        this.api.getLearningTaskCatalog({ domain: mutation.snapshot.settings.learningDomain }),
+        this.api.getLearningProficiencies(),
+        this.api.getLearningTier(),
+      ]);
+      this.replaceStudyTasks(recommendations, catalog);
+      this.mastery = toStudyMastery(proficiencies);
+      this.tier = toStudyTier(tier);
       this.applyServerSnapshot(mutation.snapshot);
       return { ok: true };
     } catch (error) {
@@ -471,6 +638,25 @@ export class BackendLearningGameClient implements GameClient {
       this.applyServerSnapshot(mutation.snapshot);
       return { ok: true, removed: readResultNumber(mutation.result, "removed") };
     } catch (error) {
+      console.warn("Backend cat memory clear failed", error);
+      return { ok: false, reason: "server-unavailable" };
+    }
+  }
+
+  async clearCatMemory(catVariant: CatVariant): Promise<CatMemoryClearResult> {
+    const catAssetPublicId = this.catAssetPublicIds.get(catVariant);
+    if (!catAssetPublicId) {
+      return { ok: false, reason: "cat-not-owned" };
+    }
+    const removed = this.state.catMemories[catVariant]?.length ?? 0;
+    try {
+      await this.api.clearCatMemories(catAssetPublicId);
+      this.applyServerSnapshot(await this.api.getGameSnapshot());
+      return { ok: true, removed };
+    } catch (error) {
+      if (error instanceof BackendApiError && error.status === 404) {
+        return { ok: false, reason: "cat-not-owned" };
+      }
       console.warn("Backend cat memory clear failed", error);
       return { ok: false, reason: "server-unavailable" };
     }
@@ -499,7 +685,11 @@ export class BackendLearningGameClient implements GameClient {
     }
   }
 
-  async chatWithCat(catVariant: CatVariant, userMessage: string): Promise<CatFreeConversationResult> {
+  async chatWithCat(
+    catVariant: CatVariant,
+    userMessage: string,
+    recentMessages = [] as readonly import("../core/GameClient").CatChatMessage[],
+  ): Promise<CatFreeConversationResult> {
     if (!userMessage.trim()) {
       return { ok: false, reason: "empty-message" };
     }
@@ -508,7 +698,7 @@ export class BackendLearningGameClient implements GameClient {
       return { ok: false, reason: "cat-not-owned" };
     }
     try {
-      const chat = await this.api.chatWithCat(catAssetPublicId, userMessage.slice(0, 240));
+      const chat = await this.api.chatWithCat(catAssetPublicId, userMessage.slice(0, 240), recentMessages);
       if (chat.remembered) {
         this.applyServerSnapshot(await this.api.getGameSnapshot());
       }
@@ -516,8 +706,8 @@ export class BackendLearningGameClient implements GameClient {
         ok: true,
         catVariant,
         reply: { text: chat.reply },
-        category: chat.category,
-        memoryCount: chat.memoryCount,
+        category: classifyLocalCatChat(userMessage),
+        memoryCount: this.state.catMemories[catVariant]?.length ?? 0,
         remembered: chat.remembered,
       };
     } catch (error) {
@@ -531,12 +721,41 @@ export class BackendLearningGameClient implements GameClient {
 
   async updateSettings(patch: Partial<GameSettings>): Promise<GameSettings> {
     try {
+      const learningDomainChanged =
+        patch.learningDomain !== undefined && patch.learningDomain !== this.state.settings.learningDomain;
       const mutation = await this.api.updateGameSettings(patch);
       this.applyServerSnapshot(mutation.snapshot);
+      if (learningDomainChanged) {
+        const [recommendations, catalog, proficiencies, tier] = await Promise.all([
+          this.api.getLearningRecommendations(10),
+          this.api.getLearningTaskCatalog({ domain: mutation.snapshot.settings.learningDomain }),
+          this.api.getLearningProficiencies(),
+          this.api.getLearningTier(),
+        ]);
+        this.replaceStudyTasks(recommendations, catalog);
+        this.mastery = toStudyMastery(proficiencies);
+        this.tier = toStudyTier(tier);
+        this.state = mergeTaskProgress(this.state, this.tasks.values());
+        this.emit();
+      }
     } catch (error) {
       console.warn("Backend settings update failed", error);
     }
     return { ...this.state.settings };
+  }
+
+  private replaceStudyTasks(recommendations: BackendLearningTask[], catalog: BackendLearningTask[]): void {
+    this.tasks.clear();
+    this.recommendedTaskIds.clear();
+    for (const task of recommendations) {
+      this.tasks.set(task.publicId, task);
+      this.recommendedTaskIds.add(task.publicId);
+    }
+    for (const task of catalog) {
+      if (!this.tasks.has(task.publicId)) {
+        this.tasks.set(task.publicId, task);
+      }
+    }
   }
 
   private applyServerSnapshot(snapshot: BackendGameSnapshot): void {
@@ -548,6 +767,7 @@ export class BackendLearningGameClient implements GameClient {
     this.stateVersion = snapshot.stateVersion;
     this.syncCatAssetPublicIds(snapshot);
     this.snapshotGeneration += 1;
+    this.lastSyncedAt = new Date().toISOString();
     this.emit();
   }
 
@@ -574,6 +794,10 @@ export class BackendLearningGameClient implements GameClient {
       listener(snapshot);
     }
   }
+}
+
+function normalizeSqlWhitespace(source: string): string {
+  return source.replaceAll("\u00a0", " ");
 }
 
 const canonicalItemIds: Record<FurnitureKind, ShopItemId> = {
@@ -804,8 +1028,15 @@ function readResultNumber(result: Record<string, unknown>, key: string): number 
   return value;
 }
 
-function utcDateStamp(value: Date): string {
-  return value.toISOString().slice(0, 10);
+export function gameDateStamp(value: Date): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(value);
+  const read = (type: Intl.DateTimeFormatPartTypes): string => parts.find((part) => part.type === type)?.value ?? "";
+  return `${read("year")}-${read("month")}-${read("day")}`;
 }
 
 function toStudyTaskView(task: BackendLearningTask): StudyTaskView {
@@ -816,12 +1047,13 @@ function toStudyTaskView(task: BackendLearningTask): StudyTaskView {
     concept: mapConcept(task.conceptName),
     difficulty: mapDifficulty(task.difficulty),
     title: { text: cleanTaskTitle(task.title) },
-    summary: { text: task.description },
+    summary: { text: learningCardSummary(task.description) },
     rewardCoins: task.rewardCoins,
     completed: task.completed,
   };
 }
 
+<<<<<<< HEAD
 function mapStudyLanguage(domain: BackendLearningTask["domain"]): StudyTaskView["language"] {
   if (domain === "SQL") {
     return "sql";
@@ -830,6 +1062,15 @@ function mapStudyLanguage(domain: BackendLearningTask["domain"]): StudyTaskView[
     return "machine-learning";
   }
   return "python";
+=======
+function splitHintSteps(hintText: string | null): string[] {
+  return hintText
+    ? hintText
+        .split(/\r?\n/)
+        .map((step) => step.trim())
+        .filter(Boolean)
+    : [];
+>>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
 }
 
 function mapConcept(value: string): StudyTaskView["concept"] {
@@ -838,6 +1079,38 @@ function mapConcept(value: string): StudyTaskView["concept"] {
     return name;
   }
   return "other";
+}
+
+function toStudyMastery(proficiencies: BackendConceptProficiency[]): StudyMasteryView {
+  return proficiencies.map((proficiency) => ({
+    conceptName: proficiency.conceptName,
+    attempts: proficiency.attempts,
+    proficiencyLevel: proficiency.proficiencyLevel,
+  }));
+}
+
+function toStudyTier(tier: BackendLearningTier): StudyTierView {
+  return {
+    domain: tier.domain,
+    currentTier: tier.currentTier,
+    unlockedDifficulties: tier.unlockedDifficulties.map(mapDifficulty),
+    nextTier: tier.nextTier,
+    completed: tier.completed,
+    total: tier.total,
+    required: tier.required,
+  };
+}
+
+function defaultStudyTier(domain: "PYTHON" | "SQL"): StudyTierView {
+  return {
+    domain,
+    currentTier: "BRONZE",
+    unlockedDifficulties: ["basic"],
+    nextTier: "SILVER",
+    completed: 0,
+    total: 50,
+    required: 40,
+  };
 }
 
 function mapDifficulty(value: BackendLearningTask["difficulty"]): StudyTaskView["difficulty"] {

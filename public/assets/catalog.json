@@ -5,7 +5,7 @@
       {
         "id": "cat.fluffy.idle.01",
         "kind": "cat",
-        "src": "/assets/cats/fluffy-white/fluffy-white-idle-01.png",
+        "src": "/assets/cats/fluffy-white/fluffy-white-idle-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -20,7 +20,7 @@
       {
         "id": "cat.fluffy.walk.01",
         "kind": "cat",
-        "src": "/assets/cats/fluffy-white/fluffy-white-walk-01.png",
+        "src": "/assets/cats/fluffy-white/fluffy-white-walk-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -35,7 +35,7 @@
       {
         "id": "cat.fluffy.run.01",
         "kind": "cat",
-        "src": "/assets/cats/fluffy-white/fluffy-white-run-01.png",
+        "src": "/assets/cats/fluffy-white/fluffy-white-run-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -50,7 +50,7 @@
       {
         "id": "cat.fluffy.attack.01",
         "kind": "cat",
-        "src": "/assets/cats/fluffy-white/fluffy-white-attack-01.png",
+        "src": "/assets/cats/fluffy-white/fluffy-white-attack-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -65,7 +65,7 @@
       {
         "id": "cat.fluffy.fall.01",
         "kind": "cat",
-        "src": "/assets/cats/fluffy-white/fluffy-white-fall-01.png",
+        "src": "/assets/cats/fluffy-white/fluffy-white-fall-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -80,7 +80,7 @@
       {
         "id": "cat.fluffy.groom.01",
         "kind": "cat",
-        "src": "/assets/cats/fluffy-white/fluffy-white-groom-01.png",
+        "src": "/assets/cats/fluffy-white/fluffy-white-groom-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -95,7 +95,7 @@
       {
         "id": "cat.fluffy.hit.01",
         "kind": "cat",
-        "src": "/assets/cats/fluffy-white/fluffy-white-hit-01.png",
+        "src": "/assets/cats/fluffy-white/fluffy-white-hit-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -110,7 +110,7 @@
       {
         "id": "cat.fluffy.jump.01",
         "kind": "cat",
-        "src": "/assets/cats/fluffy-white/fluffy-white-jump-01.png",
+        "src": "/assets/cats/fluffy-white/fluffy-white-jump-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -125,7 +125,7 @@
       {
         "id": "cat.fluffy.land.01",
         "kind": "cat",
-        "src": "/assets/cats/fluffy-white/fluffy-white-land-01.png",
+        "src": "/assets/cats/fluffy-white/fluffy-white-land-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -140,7 +140,7 @@
       {
         "id": "cat.fluffy.scratch.01",
         "kind": "cat",
-        "src": "/assets/cats/fluffy-white/fluffy-white-scratch-01.png",
+        "src": "/assets/cats/fluffy-white/fluffy-white-scratch-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -155,7 +155,7 @@
       {
         "id": "cat.fluffy.sleep.01",
         "kind": "cat",
-        "src": "/assets/cats/fluffy-white/fluffy-white-sleep-01.png",
+        "src": "/assets/cats/fluffy-white/fluffy-white-sleep-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -170,7 +170,7 @@
       {
         "id": "cat.fluffy.surprise.01",
         "kind": "cat",
-        "src": "/assets/cats/fluffy-white/fluffy-white-surprise-01.png",
+        "src": "/assets/cats/fluffy-white/fluffy-white-surprise-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -185,7 +185,7 @@
       {
         "id": "cat.ink.idle.01",
         "kind": "cat",
-        "src": "/assets/cats/ink-black/ink-black-idle-01.png",
+        "src": "/assets/cats/ink-black/ink-black-idle-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -200,7 +200,7 @@
       {
         "id": "cat.ink.walk.01",
         "kind": "cat",
-        "src": "/assets/cats/ink-black/ink-black-walk-01.png",
+        "src": "/assets/cats/ink-black/ink-black-walk-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -215,7 +215,7 @@
       {
         "id": "cat.ink.run.01",
         "kind": "cat",
-        "src": "/assets/cats/ink-black/ink-black-run-01.png",
+        "src": "/assets/cats/ink-black/ink-black-run-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -230,7 +230,7 @@
       {
         "id": "cat.ink.attack.01",
         "kind": "cat",
-        "src": "/assets/cats/ink-black/ink-black-attack-01.png",
+        "src": "/assets/cats/ink-black/ink-black-attack-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -245,7 +245,7 @@
       {
         "id": "cat.ink.fall.01",
         "kind": "cat",
-        "src": "/assets/cats/ink-black/ink-black-fall-01.png",
+        "src": "/assets/cats/ink-black/ink-black-fall-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -260,7 +260,7 @@
       {
         "id": "cat.ink.groom.01",
         "kind": "cat",
-        "src": "/assets/cats/ink-black/ink-black-groom-01.png",
+        "src": "/assets/cats/ink-black/ink-black-groom-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -275,7 +275,7 @@
       {
         "id": "cat.ink.hit.01",
         "kind": "cat",
-        "src": "/assets/cats/ink-black/ink-black-hit-01.png",
+        "src": "/assets/cats/ink-black/ink-black-hit-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -290,7 +290,7 @@
       {
         "id": "cat.ink.jump.01",
         "kind": "cat",
-        "src": "/assets/cats/ink-black/ink-black-jump-01.png",
+        "src": "/assets/cats/ink-black/ink-black-jump-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -305,7 +305,7 @@
       {
         "id": "cat.ink.land.01",
         "kind": "cat",
-        "src": "/assets/cats/ink-black/ink-black-land-01.png",
+        "src": "/assets/cats/ink-black/ink-black-land-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -320,7 +320,7 @@
       {
         "id": "cat.ink.scratch.01",
         "kind": "cat",
-        "src": "/assets/cats/ink-black/ink-black-scratch-01.png",
+        "src": "/assets/cats/ink-black/ink-black-scratch-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -335,7 +335,7 @@
       {
         "id": "cat.ink.sleep.01",
         "kind": "cat",
-        "src": "/assets/cats/ink-black/ink-black-sleep-01.png",
+        "src": "/assets/cats/ink-black/ink-black-sleep-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -350,7 +350,7 @@
       {
         "id": "cat.ink.surprise.01",
         "kind": "cat",
-        "src": "/assets/cats/ink-black/ink-black-surprise-01.png",
+        "src": "/assets/cats/ink-black/ink-black-surprise-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "spriteSheet": {
           "frameWidth": 256,
@@ -365,37 +365,43 @@
       {
         "id": "ui.home.profile.02",
         "kind": "ui",
-        "src": "/assets/ui/home-menu/profile-v2.png",
+        "src": "/assets/ui/home-menu/profile-v2.webp",
         "anchor": { "x": 0.5, "y": 0.5 }
       },
       {
         "id": "ui.home.study.02",
         "kind": "ui",
-        "src": "/assets/ui/home-menu/study-v2.png",
+        "src": "/assets/ui/home-menu/study-v2.webp",
         "anchor": { "x": 0.5, "y": 0.5 }
       },
       {
         "id": "ui.home.daily-quest.02",
         "kind": "ui",
-        "src": "/assets/ui/home-menu/daily-quest-v2.png",
+        "src": "/assets/ui/home-menu/daily-quest-v2.webp",
+        "anchor": { "x": 0.5, "y": 0.5 }
+      },
+      {
+        "id": "ui.home.attendance.01",
+        "kind": "ui",
+        "src": "/assets/ui/home-menu/attendance.svg",
         "anchor": { "x": 0.5, "y": 0.5 }
       },
       {
         "id": "ui.home.gacha.02",
         "kind": "ui",
-        "src": "/assets/ui/home-menu/gacha-v2.png",
+        "src": "/assets/ui/home-menu/gacha-v2.webp",
         "anchor": { "x": 0.5, "y": 0.5 }
       },
       {
         "id": "ui.home.house.02",
         "kind": "ui",
-        "src": "/assets/ui/home-menu/home-v2.png",
+        "src": "/assets/ui/home-menu/home-v2.webp",
         "anchor": { "x": 0.5, "y": 0.5 }
       },
       {
         "id": "ui.home.settings.02",
         "kind": "ui",
-        "src": "/assets/ui/home-menu/settings-v2.png",
+        "src": "/assets/ui/home-menu/settings-v2.webp",
         "anchor": { "x": 0.5, "y": 0.5 }
       }
     ],
@@ -403,7 +409,7 @@
       {
         "id": "cat.ink.scruff-lift.01",
         "kind": "cat",
-        "src": "/assets/cats/ink-black/ink-black-scruff-lift-01.png",
+        "src": "/assets/cats/ink-black/ink-black-scruff-lift-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -425,7 +431,7 @@
       {
         "id": "cat.fluffy.scruff-lift.01",
         "kind": "cat",
-        "src": "/assets/cats/fluffy-white/fluffy-white-scruff-lift-01.png",
+        "src": "/assets/cats/fluffy-white/fluffy-white-scruff-lift-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -447,7 +453,7 @@
       {
         "id": "cat.siamese.idle.01",
         "kind": "cat",
-        "src": "/assets/cats/siamese-seal/siamese-seal-idle-01.png",
+        "src": "/assets/cats/siamese-seal/siamese-seal-idle-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -469,7 +475,7 @@
       {
         "id": "cat.siamese.walk.01",
         "kind": "cat",
-        "src": "/assets/cats/siamese-seal/siamese-seal-walk-01.png",
+        "src": "/assets/cats/siamese-seal/siamese-seal-walk-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -491,7 +497,7 @@
       {
         "id": "cat.siamese.run.01",
         "kind": "cat",
-        "src": "/assets/cats/siamese-seal/siamese-seal-run-01.png",
+        "src": "/assets/cats/siamese-seal/siamese-seal-run-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -513,7 +519,7 @@
       {
         "id": "cat.siamese.attack.01",
         "kind": "cat",
-        "src": "/assets/cats/siamese-seal/siamese-seal-attack-01.png",
+        "src": "/assets/cats/siamese-seal/siamese-seal-attack-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -535,7 +541,7 @@
       {
         "id": "cat.siamese.fall.01",
         "kind": "cat",
-        "src": "/assets/cats/siamese-seal/siamese-seal-fall-01.png",
+        "src": "/assets/cats/siamese-seal/siamese-seal-fall-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -557,7 +563,7 @@
       {
         "id": "cat.siamese.groom.01",
         "kind": "cat",
-        "src": "/assets/cats/siamese-seal/siamese-seal-groom-01.png",
+        "src": "/assets/cats/siamese-seal/siamese-seal-groom-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -579,7 +585,7 @@
       {
         "id": "cat.siamese.hit.01",
         "kind": "cat",
-        "src": "/assets/cats/siamese-seal/siamese-seal-hit-01.png",
+        "src": "/assets/cats/siamese-seal/siamese-seal-hit-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -601,7 +607,7 @@
       {
         "id": "cat.siamese.jump.01",
         "kind": "cat",
-        "src": "/assets/cats/siamese-seal/siamese-seal-jump-01.png",
+        "src": "/assets/cats/siamese-seal/siamese-seal-jump-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -623,7 +629,7 @@
       {
         "id": "cat.siamese.land.01",
         "kind": "cat",
-        "src": "/assets/cats/siamese-seal/siamese-seal-land-01.png",
+        "src": "/assets/cats/siamese-seal/siamese-seal-land-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -645,7 +651,7 @@
       {
         "id": "cat.siamese.scratch.01",
         "kind": "cat",
-        "src": "/assets/cats/siamese-seal/siamese-seal-scratch-01.png",
+        "src": "/assets/cats/siamese-seal/siamese-seal-scratch-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -667,7 +673,7 @@
       {
         "id": "cat.siamese.sleep.01",
         "kind": "cat",
-        "src": "/assets/cats/siamese-seal/siamese-seal-sleep-01.png",
+        "src": "/assets/cats/siamese-seal/siamese-seal-sleep-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -689,7 +695,7 @@
       {
         "id": "cat.siamese.surprise.01",
         "kind": "cat",
-        "src": "/assets/cats/siamese-seal/siamese-seal-surprise-01.png",
+        "src": "/assets/cats/siamese-seal/siamese-seal-surprise-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -711,7 +717,7 @@
       {
         "id": "cat.siamese.scruff-lift.01",
         "kind": "cat",
-        "src": "/assets/cats/siamese-seal/siamese-seal-scruff-lift-01.png",
+        "src": "/assets/cats/siamese-seal/siamese-seal-scruff-lift-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -733,7 +739,7 @@
       {
         "id": "cat.tabby.idle.01",
         "kind": "cat",
-        "src": "/assets/cats/orange-tabby/orange-tabby-idle-01.png",
+        "src": "/assets/cats/orange-tabby/orange-tabby-idle-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -755,7 +761,7 @@
       {
         "id": "cat.tabby.walk.01",
         "kind": "cat",
-        "src": "/assets/cats/orange-tabby/orange-tabby-walk-01.png",
+        "src": "/assets/cats/orange-tabby/orange-tabby-walk-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -777,7 +783,7 @@
       {
         "id": "cat.tabby.run.01",
         "kind": "cat",
-        "src": "/assets/cats/orange-tabby/orange-tabby-run-01.png",
+        "src": "/assets/cats/orange-tabby/orange-tabby-run-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -799,7 +805,7 @@
       {
         "id": "cat.tabby.attack.01",
         "kind": "cat",
-        "src": "/assets/cats/orange-tabby/orange-tabby-attack-01.png",
+        "src": "/assets/cats/orange-tabby/orange-tabby-attack-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -821,7 +827,7 @@
       {
         "id": "cat.tabby.fall.01",
         "kind": "cat",
-        "src": "/assets/cats/orange-tabby/orange-tabby-fall-01.png",
+        "src": "/assets/cats/orange-tabby/orange-tabby-fall-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -843,7 +849,7 @@
       {
         "id": "cat.tabby.groom.01",
         "kind": "cat",
-        "src": "/assets/cats/orange-tabby/orange-tabby-groom-01.png",
+        "src": "/assets/cats/orange-tabby/orange-tabby-groom-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -865,7 +871,7 @@
       {
         "id": "cat.tabby.hit.01",
         "kind": "cat",
-        "src": "/assets/cats/orange-tabby/orange-tabby-hit-01.png",
+        "src": "/assets/cats/orange-tabby/orange-tabby-hit-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -887,7 +893,7 @@
       {
         "id": "cat.tabby.jump.01",
         "kind": "cat",
-        "src": "/assets/cats/orange-tabby/orange-tabby-jump-01.png",
+        "src": "/assets/cats/orange-tabby/orange-tabby-jump-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -909,7 +915,7 @@
       {
         "id": "cat.tabby.land.01",
         "kind": "cat",
-        "src": "/assets/cats/orange-tabby/orange-tabby-land-01.png",
+        "src": "/assets/cats/orange-tabby/orange-tabby-land-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -931,7 +937,7 @@
       {
         "id": "cat.tabby.scratch.01",
         "kind": "cat",
-        "src": "/assets/cats/orange-tabby/orange-tabby-scratch-01.png",
+        "src": "/assets/cats/orange-tabby/orange-tabby-scratch-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -953,7 +959,7 @@
       {
         "id": "cat.tabby.sleep.01",
         "kind": "cat",
-        "src": "/assets/cats/orange-tabby/orange-tabby-sleep-01.png",
+        "src": "/assets/cats/orange-tabby/orange-tabby-sleep-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -975,7 +981,7 @@
       {
         "id": "cat.tabby.surprise.01",
         "kind": "cat",
-        "src": "/assets/cats/orange-tabby/orange-tabby-surprise-01.png",
+        "src": "/assets/cats/orange-tabby/orange-tabby-surprise-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -997,7 +1003,7 @@
       {
         "id": "cat.tabby.scruff-lift.01",
         "kind": "cat",
-        "src": "/assets/cats/orange-tabby/orange-tabby-scruff-lift-01.png",
+        "src": "/assets/cats/orange-tabby/orange-tabby-scruff-lift-01.webp",
         "anchor": {
           "x": 0.5,
           "y": 0.95
@@ -1017,6 +1023,1268 @@
         ]
       }
     ],
+    "cats-04-v2-05-08": [
+      {
+        "id": "cat.tabby-v2.idle.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby-v2/orange-tabby-v2-idle-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 74,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": [
+          "tabby",
+          "idle"
+        ]
+      },
+      {
+        "id": "cat.tabby-v2.walk.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby-v2/orange-tabby-v2-walk-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 20,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": [
+          "tabby",
+          "walk"
+        ]
+      },
+      {
+        "id": "cat.tabby-v2.run.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby-v2/orange-tabby-v2-run-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 16,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": [
+          "tabby",
+          "run"
+        ]
+      },
+      {
+        "id": "cat.tabby-v2.attack.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby-v2/orange-tabby-v2-attack-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 51,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "tabby",
+          "attack"
+        ]
+      },
+      {
+        "id": "cat.tabby-v2.fall.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby-v2/orange-tabby-v2-fall-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 23,
+          "framesPerSecond": 16,
+          "playback": "once"
+        },
+        "tags": [
+          "tabby",
+          "fall"
+        ]
+      },
+      {
+        "id": "cat.tabby-v2.groom.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby-v2/orange-tabby-v2-groom-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 71,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "tabby",
+          "groom"
+        ]
+      },
+      {
+        "id": "cat.tabby-v2.hit.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby-v2/orange-tabby-v2-hit-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 41,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "tabby",
+          "hit"
+        ]
+      },
+      {
+        "id": "cat.tabby-v2.jump.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby-v2/orange-tabby-v2-jump-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 25,
+          "framesPerSecond": 16,
+          "playback": "once"
+        },
+        "tags": [
+          "tabby",
+          "jump"
+        ]
+      },
+      {
+        "id": "cat.tabby-v2.land.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby-v2/orange-tabby-v2-land-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 53,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "tabby",
+          "land"
+        ]
+      },
+      {
+        "id": "cat.tabby-v2.scratch.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby-v2/orange-tabby-v2-scratch-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 67,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "tabby",
+          "scratch"
+        ]
+      },
+      {
+        "id": "cat.tabby-v2.sleep.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby-v2/orange-tabby-v2-sleep-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 59,
+          "framesPerSecond": 25,
+          "playback": "hold"
+        },
+        "tags": [
+          "tabby",
+          "sleep"
+        ]
+      },
+      {
+        "id": "cat.tabby-v2.surprise.01",
+        "kind": "cat",
+        "src": "/assets/cats/orange-tabby-v2/orange-tabby-v2-surprise-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 63,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "tabby",
+          "surprise"
+        ]
+      },
+      {
+        "id": "cat.silver.idle.01",
+        "kind": "cat",
+        "src": "/assets/cats/silver/silver-idle-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 74,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": [
+          "silver",
+          "idle"
+        ]
+      },
+      {
+        "id": "cat.silver.walk.01",
+        "kind": "cat",
+        "src": "/assets/cats/silver/silver-walk-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 20,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": [
+          "silver",
+          "walk"
+        ]
+      },
+      {
+        "id": "cat.silver.run.01",
+        "kind": "cat",
+        "src": "/assets/cats/silver/silver-run-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 16,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": [
+          "silver",
+          "run"
+        ]
+      },
+      {
+        "id": "cat.silver.attack.01",
+        "kind": "cat",
+        "src": "/assets/cats/silver/silver-attack-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 51,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "silver",
+          "attack"
+        ]
+      },
+      {
+        "id": "cat.silver.fall.01",
+        "kind": "cat",
+        "src": "/assets/cats/silver/silver-fall-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 23,
+          "framesPerSecond": 16,
+          "playback": "once"
+        },
+        "tags": [
+          "silver",
+          "fall"
+        ]
+      },
+      {
+        "id": "cat.silver.groom.01",
+        "kind": "cat",
+        "src": "/assets/cats/silver/silver-groom-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 71,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "silver",
+          "groom"
+        ]
+      },
+      {
+        "id": "cat.silver.hit.01",
+        "kind": "cat",
+        "src": "/assets/cats/silver/silver-hit-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 41,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "silver",
+          "hit"
+        ]
+      },
+      {
+        "id": "cat.silver.jump.01",
+        "kind": "cat",
+        "src": "/assets/cats/silver/silver-jump-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 25,
+          "framesPerSecond": 16,
+          "playback": "once"
+        },
+        "tags": [
+          "silver",
+          "jump"
+        ]
+      },
+      {
+        "id": "cat.silver.land.01",
+        "kind": "cat",
+        "src": "/assets/cats/silver/silver-land-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 53,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "silver",
+          "land"
+        ]
+      },
+      {
+        "id": "cat.silver.scratch.01",
+        "kind": "cat",
+        "src": "/assets/cats/silver/silver-scratch-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 67,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "silver",
+          "scratch"
+        ]
+      },
+      {
+        "id": "cat.silver.sleep.01",
+        "kind": "cat",
+        "src": "/assets/cats/silver/silver-sleep-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 59,
+          "framesPerSecond": 25,
+          "playback": "hold"
+        },
+        "tags": [
+          "silver",
+          "sleep"
+        ]
+      },
+      {
+        "id": "cat.silver.surprise.01",
+        "kind": "cat",
+        "src": "/assets/cats/silver/silver-surprise-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 63,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "silver",
+          "surprise"
+        ]
+      },
+      {
+        "id": "cat.calico.idle.01",
+        "kind": "cat",
+        "src": "/assets/cats/calico/calico-idle-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 74,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": [
+          "calico",
+          "idle"
+        ]
+      },
+      {
+        "id": "cat.calico.walk.01",
+        "kind": "cat",
+        "src": "/assets/cats/calico/calico-walk-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 20,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": [
+          "calico",
+          "walk"
+        ]
+      },
+      {
+        "id": "cat.calico.run.01",
+        "kind": "cat",
+        "src": "/assets/cats/calico/calico-run-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 16,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": [
+          "calico",
+          "run"
+        ]
+      },
+      {
+        "id": "cat.calico.attack.01",
+        "kind": "cat",
+        "src": "/assets/cats/calico/calico-attack-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 51,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "calico",
+          "attack"
+        ]
+      },
+      {
+        "id": "cat.calico.fall.01",
+        "kind": "cat",
+        "src": "/assets/cats/calico/calico-fall-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 23,
+          "framesPerSecond": 16,
+          "playback": "once"
+        },
+        "tags": [
+          "calico",
+          "fall"
+        ]
+      },
+      {
+        "id": "cat.calico.groom.01",
+        "kind": "cat",
+        "src": "/assets/cats/calico/calico-groom-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 71,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "calico",
+          "groom"
+        ]
+      },
+      {
+        "id": "cat.calico.hit.01",
+        "kind": "cat",
+        "src": "/assets/cats/calico/calico-hit-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 41,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "calico",
+          "hit"
+        ]
+      },
+      {
+        "id": "cat.calico.jump.01",
+        "kind": "cat",
+        "src": "/assets/cats/calico/calico-jump-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 25,
+          "framesPerSecond": 16,
+          "playback": "once"
+        },
+        "tags": [
+          "calico",
+          "jump"
+        ]
+      },
+      {
+        "id": "cat.calico.land.01",
+        "kind": "cat",
+        "src": "/assets/cats/calico/calico-land-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 53,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "calico",
+          "land"
+        ]
+      },
+      {
+        "id": "cat.calico.scratch.01",
+        "kind": "cat",
+        "src": "/assets/cats/calico/calico-scratch-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 67,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "calico",
+          "scratch"
+        ]
+      },
+      {
+        "id": "cat.calico.sleep.01",
+        "kind": "cat",
+        "src": "/assets/cats/calico/calico-sleep-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 59,
+          "framesPerSecond": 25,
+          "playback": "hold"
+        },
+        "tags": [
+          "calico",
+          "sleep"
+        ]
+      },
+      {
+        "id": "cat.calico.surprise.01",
+        "kind": "cat",
+        "src": "/assets/cats/calico/calico-surprise-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 63,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "calico",
+          "surprise"
+        ]
+      },
+      {
+        "id": "cat.tuxedo.idle.01",
+        "kind": "cat",
+        "src": "/assets/cats/tuxedo/tuxedo-idle-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 74,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": [
+          "tuxedo",
+          "idle"
+        ]
+      },
+      {
+        "id": "cat.tuxedo.walk.01",
+        "kind": "cat",
+        "src": "/assets/cats/tuxedo/tuxedo-walk-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 20,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": [
+          "tuxedo",
+          "walk"
+        ]
+      },
+      {
+        "id": "cat.tuxedo.run.01",
+        "kind": "cat",
+        "src": "/assets/cats/tuxedo/tuxedo-run-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 16,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": [
+          "tuxedo",
+          "run"
+        ]
+      },
+      {
+        "id": "cat.tuxedo.attack.01",
+        "kind": "cat",
+        "src": "/assets/cats/tuxedo/tuxedo-attack-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 51,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "tuxedo",
+          "attack"
+        ]
+      },
+      {
+        "id": "cat.tuxedo.fall.01",
+        "kind": "cat",
+        "src": "/assets/cats/tuxedo/tuxedo-fall-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 23,
+          "framesPerSecond": 16,
+          "playback": "once"
+        },
+        "tags": [
+          "tuxedo",
+          "fall"
+        ]
+      },
+      {
+        "id": "cat.tuxedo.groom.01",
+        "kind": "cat",
+        "src": "/assets/cats/tuxedo/tuxedo-groom-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 71,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "tuxedo",
+          "groom"
+        ]
+      },
+      {
+        "id": "cat.tuxedo.hit.01",
+        "kind": "cat",
+        "src": "/assets/cats/tuxedo/tuxedo-hit-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 41,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "tuxedo",
+          "hit"
+        ]
+      },
+      {
+        "id": "cat.tuxedo.jump.01",
+        "kind": "cat",
+        "src": "/assets/cats/tuxedo/tuxedo-jump-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 25,
+          "framesPerSecond": 16,
+          "playback": "once"
+        },
+        "tags": [
+          "tuxedo",
+          "jump"
+        ]
+      },
+      {
+        "id": "cat.tuxedo.land.01",
+        "kind": "cat",
+        "src": "/assets/cats/tuxedo/tuxedo-land-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 53,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "tuxedo",
+          "land"
+        ]
+      },
+      {
+        "id": "cat.tuxedo.scratch.01",
+        "kind": "cat",
+        "src": "/assets/cats/tuxedo/tuxedo-scratch-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 67,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "tuxedo",
+          "scratch"
+        ]
+      },
+      {
+        "id": "cat.tuxedo.sleep.01",
+        "kind": "cat",
+        "src": "/assets/cats/tuxedo/tuxedo-sleep-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 59,
+          "framesPerSecond": 25,
+          "playback": "hold"
+        },
+        "tags": [
+          "tuxedo",
+          "sleep"
+        ]
+      },
+      {
+        "id": "cat.tuxedo.surprise.01",
+        "kind": "cat",
+        "src": "/assets/cats/tuxedo/tuxedo-surprise-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 63,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "tuxedo",
+          "surprise"
+        ]
+      },
+      {
+        "id": "cat.fold.idle.01",
+        "kind": "cat",
+        "src": "/assets/cats/fold/fold-idle-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 74,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": [
+          "fold",
+          "idle"
+        ]
+      },
+      {
+        "id": "cat.fold.walk.01",
+        "kind": "cat",
+        "src": "/assets/cats/fold/fold-walk-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 20,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": [
+          "fold",
+          "walk"
+        ]
+      },
+      {
+        "id": "cat.fold.run.01",
+        "kind": "cat",
+        "src": "/assets/cats/fold/fold-run-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 16,
+          "framesPerSecond": 25,
+          "playback": "loop"
+        },
+        "tags": [
+          "fold",
+          "run"
+        ]
+      },
+      {
+        "id": "cat.fold.attack.01",
+        "kind": "cat",
+        "src": "/assets/cats/fold/fold-attack-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 51,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "fold",
+          "attack"
+        ]
+      },
+      {
+        "id": "cat.fold.fall.01",
+        "kind": "cat",
+        "src": "/assets/cats/fold/fold-fall-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 23,
+          "framesPerSecond": 16,
+          "playback": "once"
+        },
+        "tags": [
+          "fold",
+          "fall"
+        ]
+      },
+      {
+        "id": "cat.fold.groom.01",
+        "kind": "cat",
+        "src": "/assets/cats/fold/fold-groom-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 71,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "fold",
+          "groom"
+        ]
+      },
+      {
+        "id": "cat.fold.hit.01",
+        "kind": "cat",
+        "src": "/assets/cats/fold/fold-hit-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 41,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "fold",
+          "hit"
+        ]
+      },
+      {
+        "id": "cat.fold.jump.01",
+        "kind": "cat",
+        "src": "/assets/cats/fold/fold-jump-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 25,
+          "framesPerSecond": 16,
+          "playback": "once"
+        },
+        "tags": [
+          "fold",
+          "jump"
+        ]
+      },
+      {
+        "id": "cat.fold.land.01",
+        "kind": "cat",
+        "src": "/assets/cats/fold/fold-land-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 53,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "fold",
+          "land"
+        ]
+      },
+      {
+        "id": "cat.fold.scratch.01",
+        "kind": "cat",
+        "src": "/assets/cats/fold/fold-scratch-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 67,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "fold",
+          "scratch"
+        ]
+      },
+      {
+        "id": "cat.fold.sleep.01",
+        "kind": "cat",
+        "src": "/assets/cats/fold/fold-sleep-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 59,
+          "framesPerSecond": 25,
+          "playback": "hold"
+        },
+        "tags": [
+          "fold",
+          "sleep"
+        ]
+      },
+      {
+        "id": "cat.fold.surprise.01",
+        "kind": "cat",
+        "src": "/assets/cats/fold/fold-surprise-01.webp",
+        "anchor": {
+          "x": 0.5,
+          "y": 0.95
+        },
+        "spriteSheet": {
+          "frameWidth": 256,
+          "frameHeight": 256,
+          "columns": 8,
+          "frameCount": 63,
+          "framesPerSecond": 25,
+          "playback": "once"
+        },
+        "tags": [
+          "fold",
+          "surprise"
+        ]
+      }
+    ],
     "home-environment": [
       {
         "id": "background.forest.meadow-day.01",
@@ -1027,63 +2295,63 @@
       {
         "id": "furniture.sofa.cat-rug.01",
         "kind": "furniture",
-        "src": "/assets/environment/furniture-sofa-rug-01.png",
+        "src": "/assets/environment/furniture-sofa-rug-01.webp",
         "anchor": { "x": 0.5, "y": 0.94 },
         "tags": ["sofa", "rug", "calico", "transparent", "outdoor"]
       },
       {
         "id": "furniture.desk.low-table.01",
         "kind": "furniture",
-        "src": "/assets/environment/furniture-low-table-01.png",
+        "src": "/assets/environment/furniture-low-table-01.webp",
         "anchor": { "x": 0.5, "y": 0.94 },
         "tags": ["desk", "table", "wood", "transparent", "outdoor"]
       },
       {
         "id": "furniture.plant.flower-bush.01",
         "kind": "furniture",
-        "src": "/assets/environment/furniture-flower-bush-01.png",
+        "src": "/assets/environment/furniture-flower-bush-01.webp",
         "anchor": { "x": 0.5, "y": 0.97 },
         "tags": ["plant", "shrub", "flowers", "transparent", "forest"]
       },
       {
         "id": "furniture.cat-tree.scratch-post.01",
         "kind": "furniture",
-        "src": "/assets/environment/furniture-cat-tree-01.png",
+        "src": "/assets/environment/furniture-cat-tree-01.webp",
         "anchor": { "x": 0.5, "y": 0.98 },
         "tags": ["cat-tree", "scratch-post", "wood", "transparent", "outdoor"]
       },
       {
         "id": "furniture.bed.paw-cushion.01",
         "kind": "furniture",
-        "src": "/assets/environment/furniture-paw-bed-01.png",
+        "src": "/assets/environment/furniture-paw-bed-01.webp",
         "anchor": { "x": 0.5, "y": 0.94 },
         "tags": ["bed", "paw", "cushion", "transparent", "outdoor"]
       },
       {
         "id": "furniture.bench.forest-mushroom.01",
         "kind": "furniture",
-        "src": "/assets/environment/furniture-forest-bench-01.png",
+        "src": "/assets/environment/furniture-forest-bench-01.webp",
         "anchor": { "x": 0.5, "y": 0.96 },
         "tags": ["bench", "mushroom", "moss", "transparent", "forest"]
       },
       {
         "id": "furniture.hideout.forest-log.01",
         "kind": "furniture",
-        "src": "/assets/environment/furniture-forest-hideout-01.png",
+        "src": "/assets/environment/furniture-forest-hideout-01.webp",
         "anchor": { "x": 0.5, "y": 0.95 },
         "tags": ["hideout", "log", "moss", "transparent", "forest"]
       },
       {
         "id": "furniture.cat-tree.leaf-scratcher.01",
         "kind": "furniture",
-        "src": "/assets/environment/furniture-leaf-scratcher-01.png",
+        "src": "/assets/environment/furniture-leaf-scratcher-01.webp",
         "anchor": { "x": 0.5, "y": 0.96 },
         "tags": ["cat-tree", "scratcher", "leaf", "transparent", "forest"]
       },
       {
         "id": "furniture.cat-tree.great-tree.01",
         "kind": "furniture",
-        "src": "/assets/environment/furniture-great-tree-tower-01.png",
+        "src": "/assets/environment/furniture-great-tree-tower-01.webp",
         "anchor": { "x": 0.5, "y": 0.98 },
         "tags": ["cat-tree", "tower", "great-tree", "transparent", "forest"]
       },
@@ -1111,112 +2379,112 @@
       {
         "id": "background.forest.clearing-day.01",
         "kind": "background",
-        "src": "/assets/backgrounds/forest/forest-clearing-day-01.png",
+        "src": "/assets/backgrounds/forest/forest-clearing-day-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["forest", "clearing", "day", "one-point-perspective", "cat-style"]
       },
       {
         "id": "background.forest.clearing-sunny.01",
         "kind": "background",
-        "src": "/assets/backgrounds/forest/forest-clearing-sunny-01.png",
+        "src": "/assets/backgrounds/forest/forest-clearing-sunny-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["forest", "clearing", "sunny", "belt-view", "cat-style"]
       },
       {
         "id": "background.forest.waterfall-day.01",
         "kind": "background",
-        "src": "/assets/backgrounds/forest/forest-waterfall-day-01.png",
+        "src": "/assets/backgrounds/forest/forest-waterfall-day-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["forest", "waterfall", "day", "belt-view", "cat-style"]
       },
       {
         "id": "background.alley.stone-courtyard.01",
         "kind": "background",
-        "src": "/assets/backgrounds/alley/stone-courtyard-01.png",
+        "src": "/assets/backgrounds/alley/stone-courtyard-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["alley", "stone", "courtyard", "day", "belt-view"]
       },
       {
         "id": "background.alley.modern-courtyard.01",
         "kind": "background",
-        "src": "/assets/backgrounds/alley/modern-courtyard-01.png",
+        "src": "/assets/backgrounds/alley/modern-courtyard-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["alley", "modern", "courtyard", "day", "belt-view"]
       },
       {
         "id": "background.alley.village-yard.01",
         "kind": "background",
-        "src": "/assets/backgrounds/alley/village-yard-01.png",
+        "src": "/assets/backgrounds/alley/village-yard-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["alley", "village", "yard", "day", "belt-view"]
       },
       {
         "id": "background.room.cottage.01",
         "kind": "background",
-        "src": "/assets/backgrounds/room/cottage-room-01.png",
+        "src": "/assets/backgrounds/room/cottage-room-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["room", "cottage", "wood", "day", "belt-view"]
       },
       {
         "id": "background.room.sunny-studio.01",
         "kind": "background",
-        "src": "/assets/backgrounds/room/sunny-studio-01.png",
+        "src": "/assets/backgrounds/room/sunny-studio-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["room", "studio", "sunny", "day", "belt-view"]
       },
       {
         "id": "background.room.living-room.01",
         "kind": "background",
-        "src": "/assets/backgrounds/room/living-room-01.png",
+        "src": "/assets/backgrounds/room/living-room-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["room", "living-room", "sunny", "day", "belt-view"]
       },
       {
         "id": "background.room.city-office.01",
         "kind": "background",
-        "src": "/assets/backgrounds/room/city-office-01.png",
+        "src": "/assets/backgrounds/room/city-office-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["room", "office", "city", "day", "belt-view"]
       },
       {
         "id": "background.desk.botanical.01",
         "kind": "background",
-        "src": "/assets/backgrounds/desk/botanical-desk-01.png",
+        "src": "/assets/backgrounds/desk/botanical-desk-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["desk", "botanical", "sunny", "day", "belt-view"]
       },
       {
         "id": "background.desk.music.01",
         "kind": "background",
-        "src": "/assets/backgrounds/desk/music-desk-01.png",
+        "src": "/assets/backgrounds/desk/music-desk-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["desk", "music", "sunny", "day", "belt-view"]
       },
       {
         "id": "background.desk.executive.01",
         "kind": "background",
-        "src": "/assets/backgrounds/desk/executive-desk-01.png",
+        "src": "/assets/backgrounds/desk/executive-desk-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["desk", "executive", "city", "evening", "belt-view"]
       },
       {
         "id": "background.ocean.sandy-cove.01",
         "kind": "background",
-        "src": "/assets/backgrounds/ocean/sandy-cove-01.png",
+        "src": "/assets/backgrounds/ocean/sandy-cove-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["ocean", "beach", "sand", "day", "belt-view"]
       },
       {
         "id": "background.ocean.seaside-promenade.01",
         "kind": "background",
-        "src": "/assets/backgrounds/ocean/seaside-promenade-01.png",
+        "src": "/assets/backgrounds/ocean/seaside-promenade-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["ocean", "promenade", "city", "day", "belt-view"]
       },
       {
         "id": "background.ocean.working-harbor.01",
         "kind": "background",
-        "src": "/assets/backgrounds/ocean/working-harbor-01.png",
+        "src": "/assets/backgrounds/ocean/working-harbor-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["ocean", "harbor", "boats", "day", "belt-view"]
       }
@@ -1278,7 +2546,76 @@
       { "id": "furniture.ocean.cat-tower.03", "kind": "furniture", "src": "/assets/furniture/ocean/ocean-cat-tower-03.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["ocean", "cat-tree", "variant", "transparent", "belt-view"] },
       { "id": "furniture.ocean.hideout.02", "kind": "furniture", "src": "/assets/furniture/ocean/ocean-hideout-02.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["ocean", "hideout", "variant", "transparent", "belt-view"] },
       { "id": "furniture.ocean.scratcher.02", "kind": "furniture", "src": "/assets/furniture/ocean/ocean-scratcher-02.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["ocean", "scratcher", "variant", "transparent", "belt-view"] },
-      { "id": "furniture.ocean.litter-box.02", "kind": "furniture", "src": "/assets/furniture/ocean/ocean-litter-box-02.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["ocean", "litter-box", "variant", "transparent", "belt-view"] }
+      { "id": "furniture.ocean.litter-box.02", "kind": "furniture", "src": "/assets/furniture/ocean/ocean-litter-box-02.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["ocean", "litter-box", "variant", "transparent", "belt-view"] },
+
+      { "id": "furniture.alley.cat-tower.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/alley-cat-tower-03.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["alley", "cat-tree", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.alley.hideout.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/alley-hideout-03.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["alley", "hideout", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.alley.litter-box.04", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/alley-litter-box-04.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["alley", "litter-box", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.alley.rug.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/alley-rug-03.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["alley", "rug", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.alley.scratcher.04", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/alley-scratcher-04.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["alley", "scratcher", "variant", "transparent", "belt-view"] },
+
+      { "id": "furniture.desk.cat-tower.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/desk-cat-tower-03.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["desk", "cat-tree", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.desk.hideout.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/desk-hideout-03.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["desk", "hideout", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.desk.litter-box.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/desk-litter-box-03.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["desk", "litter-box", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.desk.rug.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/desk-rug-03.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["desk", "rug", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.desk.scratcher.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/desk-scratcher-03.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["desk", "scratcher", "variant", "transparent", "belt-view"] },
+
+      { "id": "furniture.ocean.cat-tower.incoming.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/ocean-cat-tower-03.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["ocean", "cat-tree", "variant", "incoming", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.food-bowl.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/ocean-food-bowl-front-01.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["ocean", "food-bowl", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.hideout.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/ocean-hideout-03.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["ocean", "hideout", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.litter-box.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/ocean-litter-box-03.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["ocean", "litter-box", "variant", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.scratcher.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/ocean-scratcher-03.webp", "anchor": { "x": 0.5, "y": 0.96 }, "tags": ["ocean", "scratcher", "variant", "transparent", "belt-view"] },
+
+      { "id": "furniture.room.rug.03", "kind": "furniture", "src": "/assets/backgrounds/01_Add_item/room-rug-03.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["room", "rug", "variant", "transparent", "belt-view"] },
+      
+      { "id": "furniture.alley.camping-chair.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/alley-camping-chair-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["alley", "camping", "chair", "transparent", "belt-view"] },
+      { "id": "furniture.alley.cleaning-kit.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/alley-cleaning-kit-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["alley", "cleaning", "bucket", "broom", "transparent", "belt-view"] },
+      { "id": "furniture.alley.crock.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/alley-crock-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["alley", "crock", "pot", "jar", "transparent", "belt-view"] },
+      { "id": "furniture.alley.handcart.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/alley-handcart-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["alley", "handcart", "cart", "transparent", "belt-view"] },
+      { "id": "furniture.alley.plastic-crate.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/alley-plastic-crate-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["alley", "crate", "box", "plastic", "transparent", "belt-view"] },
+      { "id": "furniture.alley.stool.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/alley-stool-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["alley", "stool", "chair", "transparent", "belt-view"] },
+      { "id": "furniture.alley.toolbox.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/alley-toolbox-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["alley", "toolbox", "gardening", "transparent", "belt-view"] },
+      { "id": "furniture.alley.watering-can.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/alley-watering-can-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["alley", "watering-can", "metal", "transparent", "belt-view"] },
+      
+      { "id": "furniture.desk.books.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/desk-books-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["desk", "books", "gift", "ribbon", "transparent", "belt-view"] },
+      { "id": "furniture.desk.briefcase.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/desk-briefcase-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["desk", "briefcase", "bag", "leather", "transparent", "belt-view"] },
+      { "id": "furniture.desk.cabinet.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/desk-cabinet-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["desk", "cabinet", "chest", "drawer", "transparent", "belt-view"] },
+      { "id": "furniture.desk.document-tray.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/desk-document-tray-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["desk", "tray", "document", "paper", "transparent", "belt-view"] },
+      { "id": "furniture.desk.floor-lamp.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/desk-floor-lamp-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["desk", "lamp", "light", "transparent", "belt-view"] },
+      { "id": "furniture.desk.gardening-kit.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/desk-gardening-kit-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["desk", "gardening", "spray", "scissors", "transparent", "belt-view"] },
+      { "id": "furniture.desk.headphone.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/desk-headphone-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["desk", "headphone", "audio", "stand", "transparent", "belt-view"] },
+      { "id": "furniture.desk.metronome.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/desk-metronome-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["desk", "metronome", "music", "wood", "transparent", "belt-view"] },
+      { "id": "furniture.desk.organizer.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/desk-organizer-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["desk", "organizer", "tray", "pen", "transparent", "belt-view"] },
+      { "id": "furniture.desk.organizer.02", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/desk-organizer-02.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["desk", "organizer", "pen", "stand", "transparent", "belt-view"] },
+      { "id": "furniture.desk.plant-pot.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/desk-plant-pot-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["desk", "plant", "pot", "snake-plant", "transparent", "belt-view"] },
+      { "id": "furniture.desk.record-player.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/desk-record-player-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["desk", "record", "player", "turntable", "transparent", "belt-view"] },
+      { "id": "furniture.desk.terrarium.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/desk-terrarium-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["desk", "terrarium", "glass", "jar", "moss", "transparent", "belt-view"] },
+      
+      { "id": "furniture.forest.basket.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/forest-basket-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["forest", "basket", "pinecone", "transparent", "belt-view"] },
+      { "id": "furniture.forest.box.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/forest-box-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["forest", "box", "crate", "wood", "transparent", "belt-view"] },
+      { "id": "furniture.forest.cart.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/forest-cart-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["forest", "cart", "wagon", "transparent", "belt-view"] },
+      { "id": "furniture.forest.firewood.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/forest-firewood-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["forest", "firewood", "wood", "log", "transparent", "belt-view"] },
+      { "id": "furniture.forest.lantern.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/forest-lantern-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["forest", "lantern", "stone", "moss", "transparent", "belt-view"] },
+      { "id": "furniture.forest.light.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/forest-light-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["forest", "light", "lamp", "transparent", "belt-view"] },
+      { "id": "furniture.forest.mush.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/forest-mush-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["forest", "mushroom", "plant", "transparent", "belt-view"] },
+      { "id": "furniture.forest.stump.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/forest-stump-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["forest", "stump", "flower", "moss", "transparent", "belt-view"] },
+      
+      { "id": "furniture.ocean.beach-basket.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/ocean-beach-basket-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["ocean", "basket", "beach", "towel", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.bench.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/ocean-bench-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["ocean", "bench", "chair", "blue", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.box.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/ocean-box-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["ocean", "box", "crate", "rope", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.cart.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/ocean-cart-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["ocean", "cart", "wagon", "wheel", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.parasol.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/ocean-parasol-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["ocean", "parasol", "umbrella", "transparent", "belt-view"] },
+      { "id": "furniture.ocean.sign.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/ocean-sign-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["ocean", "sign", "wood", "starfish", "transparent", "belt-view"] },
+      
+      { "id": "furniture.room.art-stool.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/room-art-stool-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["room", "stool", "art", "brush", "transparent", "belt-view"] },
+      { "id": "furniture.room.basket.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/room-basket-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["room", "basket", "blanket", "transparent", "belt-view"] },
+      { "id": "furniture.room.easel.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/room-easel-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["room", "easel", "art", "canvas", "transparent", "belt-view"] },
+      { "id": "furniture.room.laundry-basket.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/room-laundry-basket-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["room", "basket", "laundry", "knitted", "transparent", "belt-view"] },
+      { "id": "furniture.room.laundry-tray.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/room-laundry-tray-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["room", "tray", "bamboo", "laundry", "transparent", "belt-view"] },
+      { "id": "furniture.room.plant-stool.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/room-plant-stool-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["room", "stool", "plant", "pot", "transparent", "belt-view"] },
+      { "id": "furniture.room.shelf.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/room-shelf-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["room", "shelf", "plant", "box", "transparent", "belt-view"] },
+      { "id": "furniture.room.sidetable.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/room-sidetable-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["room", "sidetable", "lamp", "book", "transparent", "belt-view"] },
+      { "id": "furniture.room.table.01", "kind": "furniture", "src": "/assets/backgrounds/02_Add_item/room-table-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "tags": ["room", "table", "round", "vase", "transparent", "belt-view"] }
     ],
     "decorations": [
       { "id": "furniture.decor.reed-clump.01", "kind": "furniture", "src": "/assets/decor/forest-reed-clump-01.webp", "anchor": { "x": 0.5, "y": 0.98 }, "tags": ["forest", "reed", "grass", "decor", "transparent", "belt-view"] },
@@ -1308,6 +2645,7 @@
       { "id": "consumable.catnip-biscuits.01", "kind": "consumable", "src": "/assets/consumables/catnip-biscuits-01.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["catnip", "treat", "transparent"] },
       { "id": "consumable.tuna-soup.01", "kind": "consumable", "src": "/assets/consumables/tuna-soup-01.webp", "anchor": { "x": 0.5, "y": 0.94 }, "tags": ["tuna", "treat", "transparent"] }
     ],
+<<<<<<< HEAD
     "study": [
       {
         "id": "ui.scene.study-forest-board.03",
@@ -1334,95 +2672,104 @@
         "kind": "ui",
         "src": "/assets/ui/scenes/study-siamese-leaning-01.png"
       }
+=======
+    "study": [],
+    "cats-v3-scruff-lift": [
+      { "id": "cat.tabby-v2.scruff-lift.01", "kind": "cat", "src": "/assets/cats/orange-tabby-v2/orange-tabby-v2-scruff-lift-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "spriteSheet": { "frameWidth": 256, "frameHeight": 256, "columns": 8, "frameCount": 16, "framesPerSecond": 14, "playback": "once" }, "tags": ["tabby-v2", "scruff-lift"] },
+      { "id": "cat.silver.scruff-lift.01", "kind": "cat", "src": "/assets/cats/silver/silver-scruff-lift-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "spriteSheet": { "frameWidth": 256, "frameHeight": 256, "columns": 8, "frameCount": 16, "framesPerSecond": 14, "playback": "once" }, "tags": ["silver", "scruff-lift"] },
+      { "id": "cat.calico.scruff-lift.01", "kind": "cat", "src": "/assets/cats/calico/calico-scruff-lift-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "spriteSheet": { "frameWidth": 256, "frameHeight": 256, "columns": 8, "frameCount": 16, "framesPerSecond": 14, "playback": "once" }, "tags": ["calico", "scruff-lift"] },
+      { "id": "cat.tuxedo.scruff-lift.01", "kind": "cat", "src": "/assets/cats/tuxedo/tuxedo-scruff-lift-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "spriteSheet": { "frameWidth": 256, "frameHeight": 256, "columns": 8, "frameCount": 16, "framesPerSecond": 14, "playback": "once" }, "tags": ["tuxedo", "scruff-lift"] },
+      { "id": "cat.fold.scruff-lift.01", "kind": "cat", "src": "/assets/cats/fold/fold-scruff-lift-01.webp", "anchor": { "x": 0.5, "y": 0.95 }, "spriteSheet": { "frameWidth": 256, "frameHeight": 256, "columns": 8, "frameCount": 16, "framesPerSecond": 14, "playback": "once" }, "tags": ["fold", "scruff-lift"] }
+>>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
     ],
     "common-ui": [
       {
         "id": "background.loading.cat-study-night.01",
         "kind": "background",
-        "src": "/assets/loading/cat-study-night-01.png",
+        "src": "/assets/loading/cat-study-night-01.webp",
         "tags": ["loading", "study", "night", "watercolor", "cat-style"]
       },
       {
         "id": "ui.logo.game.01",
         "kind": "ui",
-        "src": "/assets/loading/game-logo-01.png",
+        "src": "/assets/loading/game-logo-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["logo", "game-title", "transparent", "watercolor"]
       },
       {
         "id": "ui.scene.shop-showcase.01",
         "kind": "ui",
-        "src": "/assets/ui/scenes/shop-furniture-showcase-01.png",
+        "src": "/assets/ui/scenes/shop-furniture-showcase-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["shop", "furniture", "showcase", "watercolor"]
       },
       {
         "id": "ui.scene.gacha-machine.01",
         "kind": "ui",
-        "src": "/assets/ui/scenes/gacha-machine-01.png",
+        "src": "/assets/ui/scenes/gacha-machine-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["gacha", "machine", "watercolor"]
       },
       {
         "id": "ui.scene.gacha-room-backdrop.01",
         "kind": "ui",
-        "src": "/assets/ui/scenes/gacha-room-backdrop-01.png",
+        "src": "/assets/ui/scenes/gacha-room-backdrop-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["gacha", "room", "background", "watercolor"]
       },
       {
         "id": "ui.scene.gacha-machine.02",
         "kind": "ui",
-        "src": "/assets/ui/scenes/gacha-machine-02.png",
+        "src": "/assets/ui/scenes/gacha-machine-02.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["gacha", "machine", "cream", "watercolor"]
       },
       {
         "id": "ui.scene.gacha-mascot-environment.01",
         "kind": "ui",
-        "src": "/assets/ui/scenes/gacha-mascot-environment-01.png",
+        "src": "/assets/ui/scenes/gacha-mascot-environment-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["gacha", "cat", "environment", "watercolor"]
       },
       {
         "id": "ui.scene.gacha-machine-cutout.01",
         "kind": "ui",
-        "src": "/assets/ui/scenes/gacha-machine-cutout-01.png",
+        "src": "/assets/ui/scenes/gacha-machine-cutout-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["gacha", "machine", "transparent", "watercolor"]
       },
       {
         "id": "ui.scene.gacha-mascot-cutout.01",
         "kind": "ui",
-        "src": "/assets/ui/scenes/gacha-mascot-cutout-01.png",
+        "src": "/assets/ui/scenes/gacha-mascot-cutout-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["gacha", "cat", "transparent", "watercolor"]
       },
       {
         "id": "ui.scene.gacha-left-decor-cutout.01",
         "kind": "ui",
-        "src": "/assets/ui/scenes/gacha-left-decor-cutout-01.png",
+        "src": "/assets/ui/scenes/gacha-left-decor-cutout-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["gacha", "decor", "transparent", "watercolor"]
       },
       {
         "id": "ui.scene.gacha-right-decor-cutout.01",
         "kind": "ui",
-        "src": "/assets/ui/scenes/gacha-right-decor-cutout-01.png",
+        "src": "/assets/ui/scenes/gacha-right-decor-cutout-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["gacha", "decor", "transparent", "watercolor"]
       },
       {
         "id": "ui.common.currency-coin.01",
         "kind": "ui",
-        "src": "/assets/ui/common/currency-coin-01.png",
+        "src": "/assets/ui/common/currency-coin-01.webp",
         "anchor": { "x": 0.5, "y": 0.5 },
         "tags": ["currency", "coin", "paw", "transparent", "watercolor"]
       },
       {
         "id": "ui.common.back-button.01",
         "kind": "ui",
-        "src": "/assets/ui/common/back-button-01.png",
+        "src": "/assets/ui/common/back-button-01.webp",
         "anchor": { "x": 0, "y": 0 },
         "tags": ["button", "back", "transparent", "watercolor"]
       }

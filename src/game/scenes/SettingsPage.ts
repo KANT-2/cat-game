@@ -1,26 +1,29 @@
-import { Container, Graphics, Text } from "pixi.js";
+import { Container, Graphics, Sprite, Text, type Texture } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
-import type { Awaitable, LearningResetResult } from "../../core/GameClient";
+import type { Awaitable, GameSaveStatus, PlayerProfileView } from "../../core/GameClient";
 import type { GameSettings, GameState } from "../../domain/room";
 import { CanvasButton } from "../components/CanvasButton";
 import { createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
 import { textStyle } from "../config";
+import { profileImagePresentation } from "../presentation/profileImage";
 
-type SettingsSection = "account" | "sound" | "alerts" | "learning";
+type SettingsSection = "account" | "sound";
 type SettingsPageMode = "settings" | "account";
-type ConfirmAction = "logout" | "dataReset" | "accountDelete" | "learningReset";
+type ConfirmAction = "logout";
 
 type SettingsPageOptions = {
   mode: SettingsPageMode;
   onStatus: (id: MessageId) => void;
-  onOpenAttendance: () => void;
+  profileImageUrl: string | null;
+  fallbackProfileTexture: Texture;
+  playerProfile: PlayerProfileView;
+  getSaveStatus: () => GameSaveStatus;
   getState: () => GameState;
   onUpdateSettings: (patch: Partial<GameSettings>) => Awaitable<GameSettings>;
-  onResetLearning: () => Awaitable<LearningResetResult>;
   onLogout: (() => Awaitable<boolean>) | null;
 };
 
-const settingsSections: readonly SettingsSection[] = ["sound", "alerts", "learning"];
+const settingsSections: readonly SettingsSection[] = ["sound"];
 
 /** 설정 카테고리 탐색과 각 카테고리의 Canvas 컨트롤을 한 화면에서 관리한다. */
 export class SettingsPage extends Container {
@@ -30,14 +33,6 @@ export class SettingsPage extends Container {
   private bgmVolume: number;
   private effectsEnabled: boolean;
   private effectsVolume: number;
-  private dailyQuestAlerts = true;
-  private studyAlerts = true;
-  private rewardAlerts = true;
-  private quietHours = true;
-  private subjectIndex = 0;
-  private hintsEnabled = true;
-  private explanationsEnabled = true;
-  private dailyGoal = 5;
 
   constructor(private readonly options: SettingsPageOptions) {
     super();
@@ -61,12 +56,8 @@ export class SettingsPage extends Container {
     this.renderHeader();
     if (this.activeSection === "account") {
       this.renderAccount();
-    } else if (this.activeSection === "sound") {
-      this.renderSound();
-    } else if (this.activeSection === "alerts") {
-      this.renderAlerts();
     } else {
-      this.renderLearning();
+      this.renderSound();
     }
     if (this.confirmAction) {
       this.renderConfirmation(this.confirmAction);
@@ -104,54 +95,61 @@ export class SettingsPage extends Container {
     description.position.set(x, 187);
     const ornament = createTitleOrnament(x, 214, 180);
     this.addChild(title, description, ornament);
-    if (this.options.mode === "account") {
-      const attendance = new CanvasButton({
-        label: message("attendance.openStatus"),
-        width: 220,
-        height: 54,
-        fontSize: 18,
-        color: 0xe3c49f,
-        onPress: this.options.onOpenAttendance,
-      });
-      attendance.position.set(1290, 155);
-      this.addChild(attendance);
-    }
   }
 
   private renderAccount(): void {
-    this.addCard(70, 225, 710, 125);
-    this.addLabel("settings.profileImage", 100, 245, 20);
-    this.addDetail("settings.profileImageDescription", 100, 280);
-    this.addActionButton("settings.change", 590, 253, 160, () => this.notify("settings.accountActionReady"));
+    this.addCard(70, 225, 600, 125);
+    const profile = profileImagePresentation(this.options.profileImageUrl);
+    const portrait = this.options.profileImageUrl
+      ? Sprite.from(this.options.profileImageUrl)
+      : new Sprite(this.options.fallbackProfileTexture);
+    portrait.anchor.set(0.5);
+    portrait.width = 78;
+    portrait.height = 78;
+    portrait.position.set(125, 287);
+    const mask = new Graphics().circle(125, 287, 39).fill(0xffffff);
+    portrait.mask = mask;
+    this.addChild(portrait, mask);
+    this.addLabel("settings.profileImage", 180, 245, 20);
+    this.addDetail("settings.profileImageDescription", 180, 280);
+    const connectionStatus = new Text({
+      text: message(profile.statusMessage),
+      style: textStyle(15, profile.isLinked ? 0x537145 : 0x8a6f5c, "700"),
+    });
+    connectionStatus.anchor.set(1, 0.5);
+    connectionStatus.position.set(630, 287);
+    this.addChild(connectionStatus);
 
-    this.addCard(810, 225, 710, 125);
-    this.addLabel("settings.nickname", 840, 245, 20);
-    this.addDetail("settings.nicknameValue", 840, 280);
-    this.addActionButton("settings.change", 1330, 253, 160, () => this.notify("settings.accountActionReady"));
+    this.addCard(690, 225, 320, 125);
+    this.addLabel("settings.name", 720, 245, 20);
+    this.addValue(this.options.playerProfile.displayName, "settings.profileInfoUnavailable", 720, 280);
 
-    this.addCard(70, 370, 1450, 125);
-    this.addLabel("settings.accountLink", 100, 390, 20);
-    this.addDetail("settings.accountLinkDescription", 100, 448);
-    this.addActionButton("settings.linkGoogle", 1200, 385, 135, () => this.notify("settings.linkReady"));
-    this.addActionButton("settings.linkEmail", 1350, 385, 140, () => this.notify("settings.linkReady"));
+    this.addCard(1030, 225, 490, 125);
+    this.addLabel("settings.email", 1060, 245, 20);
+    this.addValue(this.options.playerProfile.email, "settings.profileInfoUnavailable", 1060, 280);
 
-    this.addCard(70, 515, 1450, 75);
-    this.addLabel("settings.lastSync", 100, 535, 18);
-    this.addDetail("settings.lastSyncValue", 420, 536);
+    this.addCard(70, 370, 1450, 75);
+    this.addLabel("settings.lastSync", 100, 390, 18);
+    const saveStatus = this.options.getSaveStatus();
+    const saveStatusText = formatSaveStatus(saveStatus);
+    const saveDetail = new Text({ text: saveStatusText, style: textStyle(15, 0x76533c, "600") });
+    saveDetail.position.set(420, 391);
+    this.addChild(saveDetail);
 
-    const danger = new Graphics()
-      .roundRect(70, 610, 1450, 185, 24)
-      .fill(0xffe1d5)
-      .stroke({ color: 0xb65d49, width: 3 });
-    const title = new Text({ text: message("settings.dangerZone"), style: textStyle(21, 0x8c3429, "800") });
-    title.position.set(100, 630);
-    const detail = new Text({ text: message("settings.dangerDescription"), style: textStyle(15, 0x7e5148, "600") });
-    detail.position.set(100, 667);
-    this.addChild(danger, title, detail);
+    const sessionPanel = createCozyPanel(70, 465, 1450, 185, {
+      fill: 0xfff8e9,
+      border: 0xc38a58,
+      radius: 24,
+    });
+    const title = new Text({ text: message("settings.sessionManagement"), style: textStyle(21, 0x493022, "800") });
+    title.position.set(100, 485);
+    const detail = new Text({ text: message("settings.sessionDescription"), style: textStyle(15, 0x76533c, "600") });
+    detail.position.set(100, 522);
+    this.addChild(sessionPanel, title, detail);
     this.addActionButton(
       "settings.logout",
-      400,
-      715,
+      670,
+      570,
       250,
       () => {
         if (!this.options.onLogout) {
@@ -161,15 +159,6 @@ export class SettingsPage extends Container {
         this.askConfirmation("logout");
       },
       0xe7b080,
-    );
-    this.addActionButton("settings.dataReset", 675, 715, 250, () => this.askConfirmation("dataReset"), 0xe58c72);
-    this.addActionButton(
-      "settings.accountDelete",
-      950,
-      715,
-      250,
-      () => this.askConfirmation("accountDelete"),
-      0xd96c5b,
     );
   }
 
@@ -207,78 +196,6 @@ export class SettingsPage extends Container {
     this.addNotice("settings.vibrationNotice", 655);
   }
 
-  private renderAlerts(): void {
-    this.addToggleRow(
-      225,
-      "settings.dailyQuestAlerts",
-      "settings.dailyQuestAlertsDescription",
-      this.dailyQuestAlerts,
-      () => {
-        this.dailyQuestAlerts = !this.dailyQuestAlerts;
-      },
-    );
-    this.addToggleRow(345, "settings.studyAlerts", "settings.studyAlertsDescription", this.studyAlerts, () => {
-      this.studyAlerts = !this.studyAlerts;
-    });
-    this.addToggleRow(465, "settings.rewardAlerts", "settings.rewardAlertsDescription", this.rewardAlerts, () => {
-      this.rewardAlerts = !this.rewardAlerts;
-    });
-    this.addToggleRow(585, "settings.quietHours", "settings.quietHoursDescription", this.quietHours, () => {
-      this.quietHours = !this.quietHours;
-    });
-    this.addNotice("settings.notificationPermissionNotice", 705);
-  }
-
-  private renderLearning(): void {
-    this.addSelectCard(
-      370,
-      245,
-      "settings.subject",
-      "settings.subjectDescription",
-      subjectMessages[this.subjectIndex],
-      () => {
-        this.subjectIndex = (this.subjectIndex + 1) % subjectMessages.length;
-      },
-    );
-    this.addGridToggle(950, 245, "settings.hints", "settings.hintsDescription", this.hintsEnabled, () => {
-      this.hintsEnabled = !this.hintsEnabled;
-    });
-    this.addGridToggle(
-      950,
-      390,
-      "settings.explanations",
-      "settings.explanationsDescription",
-      this.explanationsEnabled,
-      () => {
-        this.explanationsEnabled = !this.explanationsEnabled;
-      },
-    );
-    this.addGoalCard(370, 390);
-    this.addDangerCard(370, 550, "settings.learningReset", "settings.learningResetDescription", "settings.reset", () =>
-      this.askConfirmation("learningReset"),
-    );
-  }
-
-  private addToggleRow(
-    y: number,
-    label: MessageId,
-    detail: MessageId,
-    value: boolean,
-    toggle: () => Awaitable<unknown>,
-  ): void {
-    this.addCard(370, y, 1150, 100);
-    this.addLabel(label, 400, y + 18, 20);
-    this.addDetail(detail, 400, y + 54);
-    this.addActionButton(
-      value ? "settings.on" : "settings.off",
-      1330,
-      y + 23,
-      160,
-      () => this.change(toggle),
-      value ? 0x83a66a : 0xc7aa91,
-    );
-  }
-
   private addSoundControlRow(
     y: number,
     label: MessageId,
@@ -307,80 +224,6 @@ export class SettingsPage extends Container {
     this.addChild(amount);
   }
 
-  private addSelectCard(
-    x: number,
-    y: number,
-    label: MessageId,
-    detail: MessageId,
-    value: MessageId,
-    select: () => Awaitable<unknown>,
-  ): void {
-    this.addActionCard(x, y, label, detail, value, () => this.change(select));
-  }
-
-  private addGridToggle(
-    x: number,
-    y: number,
-    label: MessageId,
-    detail: MessageId,
-    value: boolean,
-    toggle: () => Awaitable<unknown>,
-  ): void {
-    this.addActionCard(x, y, label, detail, value ? "settings.on" : "settings.off", () => this.change(toggle));
-  }
-
-  private addGoalCard(x: number, y: number): void {
-    this.addCard(x, y, 555, 105);
-    this.addLabel("settings.dailyGoal", x + 30, y + 18, 20);
-    this.addDetail("settings.dailyGoalDescription", x + 30, y + 54);
-    this.addActionButton("settings.decrease", x + 330, y + 31, 50, () =>
-      this.change(() => {
-        this.dailyGoal = Math.max(1, this.dailyGoal - 1);
-      }),
-    );
-    const goal = new Text({
-      text: message("settings.problemCount", { count: this.dailyGoal }),
-      style: textStyle(17, 0x493022, "800"),
-    });
-    goal.anchor.set(0.5);
-    goal.position.set(x + 435, y + 54);
-    this.addActionButton("settings.increase", x + 475, y + 31, 50, () =>
-      this.change(() => {
-        this.dailyGoal = Math.min(20, this.dailyGoal + 1);
-      }),
-    );
-    this.addChild(goal);
-  }
-
-  private addActionCard(
-    x: number,
-    y: number,
-    label: MessageId,
-    detail: MessageId,
-    action: MessageId,
-    onPress: () => void,
-  ): void {
-    this.addCard(x, y, 555, 105);
-    this.addLabel(label, x + 30, y + 18, 19);
-    this.addDetail(detail, x + 30, y + 52);
-    this.addActionButton(action, x + 385, y + 31, 140, onPress);
-  }
-
-  private addDangerCard(
-    x: number,
-    y: number,
-    label: MessageId,
-    detail: MessageId,
-    action: MessageId,
-    onPress: () => void,
-  ): void {
-    const card = new Graphics().roundRect(x, y, 1150, 120, 22).fill(0xffe1d5).stroke({ color: 0xb65d49, width: 3 });
-    this.addChild(card);
-    this.addLabel(label, x + 30, y + 20, 20, 0x8c3429);
-    this.addDetail(detail, x + 30, y + 58);
-    this.addActionButton(action, x + 930, y + 34, 190, onPress, 0xd96c5b);
-  }
-
   private addNotice(id: MessageId, y: number): void {
     const notice = new Text({ text: message(id), style: textStyle(15, 0x76533c, "600") });
     notice.anchor.set(0.5);
@@ -400,6 +243,12 @@ export class SettingsPage extends Container {
 
   private addDetail(id: MessageId, x: number, y: number): void {
     const detail = new Text({ text: message(id), style: textStyle(15, 0x76533c, "600") });
+    detail.position.set(x, y);
+    this.addChild(detail);
+  }
+
+  private addValue(value: string | null, fallback: MessageId, x: number, y: number): void {
+    const detail = new Text({ text: value ?? message(fallback), style: textStyle(15, 0x76533c, "600") });
     detail.position.set(x, y);
     this.addChild(detail);
   }
@@ -469,21 +318,11 @@ export class SettingsPage extends Container {
       color: 0xd96c5b,
       onPress: async () => {
         this.confirmAction = null;
-        if (action === "logout") {
-          const loggedOut = await this.options.onLogout?.();
-          if (!loggedOut) {
-            this.notify("settings.logoutFailed");
-            this.render();
-            return;
-          }
-        }
-        if (action === "learningReset") {
-          const result = await this.options.onResetLearning();
-          if (!result.ok) {
-            this.notify("settings.resetFailed");
-            this.render();
-            return;
-          }
+        const loggedOut = await this.options.onLogout?.();
+        if (!loggedOut) {
+          this.notify("settings.logoutFailed");
+          this.render();
+          return;
         }
         this.notify(confirmMessages[action].status);
         this.render();
@@ -494,15 +333,33 @@ export class SettingsPage extends Container {
   }
 }
 
+function formatSaveStatus(status: GameSaveStatus): string {
+  if (!status.savedAt) {
+    return message("settings.lastSyncUnavailable");
+  }
+  const savedAt = new Date(status.savedAt);
+  if (!Number.isFinite(savedAt.getTime())) {
+    return message("settings.lastSyncUnavailable");
+  }
+  const formatted = formatLocalDateTime(savedAt);
+  return message(status.destination === "server" ? "settings.lastSyncServer" : "settings.lastSyncDevice", {
+    time: formatted,
+  });
+}
+
+function formatLocalDateTime(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  const second = String(date.getSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+}
+
 const sectionMessages: Record<SettingsSection, { tab: MessageId; title: MessageId; description: MessageId }> = {
   account: { tab: "settings.tabAccount", title: "settings.accountTitle", description: "settings.accountDescription" },
   sound: { tab: "settings.tabSound", title: "settings.soundTitle", description: "settings.soundPageDescription" },
-  alerts: { tab: "settings.tabAlerts", title: "settings.alertsTitle", description: "settings.alertsDescription" },
-  learning: {
-    tab: "settings.tabLearning",
-    title: "settings.learningTitle",
-    description: "settings.learningDescription",
-  },
 };
 
 const confirmMessages: Record<ConfirmAction, { title: MessageId; description: MessageId; status: MessageId }> = {
@@ -511,28 +368,7 @@ const confirmMessages: Record<ConfirmAction, { title: MessageId; description: Me
     description: "settings.confirmLogoutDescription",
     status: "settings.logoutComplete",
   },
-  dataReset: {
-    title: "settings.confirmDataResetTitle",
-    description: "settings.confirmDataResetDescription",
-    status: "settings.accountActionReady",
-  },
-  accountDelete: {
-    title: "settings.confirmAccountDeleteTitle",
-    description: "settings.confirmAccountDeleteDescription",
-    status: "settings.accountActionReady",
-  },
-  learningReset: {
-    title: "settings.confirmLearningResetTitle",
-    description: "settings.confirmLearningResetDescription",
-    status: "settings.learningResetReady",
-  },
 };
-
-const subjectMessages: readonly MessageId[] = [
-  "settings.subjectPython",
-  "settings.subjectJavaScript",
-  "settings.subjectWeb",
-];
 function clampVolume(value: number): number {
   return Math.min(100, Math.max(0, value));
 }

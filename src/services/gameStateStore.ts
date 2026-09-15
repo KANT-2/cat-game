@@ -5,14 +5,21 @@ import { createDefaultState, type FurnitureKind, type GameSettings, type GameSta
 import { type ShopItemId, shopItemDefinitions } from "../domain/shop";
 
 const SAVE_KEY = "cozy-code-cat-room-v1";
+const SAVED_AT_KEY = `${SAVE_KEY}-saved-at`;
+
+export type GameStateStoreOptions = {
+  previewAllCats?: boolean;
+};
 
 export class GameStateStore implements GameStateRepository {
+  constructor(private readonly options: GameStateStoreOptions = {}) {}
+
   load(): GameState {
     const fallback = createDefaultState();
     try {
       const raw = localStorage.getItem(SAVE_KEY);
       if (!raw) {
-        return fallback;
+        return this.applyPreviewCats(fallback);
       }
       const saved = JSON.parse(raw) as Omit<Partial<GameState>, "economyVersion"> & {
         economyVersion?: number;
@@ -26,7 +33,7 @@ export class GameStateStore implements GameStateRepository {
       const activeCat = savedActiveCat && ownedCats.includes(savedActiveCat) ? savedActiveCat : ownedCats[0];
       const homeCats = readHomeCats(saved.homeCats, ownedCats, activeCat);
       const clearPreviouslyAppliedThemes = saved.roomAppearanceVersion !== 1;
-      return {
+      return this.applyPreviewCats({
         economyVersion: 3,
         roomAppearanceVersion: 1,
         coins: readUnifiedCoins(saved, fallback.coins),
@@ -51,14 +58,31 @@ export class GameStateStore implements GameStateRepository {
         shopInventory: readShopInventory(saved.shopInventory, inventory),
         activeWallpaper: clearPreviouslyAppliedThemes ? null : readActiveTheme(saved.activeWallpaper, "wallpaper"),
         activeFloor: clearPreviouslyAppliedThemes ? null : readActiveTheme(saved.activeFloor, "floor"),
-      };
+      });
     } catch {
-      return fallback;
+      return this.applyPreviewCats(fallback);
     }
   }
 
-  save(state: GameState): void {
+  save(state: GameState, savedAt = new Date().toISOString()): void {
     localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    localStorage.setItem(SAVED_AT_KEY, savedAt);
+  }
+
+  loadSavedAt(): string | null {
+    const savedAt = localStorage.getItem(SAVED_AT_KEY);
+    return savedAt && Number.isFinite(Date.parse(savedAt)) ? savedAt : null;
+  }
+
+  private applyPreviewCats(state: GameState): GameState {
+    if (!this.options.previewAllCats) {
+      return state;
+    }
+    return {
+      ...state,
+      ownedCats: [...catVariants],
+      homeCats: [...catVariants],
+    };
   }
 }
 
@@ -219,6 +243,7 @@ function readSettings(value: unknown, fallback: GameSettings): GameSettings {
     effectsEnabled: typeof saved.effectsEnabled === "boolean" ? saved.effectsEnabled : fallback.effectsEnabled,
     effectsVolume: readPercent(saved.effectsVolume, fallback.effectsVolume),
     reducedMotion: typeof saved.reducedMotion === "boolean" ? saved.reducedMotion : fallback.reducedMotion,
+    learningDomain: saved.learningDomain === "SQL" ? "SQL" : "PYTHON",
   };
 }
 

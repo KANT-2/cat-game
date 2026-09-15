@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { GameStateRepository } from "../src/core/GameClient";
 import { LocalGameClient } from "../src/core/LocalGameClient";
+import { type GachaRewardId, gachaRewardDefinitions } from "../src/domain/gacha";
 import { createDefaultState, type GameState } from "../src/domain/room";
 import {
   ML_SUPERVISED_QUIZ_ID,
@@ -8,6 +9,18 @@ import {
   SQL_ACTIVE_CATS_CODE_ID,
   SQL_SELECT_QUIZ_ID,
 } from "../src/domain/study";
+
+function randomValueForReward(id: GachaRewardId): number {
+  let lowerBoundary = 0;
+  for (const reward of gachaRewardDefinitions) {
+    const upperBoundary = lowerBoundary + reward.weight;
+    if (reward.id === id) {
+      return (lowerBoundary + upperBoundary) / 2;
+    }
+    lowerBoundary = upperBoundary;
+  }
+  throw new Error(`unknown gacha reward: ${id}`);
+}
 
 class MemoryRepository implements GameStateRepository {
   state = createDefaultState();
@@ -34,6 +47,18 @@ describe("LocalGameClient", () => {
     expect(client.getSnapshot().furniture).toHaveLength(1);
     expect(repository.save).toHaveBeenCalledOnce();
     expect(listener).toHaveBeenCalledOnce();
+  });
+
+  it("records the actual time after a successful local save", () => {
+    const repository = new MemoryRepository();
+    repository.state.furniture = [];
+    const savedAt = new Date("2026-09-11T06:42:00.000Z");
+    const client = new LocalGameClient(repository, () => 0.5, () => savedAt);
+
+    client.placeFurniture({ kind: "plant", x: 3, y: 3, rotation: 0 });
+
+    expect(repository.save).toHaveBeenCalledWith(expect.any(Object), savedAt.toISOString());
+    expect(client.getSaveStatus()).toEqual({ savedAt: savedAt.toISOString(), destination: "device" });
   });
 
   it("rejects overlapping furniture without saving", () => {
@@ -230,7 +255,7 @@ describe("LocalGameClient", () => {
 
   it("draws a furniture reward and stores the exact product", () => {
     const repository = new MemoryRepository();
-    const client = new LocalGameClient(repository, () => 0.1);
+    const client = new LocalGameClient(repository, () => randomValueForReward("furniture.desk"));
 
     const result = client.drawGacha(1);
 
@@ -295,17 +320,27 @@ describe("LocalGameClient", () => {
 
   it("gives eleven independently drawn rewards for the multi draw", () => {
     const repository = new MemoryRepository();
-    const client = new LocalGameClient(repository, () => 0.9);
+    const client = new LocalGameClient(repository, () => randomValueForReward("furniture.sofa"));
 
     const result = client.drawGacha(11);
 
-    expect(result).toMatchObject({ ok: true, remainingCoins: 1_099_730 });
+    expect(result).toMatchObject({ ok: true, remainingCoins: 1_099_700 });
     if (!result.ok) {
       throw new Error("expected multi draw to succeed");
     }
     expect(result.rewards).toHaveLength(11);
     expect(result.rewards.every((reward) => reward.id === "furniture.sofa")).toBe(true);
     expect(client.getSnapshot().shopInventory["furniture.sofa"]).toBe(11);
+  });
+
+  it("requires the full 300 coins before starting the multi draw", () => {
+    const repository = new MemoryRepository();
+    repository.state.coins = 299;
+    const client = new LocalGameClient(repository, () => randomValueForReward("furniture.sofa"));
+
+    expect(client.drawGacha(11)).toEqual({ ok: false, reason: "insufficient-coins" });
+    expect(client.getSnapshot().coins).toBe(299);
+    expect(repository.save).not.toHaveBeenCalled();
   });
 
   it("rejects a draw without enough coins and cannot select an unowned cat", () => {
@@ -319,20 +354,31 @@ describe("LocalGameClient", () => {
     expect(repository.save).not.toHaveBeenCalled();
   });
 
-  it("grades a function-body challenge and preserves the base reward when hints are used", () => {
+  it("grades an editable full-function challenge and preserves the base reward when hints are used", () => {
     const repository = new MemoryRepository();
     const client = new LocalGameClient(
       repository,
       () => 0.5,
       () => new Date(2026, 8, 3),
     );
+    expect(client.getCodeChallenge("python-sum-001")).toMatchObject({
+      editorMode: "function",
+      starterCode: expect.stringContaining("def sum_to(n):"),
+    });
 
-    const failed = client.submitCodeChallenge("python-sum-001", "    return 0", 0);
+    const failed = client.submitCodeChallenge("python-sum-001", "def sum_to(n):\n    return 0", 0);
     expect(failed).toMatchObject({ ok: true, passed: false, coinsAwarded: 0 });
+
+    const missingEntrypoint = client.submitCodeChallenge(
+      "python-sum-001",
+      "def renamed(n):\n    return n * (n + 1) // 2",
+      0,
+    );
+    expect(missingEntrypoint).toMatchObject({ ok: true, passed: false, coinsAwarded: 0 });
 
     const passed = client.submitCodeChallenge(
       "python-sum-001",
-      "    total = 0\n    for i in range(1, n + 1):\n        total += i\n    return total",
+      "def sum_to(n):\n    total = 0\n    for i in range(1, n + 1):\n        total += i\n    return total",
       2,
     );
     expect(passed).toMatchObject({ ok: true, passed: true, firstCompletion: true, coinsAwarded: 40 });
@@ -379,9 +425,13 @@ describe("LocalGameClient", () => {
     );
     client.answerQuiz("python-range-001", "zero-to-two");
     expect(client.getDailyQuests()[0].progress).toBe(1);
+    expect(client.getStudyTasks().find((task) => task.id === "python-range-001")?.completed).toBe(true);
 
     day = 4;
+    client.prepareStudy();
     expect(client.getDailyQuests()[0].progress).toBe(0);
+    expect(client.getStudyTasks().find((task) => task.id === "python-range-001")?.completed).toBe(false);
+    expect(client.getSnapshot().completedQuizIds).toContain("python-range-001");
     expect(client.getSnapshot().claimedDailyQuestIds).toEqual([]);
   });
 
@@ -448,6 +498,8 @@ describe("LocalGameClient", () => {
       itemType: "wallpaper",
     });
     expect(client.getSnapshot().activeWallpaper).toBe("wallpaper.cream");
+    expect(client.applyRoomTheme(null)).toEqual({ ok: true, itemId: null, itemType: "wallpaper" });
+    expect(client.getSnapshot().activeWallpaper).toBeNull();
   });
 
   it("persists sound settings and clears only cat memories", () => {
@@ -458,7 +510,10 @@ describe("LocalGameClient", () => {
     expect(client.updateSettings({ bgmEnabled: false, effectsVolume: 37 })).toMatchObject({
       bgmEnabled: false,
       effectsVolume: 40,
+      learningDomain: "PYTHON",
     });
+    expect(client.updateSettings({ learningDomain: "SQL" })).toMatchObject({ learningDomain: "SQL" });
+    expect(client.getStudyTasks()).toEqual([]);
     expect(client.clearCatMemories()).toEqual({ ok: true, removed: 1 });
     expect(client.getSnapshot().ownedCats).toContain("fluffy");
     expect(client.getSnapshot().catMemories).toEqual({});
@@ -479,7 +534,22 @@ describe("LocalGameClient", () => {
     expect(client.getSnapshot().catMemories.ink).toBeUndefined();
   });
 
-  it("keeps free chat useful while rejecting prompt control and unknown knowledge", () => {
+  it("clears only the selected cat's memories", () => {
+    const repository = new MemoryRepository();
+    repository.state.ownedCats = ["fluffy", "ink"];
+    repository.state.catMemories = {
+      fluffy: ["포근이와 나눈 이야기"],
+      ink: ["먹구름과 나눈 이야기"],
+    };
+    const client = new LocalGameClient(repository);
+
+    expect(client.clearCatMemory("fluffy")).toEqual({ ok: true, removed: 1 });
+    expect(client.getSnapshot().catMemories.fluffy).toBeUndefined();
+    expect(client.getSnapshot().catMemories.ink).toEqual(["먹구름과 나눈 이야기"]);
+    expect(client.clearCatMemory("tabby")).toEqual({ ok: false, reason: "cat-not-owned" });
+  });
+
+  it("keeps free chat useful while rejecting prompt control", () => {
     const repository = new MemoryRepository();
     const client = new LocalGameClient(repository);
 
@@ -497,10 +567,22 @@ describe("LocalGameClient", () => {
     });
     expect(client.chatWithCat("fluffy", "양자역학을 자세히 설명해 줘")).toMatchObject({
       ok: true,
-      category: "UNKNOWN",
+      category: "GENERAL",
       reply: { messageId: "cat.conversation.unknownReply" },
       remembered: false,
     });
     expect(client.getSnapshot().catMemories.fluffy).toEqual(["사용자와 코딩 학습에 관해 대화했다."]);
+  });
+
+  it("recognizes natural play invitations as companion chat", () => {
+    const client = new LocalGameClient(new MemoryRepository());
+
+    for (const prompt of ["같이 놀자", "같이 놀래?", "우리 같이 놀까?", "나랑 놀아 줘", "공놀이하자"]) {
+      expect(client.chatWithCat("fluffy", prompt)).toMatchObject({
+        ok: true,
+        category: "COMPANION",
+        remembered: true,
+      });
+    }
   });
 });

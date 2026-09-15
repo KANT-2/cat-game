@@ -13,6 +13,11 @@ FastAPI는 호스트 포트를 열지 않고, nginx만 `127.0.0.1:8080`에 노�
 3. `CAT_GAME_AUTH_RATE_LIMIT_SECRET`은 모든 API 인스턴스가 공유하는 32바이트 이상의 무작위 값으로 만든다.
 4. Python 채점은 호스트 Docker 소켓을 API 컨테이너에 마운트하지 않는다. 별도 격리 호스트의 TLS Docker
    endpoint와 클라이언트 인증서 디렉터리를 `CAT_GAME_GRADING_DOCKER_*`에 지정한다.
+5. SQL 채점은 운영 애플리케이션 DB와 분리된 빈 PostgreSQL을 준비하고, superuser가 아닌 전용 계정 URL을
+   `CAT_GAME_SQL_GRADING_DATABASE_URL`에 지정한다. 이 계정은 자신의 임시 스키마를 생성·삭제할 수 있어야 한다.
+6. 고양이 자유 대화용 `CAT_GAME_GEMINI_API_KEY`와 문제 관리용 `CAT_GAME_TASKS_API_KEY`는 저장소에
+   커밋하지 않고 서버 Secret 또는 저장소 밖의 `production.env`에만 등록한다. Compose는 두 값을 각각
+   백엔드의 `GEMINI_API_KEY`, `TASKS_API_KEY`로 전달하며, 값이 없으면 안전하게 배포를 중단한다.
 
 운영 설정을 렌더링하고 시작한다.
 
@@ -30,12 +35,16 @@ curl -fsS https://nyang.example.com/ready
 `CAT_GAME_GRADING_LEASE_SECONDS`로 조정한다.
 메모리·CPU·PID·출력 제한은 `production.env.example`의 `CAT_GAME_GRADING_*` 값을 기준으로 조정한다.
 특히 출력 상한은 학생 프로세스와 Docker CLI 양쪽에 적용되므로 워커가 무한 출력을 메모리에 쌓지 않는다.
+SQL 채점의 연결·statement timeout과 행·출력 상한은 `CAT_GAME_SQL_GRADING_*` 값으로 제한하며, 해당
+데이터베이스에는 운영 데이터나 다른 서비스의 테이블을 두지 않는다.
 
 PWA와 `/api`, `/health`, `/ready`는 같은 공개 호스트를 사용한다. 따라서 운영의 `__Host-nyang_session`
 쿠키와 CSRF 쿠키를 다른 서브도메인으로 넓힐 필요가 없다. nginx는 API 본문 크기와 proxy timeout을 제한하고,
 정적 해시 자산만 장기 캐시한다. 앱 셸과 service worker는 `no-store`로 갱신하며, CSP를 포함한 보안 헤더는
 캐시 정책과 관계없이 모든 응답에 유지한다. 이미 설치된 PWA를 오프라인에서 다시 열면 캐시된 Canvas 셸이
 연결 오류 화면을 유지하며, 온라인 복귀 후 새로고침하면 서버 세션과 상태를 다시 읽는다.
+이미지는 service worker 설치 목록에 포함하지 않고 nginx에서 최초 응답한 뒤 런타임 캐시에 저장한다. 파일을
+교체할 때는 장기 `immutable` HTTP 캐시와 충돌하지 않도록 새 파일명을 사용하고 `catalog.json`을 갱신한다.
 
 ## 백업과 복구
 

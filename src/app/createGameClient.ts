@@ -26,7 +26,9 @@ export type GameClientStart =
 
 /** 환경 설정과 브라우저 세션에 따라 즉시 사용할 클라이언트 또는 로그인 명령을 준비한다. */
 export async function createGameClient(): Promise<GameClientStart> {
-  const local = new LocalGameClient(new GameStateStore());
+  const previewAllCats =
+    import.meta.env.DEV && new URLSearchParams(window.location.search).get("previewAllCats") !== "0";
+  const local = new LocalGameClient(new GameStateStore({ previewAllCats }));
   const baseUrl = import.meta.env.VITE_CAT_GAME_API_BASE_URL?.trim();
   if (!baseUrl) {
     return { kind: "ready", client: local, session: null };
@@ -37,8 +39,11 @@ export async function createGameClient(): Promise<GameClientStart> {
     return { kind: "ready", client: await BackendLearningGameClient.create(local, api), session: null };
   }
   try {
-    await api.connectBrowserSession();
-    return { kind: "ready", ...browserSession(await BackendLearningGameClient.createConnected(local, api), api) };
+    const user = await api.connectBrowserSession();
+    return {
+      kind: "ready",
+      ...browserSession(await BackendLearningGameClient.createConnected(local, api, user), api),
+    };
   } catch (error) {
     if (!(error instanceof BackendApiError) || error.status !== 401) {
       throw error;
@@ -50,12 +55,11 @@ export async function createGameClient(): Promise<GameClientStart> {
   return {
     kind: "authentication-required",
     authenticate: async (mode, email, password) => {
-      if (mode === "login") {
-        await api.login(email, password);
-      } else {
-        await api.register(email, deriveUsername(email), password);
-      }
-      return browserSession(await BackendLearningGameClient.createConnected(local, api), api);
+      const user =
+        mode === "login"
+          ? await api.login(email, password)
+          : await api.register(email, deriveUsername(email), password);
+      return browserSession(await BackendLearningGameClient.createConnected(local, api, user), api);
     },
   };
 }

@@ -35,6 +35,7 @@ assets/
 - ID는 `종류.대상.변형.번호` 형식의 소문자 영문으로 작성한다.
 - 원본 작업 파일은 별도 디자인 저장소에서 관리하고 이곳에는 게임용 export만 둔다.
 - 기본 게임용 이미지는 투명 WebP 또는 PNG를 사용한다.
+- 고양이 스프라이트 시트는 투명 픽셀까지 보존하는 무손실 WebP로 내보낸다.
 - 글자는 이미지에 굽지 않는다.
 - 가격, 점유 셀, 충돌, 보상 값은 리소스 카탈로그에 넣지 않는다.
 - PR 전에 `npm run assets:check`를 실행한다.
@@ -62,7 +63,7 @@ assets/
 {
   "id": "cat.fluffy.idle.01",
   "kind": "cat",
-  "src": "/assets/cats/fluffy-white/fluffy-white-idle-01.png",
+  "src": "/assets/cats/fluffy-white/fluffy-white-idle-01.webp",
   "anchor": { "x": 0.5, "y": 0.9 },
   "spriteSheet": {
     "frameWidth": 256,
@@ -79,5 +80,6 @@ assets/
 - `playback`은 반복하는 `loop`, 한 번 재생하는 `once`, 마지막 프레임을 유지하는 `hold` 중 하나다.
 - 프레임마다 바닥 접점이 흔들리지 않도록 같은 크기와 anchor를 사용한다.
 - 배경색을 넣은 contact sheet와 GIF는 검수용으로만 사용하고 `catalog.json`에는 투명 PNG 또는 WebP 시트만 등록한다.
-- 고양이 리소스는 `ink-black`, `fluffy-white`, `siamese-seal`, `orange-tabby` 4종이며, 각 13개 동작을 `catalog.json`에 등록한다.
+- 기존 `cat_04`인 `tabby`는 `orange-tabby-v2` 파일명을 사용하는 개선 시트를 쓰고, 신규 `silver`, `calico`, `tuxedo`, `fold` 파일명은 각각 해당 게임 변형으로 연결한다.
+- 숫자형 export는 기존 런타임 규격인 256×256 프레임과 8열 메타데이터를 사용한다. 일반 동작은 25fps이며 V3 `scruff-lift`는 14fps용 5프레임 간격으로 표본화한다. 집기는 `앉음 → 매달림 → 앉음` 왕복 순서로 패킹해 가운데 매달린 프레임에서 멈춘다. 04–08 V3 export는 각 13개 동작을 제공하며 드래그 중에는 해당 변형의 `scruff-lift` 시트를 사용한다.
 - 공통 신규 동작 `scruff-lift`는 시트와 카탈로그 등록까지 완료된 리소스다. 게임 상태 기계에서 사용할 시점에 `CatAction`과 동작 전이 규칙을 별도 연결한다.

@@ -15,6 +15,10 @@ workspace/
 
 백엔드가 다른 위치에 있다면 `CAT_GAME_BACKEND_PATH`에 해당 경로를 지정할 수 있다.
 
+고양이 자유 대화를 사용하려면 백엔드 저장소의 `.env`에 `GEMINI_API_KEY`를 설정한다. 통합 Compose는
+해당 `.env`를 API 컨테이너에 읽어 들이며, 파일이 없거나 키가 비어 있으면 AI 대화만 `503 Service Unavailable`로
+비활성화된다. `.env`는 이미지에 복사하거나 Git에 커밋하지 않는다.
+
 ## 실행과 확인
 
 프런트엔드 저장소에서 다음을 실행한다.

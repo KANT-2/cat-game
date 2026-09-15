@@ -1,6 +1,6 @@
 import { Container, Graphics, Rectangle, Sprite, Text } from "pixi.js";
 import { message } from "../../content/messages";
-import type { GameClient } from "../../core/GameClient";
+import type { GameClient, GameSaveStatus, PlayerProfileView } from "../../core/GameClient";
 import type { CatVariant } from "../../domain/cats";
 import type { FurnitureKind, GameState, PlacedFurniture } from "../../domain/room";
 import type { ShopItemId } from "../../domain/shop";
@@ -28,6 +28,7 @@ export type HomeIconSources = {
   profile: string;
   study: string;
   dailyQuest: string;
+  attendance: string;
   gacha: string;
   home: string;
   settings: string;
@@ -63,6 +64,7 @@ export class HomeScene extends Container {
   private attendanceModal: AttendanceModal | null = null;
   private catConversationModal: CatConversationModal | null = null;
   private studyModal: StudyModal | null = null;
+  private studyOpening = false;
   private shopScene: ShopScene | null = null;
   private dailyQuestScene: DailyQuestScene | null = null;
   private gachaScene: GachaScene | null = null;
@@ -80,6 +82,8 @@ export class HomeScene extends Container {
   private screenWidth = BASE_WIDTH;
   private screenHeight = BASE_HEIGHT;
   private readonly onLogout: (() => Promise<boolean>) | null;
+  private readonly profileImageUrl: string | null;
+  private readonly playerProfile: PlayerProfileView;
 
   constructor(
     gameClient: GameClient,
@@ -88,6 +92,8 @@ export class HomeScene extends Container {
     forestArt: ForestArt,
     codeEditorFactory: CodeEditorOverlayFactory,
     textInputFactory: TextInputBridgeFactory,
+    profileImageUrl: string | null,
+    playerProfile: PlayerProfileView,
     onLogout: (() => Promise<boolean>) | null = null,
   ) {
     super();
@@ -99,6 +105,8 @@ export class HomeScene extends Container {
     this.consumableArt = forestArt.consumables;
     this.codeEditorFactory = codeEditorFactory;
     this.textInputFactory = textInputFactory;
+    this.profileImageUrl = profileImageUrl;
+    this.playerProfile = playerProfile;
     this.onLogout = onLogout;
     this.state = gameClient.getSnapshot();
     this.clearing = new ForestClearingView({
@@ -164,7 +172,7 @@ export class HomeScene extends Container {
     );
 
     this.profilePanel.position.set(24, 20);
-    this.sideMenu.position.set(Math.max(24, width - 464), height - 128);
+    this.sideMenu.position.set(Math.max(24, width - 572), height - 128);
     this.settingsMenu.position.set(24, height - 132);
     this.pageBackground.clear().rect(0, 0, width, height).fill(0xf8e7ca);
     this.studyModal?.layout(width, height);
@@ -197,12 +205,19 @@ export class HomeScene extends Container {
     frame.height = profileSize * visualScale;
     frame.position.set((profileSize - frame.width) / 2, (profileSize - frame.height) / 2);
     const activeAnimations = this.catAnimations[this.state.activeCat];
-    const portrait = new Sprite(activeAnimations.idle.textures[0]);
+    const portrait = Sprite.from(activeAnimations.idle.textures[0]);
     this.profilePortrait = portrait;
     this.fitProfilePortrait();
     const portraitMask = new Graphics().roundRect(40, 36, 76, 68, 16).fill(0xffffff);
     portrait.mask = portraitMask;
-    this.profilePanel.addChild(frame, portrait, portraitMask);
+    const profileLabel = new Text({ text: message("home.profile"), style: textStyle(13, 0x4b3021, "800") });
+    profileLabel.anchor.set(0.5);
+    profileLabel.position.set(profileSize / 2, 116);
+    const labelPlate = new Graphics()
+      .roundRect(profileSize / 2 - profileLabel.width / 2 - 7, 105, profileLabel.width + 14, 22, 8)
+      .fill({ color: 0xffedcd, alpha: 0.84 })
+      .stroke({ color: 0x9a6846, width: 1.5 });
+    this.profilePanel.addChild(frame, portrait, portraitMask, labelPlate, profileLabel);
     this.profilePanel.hitArea = new Rectangle(0, 0, profileSize, profileSize);
     this.profilePanel.eventMode = "static";
     this.profilePanel.cursor = "pointer";
@@ -212,11 +227,22 @@ export class HomeScene extends Container {
   private buildSideMenu(): void {
     this.shopOptions.visible = false;
 
-    const study = this.createIconButton(this.iconSources.study, message("home.study"), true, () => this.openStudy());
+    const study = this.createIconButton(
+      this.iconSources.study,
+      message("home.study"),
+      true,
+      () => void this.openStudy(),
+    );
     const dailyQuest = this.createIconButton(this.iconSources.dailyQuest, message("home.dailyQuest"), true, () =>
       this.openDailyQuest(),
     );
     const gacha = this.createIconButton(this.iconSources.gacha, message("home.gacha"), true, () => this.openGacha());
+    const attendance = this.createIconButton(
+      this.iconSources.attendance,
+      message("attendance.homeShortcut"),
+      true,
+      () => this.openAttendance(true),
+    );
     const home = this.createIconButton(this.iconSources.home, message("home.shopOwned"), true, () =>
       this.toggleShopOptions(),
     );
@@ -232,8 +258,9 @@ export class HomeScene extends Container {
     });
     placement.position.set(112, 40);
     dailyQuest.x = 108;
-    gacha.x = 216;
-    home.x = 324;
+    attendance.x = 216;
+    gacha.x = 324;
+    home.x = 432;
     const shop = new CanvasButton({
       label: message("shop.title"),
       width: 126,
@@ -249,10 +276,10 @@ export class HomeScene extends Container {
       onPress: () => this.openFeaturePage("owned"),
     });
     owned.y = 56;
-    this.shopOptions.position.set(319, -112);
+    this.shopOptions.position.set(427, -112);
     this.shopOptions.addChild(shop, owned);
 
-    this.sideMenu.addChild(study, dailyQuest, gacha, home, this.shopOptions);
+    this.sideMenu.addChild(study, dailyQuest, attendance, gacha, home, this.shopOptions);
     this.settingsMenu.addChild(settings, placement);
   }
 
@@ -286,19 +313,42 @@ export class HomeScene extends Container {
     this.uiLayer.visible = true;
   }
 
-  private openStudy(): void {
-    if (this.studyModal) {
+  private async openStudy(): Promise<void> {
+    if (this.studyModal || this.studyOpening) {
       return;
+    }
+    this.studyOpening = true;
+    try {
+      await this.gameClient.prepareStudy();
+    } catch (error) {
+      console.warn("Study refresh failed", error);
+    } finally {
+      this.studyOpening = false;
     }
     this.clearOpenPages();
     this.enterPage();
     this.studyModal = new StudyModal({
       tasks: this.gameClient.getStudyTasks(),
+<<<<<<< HEAD
       mascot: this.iconSources.studyMascot,
+=======
+      learningDomain: this.gameClient.getSnapshot().settings.learningDomain,
+      getMastery: () => this.gameClient.getStudyMastery(),
+      getTier: () => this.gameClient.getStudyTier(),
+      getCoins: () => this.gameClient.getSnapshot().coins,
+      onPrepareTask: (taskId) => this.gameClient.prepareStudyTask(taskId),
+>>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
       getQuiz: (quizId) => this.gameClient.getQuiz(quizId),
       getCodeChallenge: (challengeId) => this.gameClient.getCodeChallenge(challengeId),
       onAnswer: (quizId, choiceId) => this.gameClient.answerQuiz(quizId, choiceId),
-      onSubmitCode: (challengeId, body, hintsUsed) => this.gameClient.submitCodeChallenge(challengeId, body, hintsUsed),
+      onSubmitCode: (challengeId, code, hintsUsed) => this.gameClient.submitCodeChallenge(challengeId, code, hintsUsed),
+      onChangeLearningDomain: async (learningDomain) => {
+        const settings = await this.gameClient.updateSettings({ learningDomain });
+        return {
+          learningDomain: settings.learningDomain,
+          tasks: this.gameClient.getStudyTasks(),
+        };
+      },
       onClose: () => this.closeStudy(),
       backIcon: this.iconSources.back,
       coinIcon: this.iconSources.coin,
@@ -348,8 +398,9 @@ export class HomeScene extends Container {
       variant,
       animations: this.catAnimations[variant],
       memoryCount: this.state.catMemories[variant]?.length ?? 0,
+      onClearMemory: () => this.gameClient.clearCatMemory(variant),
       onTalk: (topic) => this.gameClient.talkToCat(variant, topic),
-      onFreeTalk: (userMessage) => this.gameClient.chatWithCat(variant, userMessage),
+      onFreeTalk: (userMessage, recentMessages) => this.gameClient.chatWithCat(variant, userMessage, recentMessages),
       textInputFactory: this.textInputFactory,
       onReaction: (action) => {
         this.clearing.playConversationReaction(action, variant);
@@ -410,7 +461,7 @@ export class HomeScene extends Container {
       getState: () => this.state,
       getQuests: () => this.gameClient.getDailyQuests(),
       onBack: () => this.closeDailyQuest(),
-      onOpenStudy: () => this.openStudy(),
+      onOpenStudy: () => void this.openStudy(),
       onClaim: (questId) => this.gameClient.claimDailyQuest(questId),
       onClaimBonus: () => this.gameClient.claimDailyBonus(),
       backIcon: this.iconSources.back,
@@ -477,6 +528,9 @@ export class HomeScene extends Container {
       onSetCatHome: async (variant, visible) => (await this.gameClient.setCatHome(variant, visible)).ok,
       onApplyTheme: async (itemId) => {
         try {
+          if (itemId === null) {
+            return (await this.gameClient.applyRoomTheme(null)).ok;
+          }
           await this.backgroundArt.load([itemId]);
         } catch (error) {
           console.warn("Selected background could not be loaded", error);
@@ -491,9 +545,10 @@ export class HomeScene extends Container {
         this.enterRoomEditMode();
       },
       onUpdateSettings: (patch) => this.gameClient.updateSettings(patch),
-      onResetLearning: () => this.gameClient.resetLearningProgress(),
       onLogout: this.onLogout,
-      onOpenAttendance: () => this.openAttendance(true),
+      profileImageUrl: this.profileImageUrl,
+      playerProfile: this.playerProfile,
+      getSaveStatus: (): GameSaveStatus => this.gameClient.getSaveStatus(),
       catAnimations: this.catAnimations,
       furnitureArt: this.furnitureArt,
       consumableArt: this.consumableArt,

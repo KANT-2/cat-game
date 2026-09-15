@@ -1,7 +1,13 @@
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+const basePath = normalizeBasePath(process.env.CAT_GAME_BASE_PATH ?? "/");
+const imageAssetPattern = new RegExp(
+  `${escapeRegularExpression(basePath)}assets/.*\\.(?:avif|gif|jpe?g|png|svg|webp)`,
+);
+
 export default defineConfig({
+  base: basePath,
   clearScreen: false,
   build: {
     rollupOptions: {
@@ -20,16 +26,18 @@ export default defineConfig({
   },
   plugins: [
     VitePWA({
+      base: basePath,
+      scope: basePath,
       registerType: "autoUpdate",
       includeAssets: ["icons/app-icon.svg"],
       manifest: {
-        id: "/",
+        id: basePath,
         name: "{ 냥 }",
         short_name: "{ 냥 }",
         description: "Python을 연습하고 고양이 방을 꾸미는 학습 게임",
         lang: "ko",
-        start_url: "/",
-        scope: "/",
+        start_url: basePath,
+        scope: basePath,
         display: "standalone",
         orientation: "landscape",
         background_color: "#3b251c",
@@ -37,7 +45,7 @@ export default defineConfig({
         categories: ["education", "games"],
         icons: [
           {
-            src: "/icons/app-icon.svg",
+            src: `${basePath}icons/app-icon.svg`,
             sizes: "any",
             type: "image/svg+xml",
             purpose: "any maskable",
@@ -45,18 +53,17 @@ export default defineConfig({
         ],
       },
       workbox: {
-        navigateFallback: "/index.html",
-        globPatterns: ["**/*.{js,css,html,json,png,webp,svg,woff2}"],
-        globIgnores: ["assets/backgrounds/**/*"],
+        navigateFallback: `${basePath}index.html`,
+        globPatterns: ["**/*.{js,css,html,json,woff2}"],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.pathname.startsWith("/assets/backgrounds/"),
+            urlPattern: imageAssetPattern,
             handler: "CacheFirst",
             options: {
-              cacheName: "location-backgrounds-v1",
+              cacheName: "game-images-v1",
               cacheableResponse: { statuses: [0, 200] },
-              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 30 },
             },
           },
         ],
@@ -67,3 +74,15 @@ export default defineConfig({
     }),
   ],
 });
+
+function normalizeBasePath(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === "/") {
+    return "/";
+  }
+  return `/${trimmed.replace(/^\/+|\/+$/g, "")}/`;
+}
+
+function escapeRegularExpression(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}

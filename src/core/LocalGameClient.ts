@@ -39,12 +39,14 @@ import type {
   DailyRewardResult,
   GachaDrawResult,
   GameClient,
+  GameSaveStatus,
   GameStateListener,
   GameStateRepository,
   LearningResetResult,
   MoveFurnitureCommand,
   PlacementCommand,
   PlacementResult,
+  PlayerProfileView,
   PurchaseResult,
   QuizAnswerResult,
   QuizView,
@@ -54,6 +56,7 @@ import type {
 
 export class LocalGameClient implements GameClient {
   private state: GameState;
+  private lastSavedAt: string | null;
   private readonly listeners = new Set<GameStateListener>();
 
   constructor(
@@ -62,10 +65,23 @@ export class LocalGameClient implements GameClient {
     private readonly now: () => Date = () => new Date(),
   ) {
     this.state = store.load();
+    this.lastSavedAt = store.loadSavedAt?.() ?? null;
   }
 
   getSnapshot(): GameState {
     return cloneState(this.state);
+  }
+
+  getProfileImageUrl(): string | null {
+    return null;
+  }
+
+  getPlayerProfile(): PlayerProfileView {
+    return { displayName: null, email: null };
+  }
+
+  getSaveStatus(): GameSaveStatus {
+    return { savedAt: this.lastSavedAt, destination: "device" };
   }
 
   subscribe(listener: GameStateListener): () => void {
@@ -232,7 +248,12 @@ export class LocalGameClient implements GameClient {
     return { ok: true, itemId, effect: item.effect, remainingQuantity };
   }
 
-  applyRoomTheme(itemId: ShopItemId): ApplyRoomThemeResult {
+  applyRoomTheme(itemId: ShopItemId | null): ApplyRoomThemeResult {
+    if (itemId === null) {
+      this.state = { ...this.state, activeWallpaper: null };
+      this.commit();
+      return { ok: true, itemId: null, itemType: "wallpaper" };
+    }
     const item = shopItemDefinitions[itemId];
     if (!item) {
       return { ok: false, reason: "item-not-found" };
@@ -397,6 +418,10 @@ export class LocalGameClient implements GameClient {
   }
 
   getStudyTasks(): StudyTaskView[] {
+    this.ensureDailyState();
+    if (this.state.settings.learningDomain === "SQL") {
+      return [];
+    }
     return studyTaskDefinitions.map((task) => ({
       id: task.id,
       type: task.type,
@@ -406,11 +431,56 @@ export class LocalGameClient implements GameClient {
       title: { messageId: task.titleMessage },
       summary: { messageId: task.summaryMessage },
       rewardCoins: task.rewardCoins,
-      completed:
-        task.type === "quiz"
-          ? this.state.completedQuizIds.includes(task.id)
-          : this.state.completedCodeChallengeIds.includes(task.id),
+      completed: this.state.dailyCompletedTaskIds.includes(task.id),
     }));
+  }
+
+  prepareStudy(): void {
+    this.ensureDailyState();
+  }
+
+  prepareStudyTask(taskId: string): StudyTaskView | null {
+    return this.getStudyTasks().find((task) => task.id === taskId) ?? null;
+  }
+
+  getStudyMastery(): import("./GameClient").StudyMasteryView {
+    const tasks = this.getStudyTasks();
+    const names =
+      this.state.settings.learningDomain === "SQL"
+        ? [
+            "basics",
+            "filtering",
+            "aggregation",
+            "joins",
+            "subqueries",
+            "advanced_queries",
+            "data_manipulation",
+            "schema",
+            "transactions",
+          ]
+        : ["basics", "conditionals", "loops", "strings", "collections", "functions", "exceptions"];
+    return names.map((conceptName) => {
+      const localConcept = conceptName === "basics" ? "variables" : conceptName;
+      const related = tasks.filter((task) => task.concept === localConcept);
+      const completed = related.filter((task) => task.completed).length;
+      return {
+        conceptName,
+        attempts: completed,
+        proficiencyLevel: related.length === 0 ? 0 : Math.round((completed / related.length) * 100),
+      };
+    });
+  }
+
+  getStudyTier(): import("./GameClient").StudyTierView {
+    return {
+      domain: this.state.settings.learningDomain,
+      currentTier: "BRONZE",
+      unlockedDifficulties: ["basic"],
+      nextTier: "SILVER",
+      completed: 0,
+      total: 50,
+      required: 40,
+    };
   }
 
   getCodeChallenge(challengeId: string): CodeChallengeView | null {
@@ -421,7 +491,12 @@ export class LocalGameClient implements GameClient {
     return {
       id: challenge.id,
       type: challenge.type,
+<<<<<<< HEAD
       language: challenge.language,
+=======
+      language: "python",
+      editorMode: "function",
+>>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
       concept: challenge.concept,
       difficulty: challenge.difficulty,
       title: { messageId: challenge.titleMessage },
@@ -429,24 +504,27 @@ export class LocalGameClient implements GameClient {
       prompt: { messageId: challenge.promptMessage },
       rewardCoins: challenge.rewardCoins,
       completed: this.state.completedCodeChallengeIds.includes(challengeId),
-      signature: challenge.signature,
-      starterBody: challenge.starterBody,
+      starterCode: challenge.starterCode,
       examples: { messageId: challenge.examplesMessage },
       hints: challenge.hintMessages.map((messageId) => ({ messageId })),
       bonusCoins: challenge.bonusCoins,
     };
   }
 
-  submitCodeChallenge(challengeId: string, body: string, hintsUsed: number): CodeSubmissionResult {
+  submitCodeChallenge(challengeId: string, code: string, hintsUsed: number): CodeSubmissionResult {
     this.ensureDailyState();
     const challenge = codeChallengeDefinitions[challengeId];
     if (!challenge) {
       return { ok: false, reason: "challenge-not-found" };
     }
-    if (body.trim().length === 0) {
+    if (code.trim().length === 0) {
       return { ok: false, reason: "empty-code" };
     }
+<<<<<<< HEAD
     const grade = gradeCodeChallenge(challenge.grader, body);
+=======
+    const grade = gradeSumChallenge(code);
+>>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
     if (!grade.passed) {
       return { ok: true, passed: false, tests: grade.tests, firstCompletion: false, coinsAwarded: 0 };
     }
@@ -591,6 +669,18 @@ export class LocalGameClient implements GameClient {
     return { ok: true, removed };
   }
 
+  clearCatMemory(catVariant: CatVariant): CatMemoryClearResult {
+    if (!this.state.ownedCats.includes(catVariant)) {
+      return { ok: false, reason: "cat-not-owned" };
+    }
+    const removed = this.state.catMemories[catVariant]?.length ?? 0;
+    const catMemories = { ...this.state.catMemories };
+    delete catMemories[catVariant];
+    this.state = { ...this.state, catMemories };
+    this.commit();
+    return { ok: true, removed };
+  }
+
   talkToCat(catVariant: CatVariant, topic: CatConversationTopic): CatConversationResult {
     if (!this.state.ownedCats.includes(catVariant)) {
       return { ok: false, reason: "cat-not-owned" };
@@ -680,7 +770,9 @@ export class LocalGameClient implements GameClient {
   }
 
   private commit(): void {
-    this.store.save(this.state);
+    const savedAt = this.now().toISOString();
+    this.store.save(this.state, savedAt);
+    this.lastSavedAt = savedAt;
     const snapshot = this.getSnapshot();
     for (const listener of this.listeners) {
       listener(snapshot);

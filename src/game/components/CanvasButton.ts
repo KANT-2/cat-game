@@ -10,6 +10,7 @@ export type CanvasButtonOptions = {
   textColor?: number;
   borderColor?: number;
   fontSize?: number;
+  wrapLabel?: boolean;
   disabled?: boolean;
   onPress: () => void;
 };
@@ -28,9 +29,27 @@ export class CanvasButton extends Container {
       text: options.label,
       style: {
         ...textStyle(options.fontSize ?? 17, options.textColor ?? 0x3c2a21, "700"),
+        ...(options.wrapLabel
+          ? {
+              align: "left" as const,
+              breakWords: true,
+              lineHeight: (options.fontSize ?? 17) + 5,
+              wordWrap: true,
+              wordWrapWidth: options.width - 48,
+            }
+          : {}),
         dropShadow: { color: 0xffffff, alpha: 0.48, angle: -Math.PI / 2, blur: 0, distance: 1 },
       },
     });
+    if (options.wrapLabel) {
+      fitWrappedTextHeight(
+        this.labelText,
+        options.height - 16,
+        Math.min(11, options.fontSize ?? 17),
+        options.fontSize ?? 17,
+        5,
+      );
+    }
     this.labelText.anchor.set(0.5);
     this.labelText.position.set(options.width / 2, options.height / 2);
     this.addChild(this.background, this.labelText);
@@ -71,6 +90,28 @@ export class CanvasButton extends Container {
       .moveTo(radius, height - 5)
       .lineTo(width - radius, height - 5)
       .stroke({ color: 0x7a4427, width: 2, alpha: 0.28 });
+  }
+}
+
+/** Keep wrapped canvas text inside a fixed-height region without dropping any content. */
+export function fitWrappedTextHeight(
+  text: Text,
+  maximumHeight: number,
+  minimumFontSize: number,
+  preferredFontSize = Number(text.style.fontSize),
+  lineHeightGap = 5,
+): void {
+  text.scale.set(1);
+  let fontSize = preferredFontSize;
+  text.style.fontSize = fontSize;
+  text.style.lineHeight = fontSize + lineHeightGap;
+  while (text.height > maximumHeight && fontSize > minimumFontSize) {
+    fontSize -= 1;
+    text.style.fontSize = fontSize;
+    text.style.lineHeight = fontSize + lineHeightGap;
+  }
+  if (text.height > maximumHeight) {
+    text.scale.set(maximumHeight / text.height);
   }
 }
 

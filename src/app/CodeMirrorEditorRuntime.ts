@@ -12,12 +12,14 @@ import type {
 } from "../game/ports/CodeEditorOverlay";
 
 const MAX_EDITOR_CHARACTERS = 8_000;
+const CSP_NONCE_PLACEHOLDER = "__CSP_NONCE__";
 
 export class CodeMirrorEditorRuntime implements CodeEditorOverlay {
   private readonly root: HTMLDivElement;
   private readonly view: EditorView;
   private visible = true;
   private positioned = false;
+  private initialLayoutFrame: number | null = null;
 
   constructor(mount: HTMLElement, options: CodeEditorOverlayOptions) {
     this.root = document.createElement("div");
@@ -25,30 +27,26 @@ export class CodeMirrorEditorRuntime implements CodeEditorOverlay {
     this.root.dataset.language = options.language;
     this.root.style.visibility = "hidden";
 
-    if (options.signature.trim().length > 0) {
-      const signature = document.createElement("div");
-      signature.className = "nyang-code-editor-signature";
-      signature.textContent = options.signature;
-      this.root.classList.add("nyang-code-editor-has-signature");
-      this.root.append(signature);
-    }
-
     const editorHost = document.createElement("div");
     editorHost.className = "nyang-code-editor-host";
     this.root.append(editorHost);
     mount.append(this.root);
 
     const language = options.language === "sql" ? sql() : python();
+    const cspNonce = document.querySelector<HTMLMetaElement>('meta[name="csp-nonce"]')?.content.trim();
+    const cspExtension = cspNonce && cspNonce !== CSP_NONCE_PLACEHOLDER ? [EditorView.cspNonce.of(cspNonce)] : [];
     const characterLimit = EditorState.changeFilter.of((transaction) => {
       return transaction.newDoc.length <= MAX_EDITOR_CHARACTERS || !transaction.docChanged;
     });
     this.view = new EditorView({
       parent: editorHost,
       doc: options.initialValue.slice(0, MAX_EDITOR_CHARACTERS),
+      selection: EditorSelection.cursor(0),
       extensions: [
         basicSetup,
         language,
         oneDark,
+        ...cspExtension,
         keymap.of([indentWithTab]),
         EditorView.lineWrapping,
         characterLimit,
@@ -71,7 +69,8 @@ export class CodeMirrorEditorRuntime implements CodeEditorOverlay {
     const nextValue = value.slice(0, MAX_EDITOR_CHARACTERS);
     this.view.dispatch({
       changes: { from: 0, to: this.view.state.doc.length, insert: nextValue },
-      selection: EditorSelection.cursor(nextValue.length),
+      selection: EditorSelection.cursor(0),
+      effects: EditorView.scrollIntoView(0, { y: "start" }),
     });
   }
 
@@ -87,6 +86,7 @@ export class CodeMirrorEditorRuntime implements CodeEditorOverlay {
   }
 
   setBounds(bounds: CodeEditorOverlayBounds): void {
+    const isInitialLayout = !this.positioned;
     this.root.style.left = `${bounds.left}px`;
     this.root.style.top = `${bounds.top}px`;
     this.root.style.width = `${bounds.width}px`;
@@ -95,6 +95,9 @@ export class CodeMirrorEditorRuntime implements CodeEditorOverlay {
     this.positioned = true;
     this.updateVisibility();
     this.view.requestMeasure();
+    if (isInitialLayout) {
+      this.measureVisibleEditorFromStart();
+    }
   }
 
   setVisible(visible: boolean): void {
@@ -107,8 +110,26 @@ export class CodeMirrorEditorRuntime implements CodeEditorOverlay {
   }
 
   destroy(): void {
+    if (this.initialLayoutFrame !== null) {
+      cancelAnimationFrame(this.initialLayoutFrame);
+    }
     this.view.destroy();
     this.root.remove();
+  }
+
+  private measureVisibleEditorFromStart(): void {
+    if (this.initialLayoutFrame !== null) {
+      cancelAnimationFrame(this.initialLayoutFrame);
+    }
+    this.initialLayoutFrame = requestAnimationFrame(() => {
+      this.initialLayoutFrame = null;
+      if (!this.root.isConnected) {
+        return;
+      }
+      this.view.requestMeasure();
+      this.view.scrollDOM.scrollTop = 0;
+      this.view.dispatch({ effects: EditorView.scrollIntoView(0, { y: "start" }) });
+    });
   }
 
   private updateVisibility(): void {

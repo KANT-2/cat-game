@@ -47,7 +47,7 @@ export type PurchaseResult =
   | { ok: false; reason: "item-not-found" | "insufficient-coins" | "already-owned" | "server-unavailable" };
 
 export type ApplyRoomThemeResult =
-  | { ok: true; itemId: ShopItemId; itemType: "wallpaper" | "floor" }
+  | { ok: true; itemId: ShopItemId | null; itemType: "wallpaper" | "floor" }
   | { ok: false; reason: "item-not-found" | "not-owned" | "not-theme" | "server-unavailable" };
 
 export type UseConsumableResult =
@@ -65,7 +65,7 @@ export type GachaReward = {
 
 export type GachaDrawResult =
   | { ok: true; rewards: GachaReward[]; remainingCoins: number }
-  | { ok: false; reason: "insufficient-coins" | "server-unavailable" };
+  | { ok: false; reason: "insufficient-coins" | "catalog-updating" | "server-unavailable" };
 
 export type CatSelectionResult =
   | { ok: true; activeCat: CatVariant }
@@ -74,6 +74,8 @@ export type CatSelectionResult =
 export type CatHomeResult =
   | { ok: true; homeCats: CatVariant[] }
   | { ok: false; reason: "cat-not-owned" | "server-unavailable" };
+
+export type CatChatMessage = { role: "user" | "assistant"; text: string };
 
 /** 로컬 메시지 키 또는 서버가 검증해 내려준 동적 학습 문구다. */
 export type GameText = { messageId: MessageId } | { text: string };
@@ -113,14 +115,35 @@ export type StudyTaskView = {
   summary: GameText;
   rewardCoins: number;
   completed: boolean;
+  recommended?: boolean;
+};
+
+export type StudyMasteryView = ReadonlyArray<{
+  conceptName: string;
+  attempts: number;
+  proficiencyLevel: number;
+}>;
+
+export type StudyTierView = {
+  domain: "PYTHON" | "SQL";
+  currentTier: "BRONZE" | "SILVER" | "GOLD";
+  unlockedDifficulties: StudyDifficulty[];
+  nextTier: "SILVER" | "GOLD" | null;
+  completed: number;
+  total: number;
+  required: number;
 };
 
 export type CodeChallengeView = StudyTaskView & {
   type: "code";
+<<<<<<< HEAD
   language: StudyCodeLanguage;
+=======
+  language: "python" | "sql";
+  editorMode: "program" | "function" | "query";
+>>>>>>> 9844eaf029ca2afa0fbf80f32440175c810cd6f4
   prompt: GameText;
-  signature: string;
-  starterBody: string;
+  starterCode: string;
   examples: GameText;
   hints: readonly GameText[];
   bonusCoins: number;
@@ -184,9 +207,21 @@ export type AttendanceClaimResult =
     }
   | { ok: false; reason: "already-claimed" | "server-unavailable" };
 
+export type PlayerProfileView = {
+  displayName: string | null;
+  email: string | null;
+};
+
+export type GameSaveStatus = {
+  savedAt: string | null;
+  destination: "device" | "server";
+};
+
 export type LearningResetResult = { ok: true } | { ok: false; reason: "server-unavailable" };
 
-export type CatMemoryClearResult = { ok: true; removed: number } | { ok: false; reason: "server-unavailable" };
+export type CatMemoryClearResult =
+  | { ok: true; removed: number }
+  | { ok: false; reason: "cat-not-owned" | "server-unavailable" };
 
 export type CatConversationResult =
   | { ok: true; catVariant: CatVariant; topic: CatConversationTopic; memoryCount: number }
@@ -228,7 +263,10 @@ export interface GameStateRepository {
    * 저장 구현은 전달받은 객체를 이후에 직접 변경하지 않아야 한다. 영속화 실패를
    * 복구할 수 없는 구현은 오류를 호출자에게 전파한다.
    */
-  save(state: GameState): void;
+  save(state: GameState, savedAt?: string): void;
+
+  /** 마지막으로 성공한 저장 시각을 ISO 8601 문자열로 반환한다. */
+  loadSavedAt?(): string | null;
 }
 
 /**
@@ -244,6 +282,15 @@ export interface GameClient {
    * @remarks 반환값을 UI가 수정해도 게임 시스템의 내부 상태나 저장 데이터는 변경되지 않는다.
    */
   getSnapshot(): GameState;
+
+  /** 로그인 연동 학생 프로필 이미지 URL을 반환하며 미연동이면 `null`이다. */
+  getProfileImageUrl(): string | null;
+
+  /** 로그인 연동 사용자의 표시 이름과 이메일을 반환하며 미연동 항목은 `null`이다. */
+  getPlayerProfile(): PlayerProfileView;
+
+  /** 마지막으로 성공한 로컬 저장 또는 서버 동기화 시각과 저장 위치를 반환한다. */
+  getSaveStatus(): GameSaveStatus;
 
   /**
    * 성공적으로 커밋된 이후의 상태 변경을 구독한다.
@@ -302,7 +349,7 @@ export interface GameClient {
   useConsumable(itemId: ShopItemId, catVariant: CatVariant): Awaitable<UseConsumableResult>;
 
   /** 보유한 벽지 또는 바닥재를 현재 방 테마로 적용한다. */
-  applyRoomTheme(itemId: ShopItemId): Awaitable<ApplyRoomThemeResult>;
+  applyRoomTheme(itemId: ShopItemId | null): Awaitable<ApplyRoomThemeResult>;
 
   /** 코인을 차감하고 가중치에 따라 고양이 또는 가구 보상을 지급한다. */
   drawGacha(count: GachaDrawCount): Awaitable<GachaDrawResult>;
@@ -345,11 +392,21 @@ export interface GameClient {
   /** 학습 홈에 표시할 과제 목록과 완료 상태를 반환한다. */
   getStudyTasks(): StudyTaskView[];
 
-  /** 함수 선언을 제외한 본문만 편집하는 코드 과제를 조회한다. */
+  /** 학습 화면 진입 전에 날짜가 바뀐 진행 상태와 서버 과제 목록을 갱신한다. */
+  prepareStudy(): Awaitable<void>;
+
+  /** 사용자가 선택한 과제를 열기 직전에 표시 세션을 준비하고 최신 표시 모델을 반환한다. */
+  prepareStudyTask(taskId: string): Awaitable<StudyTaskView | null>;
+
+  /** 최근 채점 기록으로 서버 또는 로컬 저장소가 계산한 개념별 숙련도를 반환한다. */
+  getStudyMastery(): StudyMasteryView;
+  getStudyTier(): StudyTierView;
+
+  /** 전체 시작 코드를 자유롭게 편집할 수 있는 코드 과제를 조회한다. */
   getCodeChallenge(challengeId: string): CodeChallengeView | null;
 
   /** 안전한 로컬 채점기를 통해 코드 과제를 채점하고 최초 완료 보상을 반영한다. */
-  submitCodeChallenge(challengeId: string, body: string, hintsUsed: number): Awaitable<CodeSubmissionResult>;
+  submitCodeChallenge(challengeId: string, code: string, hintsUsed: number): Awaitable<CodeSubmissionResult>;
 
   /** 오늘의 학습 기록에서 계산한 퀘스트 진행도와 수령 상태를 반환한다. */
   getDailyQuests(): DailyQuestView[];
@@ -372,6 +429,9 @@ export interface GameClient {
   /** 세션 간 저장된 모든 고양이 기억 문장을 삭제하고 처리 결과를 반환한다. */
   clearCatMemories(): Awaitable<CatMemoryClearResult>;
 
+  /** 지정한 보유 고양이와 사용자 사이의 기억만 삭제한다. */
+  clearCatMemory(catVariant: CatVariant): Awaitable<CatMemoryClearResult>;
+
   /**
    * 보유 고양이와 선택한 주제로 대화한 사실을 해당 고양이의 기억에 남긴다.
    *
@@ -390,7 +450,11 @@ export interface GameClient {
    * @returns 답변과 서버 분류, 기억 저장 여부 또는 처리 가능한 실패 이유.
    * @remarks 원격 구현은 사용자 원문을 기억에 저장하지 않으며 프롬프트 제어 시도를 생성 모델에 전달하지 않는다.
    */
-  chatWithCat(catVariant: CatVariant, userMessage: string): Awaitable<CatFreeConversationResult>;
+  chatWithCat(
+    catVariant: CatVariant,
+    userMessage: string,
+    recentMessages?: readonly CatChatMessage[],
+  ): Awaitable<CatFreeConversationResult>;
 
   /** 사운드와 접근성 환경설정을 저장하고 최신 설정을 반환한다. */
   updateSettings(patch: Partial<GameSettings>): Awaitable<GameSettings>;

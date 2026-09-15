@@ -1,6 +1,13 @@
 import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { message } from "../../content/messages";
-import type { Awaitable, CatConversationResult, CatFreeConversationResult, GameText } from "../../core/GameClient";
+import type {
+  Awaitable,
+  CatChatMessage,
+  CatConversationResult,
+  CatFreeConversationResult,
+  CatMemoryClearResult,
+  GameText,
+} from "../../core/GameClient";
 import { CAT_CONVERSATION_TOPICS, type CatConversationTopic } from "../../domain/catConversation";
 import type { CatVariant } from "../../domain/cats";
 import { textStyle } from "../config";
@@ -19,8 +26,9 @@ type CatConversationModalOptions = {
   variant: CatVariant;
   animations: CatAnimationSet;
   memoryCount: number;
+  onClearMemory: () => Awaitable<CatMemoryClearResult>;
   onTalk: (topic: CatConversationTopic) => Awaitable<CatConversationResult>;
-  onFreeTalk: (userMessage: string) => Awaitable<CatFreeConversationResult>;
+  onFreeTalk: (userMessage: string, recentMessages: readonly CatChatMessage[]) => Awaitable<CatFreeConversationResult>;
   textInputFactory: TextInputBridgeFactory;
   onReaction: (action: ReturnType<typeof resolveCatConversationReply>["action"]) => void;
   onClose: () => void;
@@ -33,7 +41,9 @@ export class CatConversationModal extends Container {
   private memoryCount: number;
   private replyText: string | null = null;
   private pending = false;
+  private confirmingMemoryClear = false;
   private draft = "";
+  private readonly recentMessages: CatChatMessage[] = [];
   private readonly inputBridge: TextInputBridge;
 
   constructor(private readonly options: CatConversationModalOptions) {
@@ -105,6 +115,9 @@ export class CatConversationModal extends Container {
     this.renderPortrait(profile.accentColor);
     this.renderDialogue(name, profile.accentColor);
     this.renderActions();
+    if (this.confirmingMemoryClear) {
+      this.renderMemoryClearConfirmation(name, profile.accentColor);
+    }
   }
 
   private renderPortrait(accentColor: number): void {
@@ -151,13 +164,17 @@ export class CatConversationModal extends Container {
       .circle(1295, 349, 6)
       .circle(1309, 352, 6)
       .fill({ color: accentColor, alpha: 0.22 });
+    const visibleReply = clampConversationText(
+      this.pending ? message("cat.conversation.pending") : (this.replyText ?? message("cat.conversation.prompt")),
+    );
+    const defaultFontSize = this.replyText ? 21 : 20;
     const text = new Text({
-      text: this.pending ? message("cat.conversation.pending") : (this.replyText ?? message("cat.conversation.prompt")),
+      text: visibleReply,
       style: {
-        ...textStyle(this.replyText ? 22 : 20, 0x482b20, this.replyText ? "700" : "600"),
+        ...textStyle(visibleReply.length > 95 ? 17 : defaultFontSize, 0x482b20, this.replyText ? "700" : "600"),
         wordWrap: true,
         wordWrapWidth: 665,
-        lineHeight: 32,
+        lineHeight: visibleReply.length > 95 ? 23 : 30,
         align: "left",
       },
     });
@@ -167,6 +184,20 @@ export class CatConversationModal extends Container {
   }
 
   private renderActions(): void {
+    const clearMemory = new CanvasButton({
+      label: message("cat.conversation.clearMemory"),
+      width: 185,
+      height: 46,
+      color: 0xd99079,
+      fontSize: 14,
+      disabled: this.pending || this.memoryCount === 0,
+      onPress: () => {
+        this.confirmingMemoryClear = true;
+        this.render();
+      },
+    });
+    clearMemory.position.set(1160, 266);
+    this.content.addChild(clearMemory);
     CAT_CONVERSATION_TOPICS.forEach((topic, index) => {
       const button = new CanvasButton({
         label: message(catConversationTopicMessages[topic]),
@@ -187,14 +218,12 @@ export class CatConversationModal extends Container {
     inputBox.eventMode = "static";
     inputBox.cursor = "text";
     inputBox.on("pointertap", () => this.inputBridge.focus());
-    const inputValue = this.draft.trim() ? this.draft.slice(-72) : message("cat.conversation.freePlaceholder");
+    const inputValue = this.draft.trim() ? compactInput(this.draft) : message("cat.conversation.freePlaceholder");
     const inputText = new Text({
       text: inputValue,
       style: {
         ...textStyle(16, this.draft.trim() ? 0x482b20 : 0xa48775, this.draft.trim() ? "600" : "500"),
-        wordWrap: true,
-        wordWrapWidth: 555,
-        lineHeight: 21,
+        wordWrap: false,
       },
     });
     inputText.position.set(592, 655);
@@ -219,6 +248,71 @@ export class CatConversationModal extends Container {
     });
     close.position.set(245, 682);
     this.content.addChild(inputBox, inputText, send, close);
+  }
+
+  private renderMemoryClearConfirmation(name: string, accentColor: number): void {
+    const blocker = new Graphics().rect(0, 0, 1600, 900).fill({ color: 0x251813, alpha: 0.64 });
+    blocker.eventMode = "static";
+    const panel = createCozyPanel(420, 230, 760, 410, {
+      fill: 0xfff4dc,
+      border: accentColor,
+      radius: 32,
+      shadowAlpha: 0.45,
+    });
+    const title = new Text({
+      text: message("cat.conversation.clearMemoryConfirmTitle", { name }),
+      style: textStyle(29, 0x6f352c, "800"),
+    });
+    title.anchor.set(0.5);
+    title.position.set(800, 315);
+    const detail = new Text({
+      text: message("cat.conversation.clearMemoryConfirmDescription"),
+      style: { ...textStyle(18, 0x725344, "600"), align: "center", lineHeight: 30 },
+    });
+    detail.anchor.set(0.5);
+    detail.position.set(800, 405);
+    const cancel = new CanvasButton({
+      label: message("cat.conversation.clearMemoryCancel"),
+      width: 210,
+      height: 58,
+      color: 0xd7b38c,
+      disabled: this.pending,
+      onPress: () => {
+        this.confirmingMemoryClear = false;
+        this.render();
+      },
+    });
+    cancel.position.set(545, 520);
+    const confirm = new CanvasButton({
+      label: message("cat.conversation.clearMemoryConfirm"),
+      width: 210,
+      height: 58,
+      color: 0xd97966,
+      disabled: this.pending,
+      onPress: () => void this.clearMemory(),
+    });
+    confirm.position.set(845, 520);
+    this.content.addChild(blocker, panel, title, detail, cancel, confirm);
+  }
+
+  private async clearMemory(): Promise<void> {
+    if (this.pending) {
+      return;
+    }
+    this.confirmingMemoryClear = false;
+    this.pending = true;
+    this.render();
+    const result = await this.options.onClearMemory();
+    this.pending = false;
+    if (!result.ok) {
+      this.replyText = message("cat.conversation.clearMemoryFailed");
+      this.render();
+      return;
+    }
+    this.memoryCount = 0;
+    this.recentMessages.length = 0;
+    this.replyText = message("cat.conversation.clearMemoryComplete");
+    this.render();
   }
 
   private async chooseTopic(topic: CatConversationTopic): Promise<void> {
@@ -248,7 +342,7 @@ export class CatConversationModal extends Container {
     }
     this.pending = true;
     this.render();
-    const result = await this.options.onFreeTalk(userMessage);
+    const result = await this.options.onFreeTalk(userMessage, this.recentMessages);
     this.pending = false;
     if (!result.ok) {
       this.replyText = message("cat.conversation.unavailable");
@@ -257,6 +351,10 @@ export class CatConversationModal extends Container {
     }
     this.memoryCount = result.memoryCount;
     this.replyText = resolveGameText(result.reply);
+    this.recentMessages.push({ role: "user", text: userMessage }, { role: "assistant", text: this.replyText });
+    if (this.recentMessages.length > 10) {
+      this.recentMessages.splice(0, this.recentMessages.length - 10);
+    }
     this.draft = "";
     this.inputBridge.setValue("");
     if (result.category === "CODING") {
@@ -272,4 +370,14 @@ export class CatConversationModal extends Container {
 
 function resolveGameText(value: GameText): string {
   return "text" in value ? value.text : message(value.messageId);
+}
+
+export function clampConversationText(value: string, maxLength = 190): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  return normalized.length <= maxLength ? normalized : `${normalized.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+function compactInput(value: string): string {
+  const normalized = value.replace(/\s+/g, " ");
+  return normalized.length <= 32 ? normalized : `…${normalized.slice(-31)}`;
 }

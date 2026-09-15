@@ -1,11 +1,15 @@
 export type BackendUser = {
   publicId: string;
   username: string;
+  email: string;
   balance: number;
+  profileImageUrl: string | null;
 };
 
 export type BackendLearningTask = {
   publicId: string;
+  presentationPublicId: string | null;
+  presentationRequired: boolean;
   conceptName: string;
   title: string;
   type: "CODE" | "MULTIPLE_CHOICE";
@@ -17,10 +21,39 @@ export type BackendLearningTask = {
   hintText: string | null;
   rewardCoins: number;
   completed: boolean;
+  publicExample: { input: string; output: string } | null;
+};
+
+export type BackendLearningTaskQuery = {
+  type?: "CODE" | "MULTIPLE_CHOICE";
+  domain?: "PYTHON" | "SQL";
+  conceptPublicId?: string;
+  difficulty?: "BRONZE" | "SILVER" | "GOLD";
+  limit?: number;
+  offset?: number;
+};
+
+export type BackendConceptProficiency = {
+  domain: "PYTHON" | "SQL";
+  conceptName: string;
+  attempts: number;
+  proficiencyLevel: number;
+};
+
+export type BackendLearningTier = {
+  domain: "PYTHON" | "SQL";
+  currentTier: "BRONZE" | "SILVER" | "GOLD";
+  unlockedDifficulties: Array<"BRONZE" | "SILVER" | "GOLD">;
+  nextTier: "SILVER" | "GOLD" | null;
+  completed: number;
+  total: number;
+  required: number;
 };
 
 export type BackendAttemptSubmission = {
+  requestId: string;
   taskPublicId: string;
+  presentationPublicId?: string;
   submittedCode?: string;
   selectedOption?: string;
   usedHint: boolean;
@@ -100,6 +133,7 @@ export type BackendGameSnapshot = {
     effectsEnabled: boolean;
     effectsVolume: number;
     reducedMotion: boolean;
+    learningDomain: "PYTHON" | "SQL";
   };
   cats: BackendGameCat[];
   items: BackendGameItem[];
@@ -114,14 +148,13 @@ export type BackendGameMutation = {
 export type BackendCatChat = {
   catAssetPublicId: string;
   reply: string;
-  category: "COMPANION" | "CODING" | "UNKNOWN" | "PROMPT_INJECTION" | "SAFETY" | "PROFESSIONAL";
-  memoryCount: number;
   remembered: boolean;
 };
 
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 type CsrfTokenProvider = () => string | null;
 type AuthenticationExpiredListener = () => void;
+const CAT_CHAT_REQUEST_TIMEOUT_MS = 35_000;
 
 export class BackendApiError extends Error {
   constructor(
@@ -160,7 +193,7 @@ export class BackendApiClient {
     this.userPublicId = null;
     this.browserSession = true;
     try {
-      return parseUser(await this.request("/api/v1/session/me"));
+      return parseUser(await this.request("/api/v1/session/me"), this.baseUrl);
     } catch (error) {
       this.browserSession = false;
       throw error;
@@ -169,7 +202,7 @@ export class BackendApiClient {
 
   /** 이메일과 비밀번호로 서버가 관리하는 브라우저 세션을 시작한다. */
   async login(email: string, password: string): Promise<BackendUser> {
-    const user = parseUser(await this.jsonCommand("/api/v1/session/login", { email, password }, false));
+    const user = parseUser(await this.jsonCommand("/api/v1/session/login", { email, password }, false), this.baseUrl);
     this.userPublicId = null;
     this.browserSession = true;
     return user;
@@ -177,7 +210,10 @@ export class BackendApiClient {
 
   /** 새 계정을 만들고 서버가 관리하는 브라우저 세션을 시작한다. */
   async register(email: string, username: string, password: string): Promise<BackendUser> {
-    const user = parseUser(await this.jsonCommand("/api/v1/session/register", { email, username, password }, false));
+    const user = parseUser(
+      await this.jsonCommand("/api/v1/session/register", { email, username, password }, false),
+      this.baseUrl,
+    );
     this.userPublicId = null;
     this.browserSession = true;
     return user;
@@ -205,17 +241,139 @@ export class BackendApiClient {
       const session = asRecord(await this.request("/api/v1/session/development", { method: "POST" }, false));
       this.userPublicId = readString(session, "public_id");
     }
-    return parseUser(await this.request("/api/v1/session/me"));
+    return parseUser(await this.request("/api/v1/session/me"), this.baseUrl);
   }
 
   /** 인증 사용자의 추천 학습 과제를 서버 순서대로 조회한다. */
   async getLearningRecommendations(limit = 10): Promise<BackendLearningTask[]> {
     const safeLimit = Math.max(1, Math.min(50, Math.trunc(limit)));
-    const payload = await this.request(`/api/v1/learning/recommendations?limit=${safeLimit}`);
+    const parameters = new URLSearchParams({ limit: String(safeLimit) });
+    const testDate = browserRecommendationTestDate();
+    if (testDate) {
+      parameters.set("test_date", testDate);
+    }
+    const payload = await this.request(`/api/v1/learning/recommendations?${parameters.toString()}`);
     if (!Array.isArray(payload)) {
       throw new Error("Backend recommendations response is invalid");
     }
+    return Promise.all(
+      payload.map(parseTask).map(async (task) => {
+        if (!task.presentationRequired) {
+          return task;
+        }
+        const presented = await this.startLearningPresentation(task.publicId);
+        return { ...presented, completed: task.completed };
+      }),
+    );
+  }
+
+  /** 공개 필터 계약으로 활성 학습 과제를 조회한다. */
+  async getLearningTasks(query: BackendLearningTaskQuery = {}): Promise<BackendLearningTask[]> {
+    const tasks = await this.getLearningTaskPage(query);
+    return Promise.all(
+      tasks.map(async (task) => {
+        if (!task.presentationRequired) {
+          return task;
+        }
+        const presented = await this.startLearningPresentation(task.publicId);
+        return { ...presented, completed: task.completed };
+      }),
+    );
+  }
+
+  /** 선택 과목에서 해금된 과제를 presentation 발급 없이 끝까지 페이지 조회한다. */
+  async getLearningTaskCatalog(
+    query: Omit<BackendLearningTaskQuery, "limit" | "offset"> = {},
+  ): Promise<BackendLearningTask[]> {
+    const pageSize = 50;
+    const tasks: BackendLearningTask[] = [];
+    for (let offset = 0; ; offset += pageSize) {
+      const page = await this.getLearningTaskPage({ ...query, limit: pageSize, offset });
+      tasks.push(...page);
+      if (page.length < pageSize) {
+        return tasks;
+      }
+    }
+  }
+
+  private async getLearningTaskPage(query: BackendLearningTaskQuery): Promise<BackendLearningTask[]> {
+    const parameters = new URLSearchParams();
+    if (query.type) {
+      parameters.set("type", query.type);
+    }
+    if (query.domain) {
+      parameters.set("domain", query.domain);
+    }
+    if (query.conceptPublicId) {
+      parameters.set("concept_public_id", query.conceptPublicId);
+    }
+    if (query.difficulty) {
+      parameters.set("difficulty", query.difficulty);
+    }
+    parameters.set("limit", String(Math.max(1, Math.min(50, Math.trunc(query.limit ?? 20)))));
+    if (query.offset !== undefined) {
+      parameters.set("offset", String(Math.max(0, Math.trunc(query.offset))));
+    }
+
+    const payload = await this.request(`/api/v1/learning/tasks?${parameters.toString()}`);
+    if (!Array.isArray(payload)) {
+      throw new Error("Backend learning tasks response is invalid");
+    }
     return payload.map(parseTask);
+  }
+
+  /** 한 논리 문제의 표시 방식과 객관식 보기 순서를 서버에 고정한다. */
+  async startLearningPresentation(
+    taskPublicId: string,
+    preferredPresentationType?: "CODE" | "MULTIPLE_CHOICE",
+  ): Promise<BackendLearningTask> {
+    const payload = asRecord(
+      await this.request("/api/v1/attempts/presentations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          task_public_id: taskPublicId,
+          preferred_presentation_type: preferredPresentationType,
+        }),
+      }),
+    );
+    const task = parseTask(payload.task);
+    const presentationPublicId = readString(payload, "presentation_public_id");
+    if (task.publicId !== taskPublicId || task.presentationPublicId !== presentationPublicId) {
+      throw new Error("Backend task presentation response is invalid");
+    }
+    return task;
+  }
+
+  /** 최근 완료 채점 기록으로 계산한 개념별 숙련도를 조회한다. */
+  async getLearningProficiencies(): Promise<BackendConceptProficiency[]> {
+    const payload = await this.request("/api/v1/learning/proficiencies");
+    if (!Array.isArray(payload)) {
+      throw new Error("Backend proficiencies response is invalid");
+    }
+    return payload.map(parseConceptProficiency);
+  }
+
+  async getLearningTier(): Promise<BackendLearningTier> {
+    const record = asRecord(await this.request("/api/v1/learning/tier"));
+    const unlocked = record.unlocked_difficulties;
+    if (!Array.isArray(unlocked)) {
+      throw new Error("Backend learning tier response is invalid");
+    }
+    return {
+      domain: readEnum(record, "domain", ["PYTHON", "SQL"] as const),
+      currentTier: readEnum(record, "current_tier", ["BRONZE", "SILVER", "GOLD"] as const),
+      unlockedDifficulties: unlocked.map((value) => {
+        if (value !== "BRONZE" && value !== "SILVER" && value !== "GOLD") {
+          throw new Error("Backend learning tier difficulty is invalid");
+        }
+        return value;
+      }),
+      nextTier: record.next_tier == null ? null : readEnum(record, "next_tier", ["SILVER", "GOLD"] as const),
+      completed: readNumber(record, "completed"),
+      total: readNumber(record, "total"),
+      required: readNumber(record, "required"),
+    };
   }
 
   /** 서버가 권위 있게 보관한 재화·고양이·인벤토리·배치 상태를 조회한다. */
@@ -284,7 +442,7 @@ export class BackendApiClient {
   }
 
   /** 보유한 벽지 또는 바닥 테마를 서버 상태에 적용한다. */
-  async applyGameTheme(itemCatalogKey: string): Promise<BackendGameMutation> {
+  async applyGameTheme(itemCatalogKey: string | null): Promise<BackendGameMutation> {
     return this.gameMutation("/api/v1/game/themes", "POST", { item_catalog_key: itemCatalogKey });
   }
 
@@ -313,6 +471,7 @@ export class BackendApiClient {
     effectsEnabled?: boolean;
     effectsVolume?: number;
     reducedMotion?: boolean;
+    learningDomain?: "PYTHON" | "SQL";
   }): Promise<BackendGameMutation> {
     return this.gameMutation("/api/v1/game/settings", "PATCH", {
       bgm_enabled: patch.bgmEnabled,
@@ -320,6 +479,7 @@ export class BackendApiClient {
       effects_enabled: patch.effectsEnabled,
       effects_volume: patch.effectsVolume,
       reduced_motion: patch.reducedMotion,
+      learning_domain: patch.learningDomain,
     });
   }
 
@@ -352,35 +512,49 @@ export class BackendApiClient {
     });
   }
 
-  /** 자유 문장을 서버의 입력·출력 가드를 거쳐 보유 고양이에게 전달한다. */
-  async chatWithCat(catAssetPublicId: string, message: string): Promise<BackendCatChat> {
+  /** 지정한 보유 고양이와 인증 사용자 사이의 기억을 모두 삭제한다. */
+  async clearCatMemories(catAssetPublicId: string): Promise<void> {
+    await this.request(`/api/v1/cats/${encodeURIComponent(catAssetPublicId)}/memories`, {
+      method: "DELETE",
+    });
+  }
+
+  /**
+   * 자유 문장을 서버의 입력·출력 가드를 거쳐 보유 고양이에게 전달한다.
+   *
+   * @remarks Gemini의 서버 제한 30초가 먼저 끝나도록 일반 API보다 긴 35초 전송 제한을 사용한다.
+   */
+  async chatWithCat(
+    catAssetPublicId: string,
+    message: string,
+    recentMessages: readonly { role: "user" | "assistant"; text: string }[] = [],
+  ): Promise<BackendCatChat> {
     const record = asRecord(
-      await this.request(`/api/v1/cats/${encodeURIComponent(catAssetPublicId)}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
-      }),
+      await this.request(
+        `/api/v1/cats/${encodeURIComponent(catAssetPublicId)}/chat`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, recent_messages: recentMessages.slice(-10) }),
+        },
+        true,
+        CAT_CHAT_REQUEST_TIMEOUT_MS,
+      ),
     );
+    const remembered = typeof record.remembered === "boolean" ? record.remembered : record.memory != null;
     return {
       catAssetPublicId: readString(record, "cat_asset_public_id"),
       reply: readString(record, "reply"),
-      category: readEnum(record, "category", [
-        "COMPANION",
-        "CODING",
-        "UNKNOWN",
-        "PROMPT_INJECTION",
-        "SAFETY",
-        "PROFESSIONAL",
-      ] as const),
-      memoryCount: readNumber(record, "memory_count"),
-      remembered: readBoolean(record, "remembered"),
+      remembered,
     };
   }
 
   /** 학습 답안을 서버 채점 큐에 제출하고 완료 또는 실패 상태까지 폴링한다. */
   async grade(submission: BackendAttemptSubmission, waitTimeoutMs = 20_000): Promise<BackendAttempt> {
     const payload = {
+      request_id: submission.requestId,
       task_public_id: submission.taskPublicId,
+      presentation_public_id: submission.presentationPublicId,
       submitted_code: submission.submittedCode,
       selected_option: submission.selectedOption,
       context_type: "LEARNING",
@@ -405,7 +579,12 @@ export class BackendApiClient {
     throw new Error("Backend grading timed out");
   }
 
-  private async request(path: string, init: RequestInit = {}, authenticated = true): Promise<unknown> {
+  private async request(
+    path: string,
+    init: RequestInit = {},
+    authenticated = true,
+    timeoutMs = this.requestTimeoutMs,
+  ): Promise<unknown> {
     const headers = new Headers(init.headers);
     headers.set("Accept", "application/json");
     const method = (init.method ?? "GET").toUpperCase();
@@ -429,7 +608,7 @@ export class BackendApiClient {
     const attemptLimit = isSafeMethod(method) ? 2 : 1;
     for (let attempt = 0; attempt < attemptLimit; attempt += 1) {
       const controller = new AbortController();
-      const timeout = globalThis.setTimeout(() => controller.abort(), this.requestTimeoutMs);
+      const timeout = globalThis.setTimeout(() => controller.abort(), timeoutMs);
       try {
         const response = await this.fetcher(`${this.baseUrl}${path}`, {
           ...init,
@@ -496,12 +675,28 @@ export class BackendApiClient {
   }
 }
 
-function parseUser(value: unknown): BackendUser {
+function browserRecommendationTestDate(): string | null {
+  if (typeof globalThis.location?.search !== "string") {
+    return null;
+  }
+  const value = new URLSearchParams(globalThis.location.search).get("testDate");
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+}
+
+function parseUser(value: unknown, baseUrl: string): BackendUser {
   const record = asRecord(value);
+  const platform = record.platform;
+  const platformRecord =
+    platform && typeof platform === "object" && !Array.isArray(platform) ? asRecord(platform) : null;
+  const profile = platformRecord?.profile;
+  const profileRecord = profile && typeof profile === "object" && !Array.isArray(profile) ? asRecord(profile) : null;
+  const hasProfileImage = typeof profileRecord?.profile_image === "string" && profileRecord.profile_image.trim() !== "";
   return {
     publicId: readString(record, "public_id"),
     username: readString(record, "username"),
+    email: readString(record, "email"),
     balance: readNumber(record, "balance"),
+    profileImageUrl: hasProfileImage ? `${baseUrl}/api/v1/session/me/profile-image` : null,
   };
 }
 
@@ -523,8 +718,19 @@ function parseTask(value: unknown): BackendLearningTask {
       }),
     );
   }
+  const rawPublicExample = record.public_example;
+  let publicExample: { input: string; output: string } | null = null;
+  if (rawPublicExample != null) {
+    const exampleRecord = asRecord(rawPublicExample);
+    publicExample = {
+      input: readString(exampleRecord, "input"),
+      output: readString(exampleRecord, "output"),
+    };
+  }
   return {
     publicId: readString(record, "public_id"),
+    presentationPublicId: record.presentation_public_id == null ? null : readString(record, "presentation_public_id"),
+    presentationRequired: record.presentation_required === true,
     conceptName: readString(record, "concept_name"),
     title: readString(record, "title"),
     type,
@@ -536,6 +742,17 @@ function parseTask(value: unknown): BackendLearningTask {
     hintText: readNullableString(record, "hint_text"),
     rewardCoins: readNumber(record, "reward_coins"),
     completed: readBoolean(record, "completed"),
+    publicExample,
+  };
+}
+
+function parseConceptProficiency(value: unknown): BackendConceptProficiency {
+  const record = asRecord(value);
+  return {
+    domain: readEnum(record, "domain", ["PYTHON", "SQL"] as const),
+    conceptName: readString(record, "name"),
+    attempts: readNumber(record, "attempts"),
+    proficiencyLevel: readNumber(record, "proficiency_level"),
   };
 }
 
@@ -647,6 +864,7 @@ function parseGameSnapshot(value: unknown): BackendGameSnapshot {
       effectsEnabled: readBoolean(settings, "effects_enabled"),
       effectsVolume: readNumber(settings, "effects_volume"),
       reducedMotion: readBoolean(settings, "reduced_motion"),
+      learningDomain: readEnum(settings, "learning_domain", ["PYTHON", "SQL"] as const),
     },
     cats,
     items,
