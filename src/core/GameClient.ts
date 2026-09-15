@@ -107,6 +107,7 @@ export type StudyTaskView = {
   summary: GameText;
   rewardCoins: number;
   completed: boolean;
+  recommended?: boolean;
 };
 
 export type StudyMasteryView = ReadonlyArray<{
@@ -381,6 +382,9 @@ export interface GameClient {
 
   /** 학습 화면 진입 전에 날짜가 바뀐 진행 상태와 서버 과제 목록을 갱신한다. */
   prepareStudy(): Awaitable<void>;
+
+  /** 사용자가 선택한 과제를 열기 직전에 표시 세션을 준비하고 최신 표시 모델을 반환한다. */
+  prepareStudyTask(taskId: string): Awaitable<StudyTaskView | null>;
 
   /** 최근 채점 기록으로 서버 또는 로컬 저장소가 계산한 개념별 숙련도를 반환한다. */
   getStudyMastery(): StudyMasteryView;

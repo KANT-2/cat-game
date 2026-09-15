@@ -33,6 +33,7 @@ type StudyModalOptions = {
   getMastery: () => StudyMasteryView;
   getTier: () => StudyTierView;
   getCoins: () => number;
+  onPrepareTask: (taskId: string) => Awaitable<StudyTaskView | null>;
   getQuiz: (quizId: string) => QuizView | null;
   getCodeChallenge: (challengeId: string) => CodeChallengeView | null;
   onAnswer: (quizId: string, choiceId: string) => Awaitable<QuizAnswerResult>;
@@ -97,6 +98,7 @@ export class StudyModal extends Container {
   private codeEditor: CodeEditorOverlay | null = null;
   private hintsUsed = 0;
   private submissionPending = false;
+  private taskOpening = false;
 
   constructor(options: StudyModalOptions) {
     super();
@@ -244,7 +246,9 @@ export class StudyModal extends Container {
   }
 
   private buildRecommendation(): void {
-    const recommended = this.tasks.find((task) => !task.completed) ?? this.tasks[0];
+    const taggedRecommendations = this.tasks.filter((task) => task.recommended);
+    const recommendationPool = taggedRecommendations.length > 0 ? taggedRecommendations : this.tasks;
+    const recommended = recommendationPool.find((task) => !task.completed) ?? recommendationPool[0];
     if (!recommended) {
       return;
     }
@@ -281,7 +285,7 @@ export class StudyModal extends Container {
       width: 210,
       height: 56,
       color: 0xe99b45,
-      onPress: () => this.openTask(recommended),
+      onPress: () => void this.openTask(recommended),
     });
     start.position.set(1290, 270);
     this.body.addChild(panel, heading, badge, badgeText, title, summary, metadata);
@@ -346,12 +350,14 @@ export class StudyModal extends Container {
       430,
       295,
       "study.filterDifficultyLabel",
-      ([
-        ["all", "study.filterAll"],
-        ["basic", "study.filterBasic"],
-        ["applied", "study.filterApplied"],
-        ["challenge", "study.filterChallenge"],
-      ] as const).filter(([value]) => value === "all" || tier.unlockedDifficulties.includes(value)),
+      (
+        [
+          ["all", "study.filterAll"],
+          ["basic", "study.filterBasic"],
+          ["applied", "study.filterApplied"],
+          ["challenge", "study.filterChallenge"],
+        ] as const
+      ).filter(([value]) => value === "all" || tier.unlockedDifficulties.includes(value)),
       this.difficultyFilter,
       (value) => {
         this.difficultyFilter = value;
@@ -462,7 +468,7 @@ export class StudyModal extends Container {
         width: 145,
         height: 44,
         color: task.completed ? 0xa9b699 : 0xe8a451,
-        onPress: () => this.openTask(task),
+        onPress: () => void this.openTask(task),
       });
       start.position.set(x + 560, y + 112);
       this.body.addChild(card, typeBadge, type, title, summary, meta);
@@ -523,17 +529,33 @@ export class StudyModal extends Container {
     );
   }
 
-  private openTask(task: StudyTaskView): void {
-    if (task.type === "quiz") {
+  private async openTask(task: StudyTaskView): Promise<void> {
+    if (this.taskOpening) {
+      return;
+    }
+    this.taskOpening = true;
+    try {
+      const prepared = await this.options.onPrepareTask(task.id);
+      if (!prepared) {
+        return;
+      }
+      const index = this.tasks.findIndex((candidate) => candidate.id === task.id);
+      if (index >= 0) {
+        this.tasks[index] = { ...prepared };
+      }
       const quiz = this.options.getQuiz(task.id);
       if (quiz) {
         this.renderQuiz(quiz);
+        return;
       }
-      return;
-    }
-    const challenge = this.options.getCodeChallenge(task.id);
-    if (challenge) {
-      this.renderCode(challenge);
+      const challenge = this.options.getCodeChallenge(task.id);
+      if (challenge) {
+        this.renderCode(challenge);
+      }
+    } catch (error) {
+      console.warn("Study task preparation failed", error);
+    } finally {
+      this.taskOpening = false;
     }
   }
 
@@ -625,17 +647,13 @@ export class StudyModal extends Container {
       result = await this.options.onAnswer(quiz.id, choiceId);
     } catch (error) {
       console.error("Quiz submission failed", error);
-      this.showFeedback(false, message("study.answerFailed"), [], () =>
-        this.reopenQuizOrCode(quiz.id, quiz),
-      );
+      this.showFeedback(false, message("study.answerFailed"), [], () => this.reopenQuizOrCode(quiz.id, quiz));
       return;
     } finally {
       this.submissionPending = false;
     }
     if (!result.ok) {
-      this.showFeedback(false, message("study.answerFailed"), [], () =>
-        this.reopenQuizOrCode(quiz.id, quiz),
-      );
+      this.showFeedback(false, message("study.answerFailed"), [], () => this.reopenQuizOrCode(quiz.id, quiz));
       return;
     }
     let detail = message(result.feedbackMessage);

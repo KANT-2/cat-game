@@ -268,10 +268,7 @@ describe("backend learning integration", () => {
       "88888888-8888-4888-8888-888888888882",
       "88888888-8888-4888-8888-888888888883",
     ];
-    const attemptIds = [
-      "33333333-3333-4333-8333-333333333331",
-      "33333333-3333-4333-8333-333333333332",
-    ];
+    const attemptIds = ["33333333-3333-4333-8333-333333333331", "33333333-3333-4333-8333-333333333332"];
     const submittedPresentationIds: string[] = [];
     const presentationBodies: Record<string, unknown>[] = [];
     let presentationReads = 0;
@@ -288,6 +285,9 @@ describe("backend learning integration", () => {
             presentation_required: true,
           },
         ]);
+      }
+      if (path === "/api/v1/learning/tasks") {
+        return json([]);
       }
       if (path === "/api/v1/attempts/presentations") {
         presentationBodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
@@ -335,10 +335,7 @@ describe("backend learning integration", () => {
       return json({ detail: "not found" }, 404);
     });
     const api = new BackendApiClient("http://localhost:8000", userId, fetcher);
-    const client = await BackendLearningGameClient.createConnected(
-      new LocalGameClient(new MemoryRepository()),
-      api,
-    );
+    const client = await BackendLearningGameClient.createConnected(new LocalGameClient(new MemoryRepository()), api);
 
     expect(client.getStudyTasks()[0]).toMatchObject({ completed: true, type: "quiz" });
     await expect(client.answerQuiz(taskId, "A")).resolves.toMatchObject({
@@ -409,6 +406,9 @@ describe("backend learning integration", () => {
         recommendationReads += 1;
         return json(recommendationReads === 1 ? [learningTask(taskId, "PYTHON")] : [learningTask(sqlTaskId, "SQL")]);
       }
+      if (pathname === "/api/v1/learning/tasks") {
+        return json(recommendationReads === 1 ? [learningTask(taskId, "PYTHON")] : [learningTask(sqlTaskId, "SQL")]);
+      }
       if (pathname === "/api/v1/game/settings" && init?.method === "PATCH") {
         expect(JSON.parse(String(init.body))).toMatchObject({ learning_domain: "SQL" });
         return json({ snapshot: gameSnapshot(1_000, 0, { learningDomain: "SQL" }), result: {} });
@@ -467,6 +467,9 @@ describe("backend learning integration", () => {
             completed: false,
           },
         ]);
+      }
+      if (url.pathname === "/api/v1/learning/tasks") {
+        return json([]);
       }
       if (url.pathname === "/api/v1/learning/proficiencies") {
         return json([
@@ -665,6 +668,85 @@ describe("backend learning integration", () => {
     ).resolves.toMatchObject([{ publicId: taskId, title: "[SAMPLE:PYTHON:BRONZE:001] 야옹이 간식 세기" }]);
   });
 
+  it("pages through the complete task catalog without creating presentations", async () => {
+    const offsets: string[] = [];
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      expect(url.pathname).toBe("/api/v1/learning/tasks");
+      offsets.push(url.searchParams.get("offset") ?? "");
+      const offset = Number(url.searchParams.get("offset"));
+      const count = offset === 0 ? 50 : 3;
+      return json(
+        Array.from({ length: count }, (_, index) => ({
+          ...learningTask(`22222222-2222-4222-8222-${String(offset + index).padStart(12, "0")}`, "PYTHON"),
+          presentation_required: true,
+        })),
+      );
+    });
+    const api = new BackendApiClient("http://localhost:8000", userId, fetcher);
+
+    const tasks = await api.getLearningTaskCatalog({ domain: "PYTHON" });
+
+    expect(tasks).toHaveLength(53);
+    expect(offsets).toEqual(["0", "50"]);
+  });
+
+  it("keeps recommendations separate and prepares catalog tasks only when opened", async () => {
+    const catalogTaskId = "99999999-9999-4999-8999-999999999999";
+    let presentationStarts = 0;
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname === "/api/v1/learning/recommendations") {
+        return json([learningTask(taskId, "PYTHON")]);
+      }
+      if (url.pathname === "/api/v1/learning/tasks") {
+        return json([
+          learningTask(taskId, "PYTHON"),
+          {
+            ...learningTask(catalogTaskId, "PYTHON"),
+            type: "CODE",
+            options: null,
+            presentation_required: true,
+          },
+        ]);
+      }
+      if (url.pathname === "/api/v1/game/snapshot") {
+        return json(gameSnapshot(1_000, 0));
+      }
+      if (url.pathname === "/api/v1/learning/proficiencies") {
+        return json([]);
+      }
+      if (url.pathname === "/api/v1/attempts/presentations") {
+        presentationStarts += 1;
+        return json({
+          presentation_public_id: presentationId,
+          task: {
+            ...learningTask(catalogTaskId, "PYTHON"),
+            presentation_public_id: presentationId,
+            presentation_required: false,
+          },
+        });
+      }
+      return json({ detail: "not found" }, 404);
+    });
+    const client = await BackendLearningGameClient.createConnected(
+      new LocalGameClient(new MemoryRepository()),
+      new BackendApiClient("http://localhost:8000", userId, fetcher),
+    );
+
+    expect(client.getStudyTasks()).toMatchObject([
+      { id: taskId, recommended: true },
+      { id: catalogTaskId, recommended: false },
+    ]);
+    expect(presentationStarts).toBe(0);
+
+    await expect(client.prepareStudyTask(catalogTaskId)).resolves.toMatchObject({
+      id: catalogTaskId,
+      type: "quiz",
+    });
+    expect(presentationStarts).toBe(1);
+  });
+
   it("normalizes non-breaking spaces before submitting SQL code", async () => {
     const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const pathname = new URL(String(input)).pathname;
@@ -693,6 +775,9 @@ describe("backend learning integration", () => {
             completed: false,
           },
         ]);
+      }
+      if (pathname === "/api/v1/learning/tasks") {
+        return json([]);
       }
       if (pathname === "/api/v1/learning/proficiencies") {
         return json([]);
@@ -749,6 +834,9 @@ describe("backend learning integration", () => {
       if (pathname === "/api/v1/learning/recommendations") {
         return json([]);
       }
+      if (pathname === "/api/v1/learning/tasks") {
+        return json([]);
+      }
       if (pathname === "/api/v1/learning/proficiencies") {
         return json([]);
       }
@@ -794,6 +882,9 @@ describe("backend learning integration", () => {
         return json(userPayload());
       }
       if (pathname === "/api/v1/learning/recommendations") {
+        return json([]);
+      }
+      if (pathname === "/api/v1/learning/tasks") {
         return json([]);
       }
       if (pathname === "/api/v1/learning/proficiencies") {

@@ -438,6 +438,10 @@ export class LocalGameClient implements GameClient {
     this.ensureDailyState();
   }
 
+  prepareStudyTask(taskId: string): StudyTaskView | null {
+    return this.getStudyTasks().find((task) => task.id === taskId) ?? null;
+  }
+
   getStudyMastery(): import("./GameClient").StudyMasteryView {
     const tasks = this.getStudyTasks();
     const names =

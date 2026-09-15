@@ -60,8 +60,10 @@ FastAPI에 위임한다. HTTP·JSON·브라우저 쿠키·CSRF 및 개발 사용
 FastAPI 명령 뒤 반환된 서버 스냅샷으로 갱신한다. 원격 명령 실패는 로컬 성공으로 대체하지 않으며,
 학습 초기화와 고양이 기억 삭제도 서버 명령으로 처리한다. `LocalGameClient`는 백엔드 URL이 없는 독립
 개발 실행에서만 권위 구현이며, 원격 클라이언트에서는 직렬화 가능한 초기 상태 형태를 만드는 데만 사용한다.
-`BackendApiClient.getLearningTasks()`는 Part 2의 전체 문제 조회 계약을 소유하며 유형, 도메인, 개념,
-난이도와 개수 필터를 백엔드의 `GET /api/v1/learning/tasks` 쿼리로 변환한다.
+`BackendApiClient.getLearningTaskCatalog()`는 Part 2의 전체 문제 조회 계약을 소유하며 선택 과목의 해금된
+문제를 `GET /api/v1/learning/tasks`의 `limit`·`offset` 페이지로 끝까지 읽는다. 목록 조회만으로 표시 세션을
+만들지 않고, 사용자가 카드를 열 때 `GameClient.prepareStudyTask()`가 해당 문제의 presentation을 발급한다.
+오늘의 추천 10개는 별도로 유지해 추천 카드의 우선순위를 결정한다.
 
 운영 빌드는 기존 브라우저 세션을 먼저 확인하고, 세션이 없으면 `AuthScene`의 Canvas 로그인·가입 화면을
 표시한다. 로그인 뒤에도 화면 계층은 인증 구현을 알지 않고 조립 계층에서 완성된 `GameClient`만 받는다.

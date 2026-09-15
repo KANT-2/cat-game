@@ -1,3 +1,4 @@
+import { message } from "../content/messages";
 import type {
   ApplyRoomThemeResult,
   AttendanceClaimResult,
@@ -47,7 +48,6 @@ import type { GachaDrawCount } from "../domain/gacha";
 import { gachaRewardDefinitions } from "../domain/gacha";
 import type { FurnitureKind, GameSettings, GameState } from "../domain/room";
 import { type ShopItemId, shopItemDefinitions } from "../domain/shop";
-import { message } from "../content/messages";
 import {
   type BackendApiClient,
   BackendApiError,
@@ -62,6 +62,7 @@ import { learningCardSummary, learningDescription } from "./learningDescription"
 /** FastAPI 상태와 명령을 권위 있게 사용하며 로컬 클라이언트는 초기 상태 형태에만 사용한다. */
 export class BackendLearningGameClient implements GameClient {
   private readonly tasks = new Map<string, BackendLearningTask>();
+  private readonly recommendedTaskIds = new Set<string>();
   private readonly listeners = new Set<GameStateListener>();
   private state: GameState;
   private dailyHasCodeCompletion: boolean;
@@ -75,15 +76,14 @@ export class BackendLearningGameClient implements GameClient {
   private constructor(
     local: GameClient,
     private readonly api: BackendApiClient,
-    tasks: BackendLearningTask[],
+    recommendations: BackendLearningTask[],
+    catalog: BackendLearningTask[],
     snapshot: BackendGameSnapshot,
     proficiencies: BackendConceptProficiency[],
     private readonly profileImageUrl: string | null,
     private readonly playerProfile: PlayerProfileView,
   ) {
-    for (const task of tasks) {
-      this.tasks.set(task.publicId, task);
-    }
+    this.replaceStudyTasks(recommendations, catalog);
     this.state = mergeTaskProgress(mergeServerSnapshot(local.getSnapshot(), snapshot), this.tasks.values());
     this.dailyHasCodeCompletion = snapshot.dailyHasCodeCompletion;
     this.stateVersion = snapshot.stateVersion;
@@ -104,15 +104,25 @@ export class BackendLearningGameClient implements GameClient {
     api: BackendApiClient,
     user: BackendUser | null = null,
   ): Promise<BackendLearningGameClient> {
-    const [tasks, snapshot, proficiencies] = await Promise.all([
+    const [recommendations, snapshot, proficiencies] = await Promise.all([
       api.getLearningRecommendations(10),
       api.getGameSnapshot(),
       api.getLearningProficiencies(),
     ]);
-    return new BackendLearningGameClient(local, api, tasks, snapshot, proficiencies, user?.profileImageUrl ?? null, {
-      displayName: user?.username ?? null,
-      email: user?.email ?? null,
-    });
+    const catalog = await api.getLearningTaskCatalog({ domain: snapshot.settings.learningDomain });
+    return new BackendLearningGameClient(
+      local,
+      api,
+      recommendations,
+      catalog,
+      snapshot,
+      proficiencies,
+      user?.profileImageUrl ?? null,
+      {
+        displayName: user?.username ?? null,
+        email: user?.email ?? null,
+      },
+    );
   }
 
   getSnapshot(): GameState {
@@ -143,18 +153,16 @@ export class BackendLearningGameClient implements GameClient {
    */
   async refreshFromServer(): Promise<boolean> {
     const generation = this.snapshotGeneration;
-    const [tasks, snapshot, proficiencies] = await Promise.all([
+    const [recommendations, snapshot, proficiencies] = await Promise.all([
       this.api.getLearningRecommendations(10),
       this.api.getGameSnapshot(),
       this.api.getLearningProficiencies(),
     ]);
+    const catalog = await this.api.getLearningTaskCatalog({ domain: snapshot.settings.learningDomain });
     if (generation !== this.snapshotGeneration || snapshot.stateVersion < this.stateVersion) {
       return false;
     }
-    this.tasks.clear();
-    for (const task of tasks) {
-      this.tasks.set(task.publicId, task);
-    }
+    this.replaceStudyTasks(recommendations, catalog);
     this.mastery = toStudyMastery(proficiencies);
     this.applyServerSnapshot(snapshot);
     return true;
@@ -391,12 +399,28 @@ export class BackendLearningGameClient implements GameClient {
   }
 
   getStudyTasks(): StudyTaskView[] {
-    return [...this.tasks.values()].map(toStudyTaskView);
+    return [...this.tasks.values()].map((task) => ({
+      ...toStudyTaskView(task),
+      recommended: this.recommendedTaskIds.has(task.publicId),
+    }));
   }
 
   async prepareStudy(): Promise<void> {
     const [, tier] = await Promise.all([this.refreshFromServer(), this.api.getLearningTier()]);
     this.tier = toStudyTier(tier);
+  }
+
+  async prepareStudyTask(taskId: string): Promise<StudyTaskView | null> {
+    const task = this.tasks.get(taskId);
+    if (!task) {
+      return null;
+    }
+    if (task.presentationRequired) {
+      const presented = await this.api.startLearningPresentation(taskId);
+      this.tasks.set(taskId, { ...presented, completed: task.completed });
+    }
+    const prepared = this.tasks.get(taskId);
+    return prepared ? { ...toStudyTaskView(prepared), recommended: this.recommendedTaskIds.has(taskId) } : null;
   }
 
   getStudyMastery(): StudyMasteryView {
@@ -578,15 +602,13 @@ export class BackendLearningGameClient implements GameClient {
   async resetLearningProgress(): Promise<LearningResetResult> {
     try {
       const mutation = await this.api.resetGameLearning();
-      const [tasks, proficiencies, tier] = await Promise.all([
+      const [recommendations, catalog, proficiencies, tier] = await Promise.all([
         this.api.getLearningRecommendations(10),
+        this.api.getLearningTaskCatalog({ domain: mutation.snapshot.settings.learningDomain }),
         this.api.getLearningProficiencies(),
         this.api.getLearningTier(),
       ]);
-      this.tasks.clear();
-      for (const task of tasks) {
-        this.tasks.set(task.publicId, task);
-      }
+      this.replaceStudyTasks(recommendations, catalog);
       this.mastery = toStudyMastery(proficiencies);
       this.tier = toStudyTier(tier);
       this.applyServerSnapshot(mutation.snapshot);
@@ -691,15 +713,13 @@ export class BackendLearningGameClient implements GameClient {
       const mutation = await this.api.updateGameSettings(patch);
       this.applyServerSnapshot(mutation.snapshot);
       if (learningDomainChanged) {
-        this.tasks.clear();
-        const [tasks, proficiencies, tier] = await Promise.all([
+        const [recommendations, catalog, proficiencies, tier] = await Promise.all([
           this.api.getLearningRecommendations(10),
+          this.api.getLearningTaskCatalog({ domain: mutation.snapshot.settings.learningDomain }),
           this.api.getLearningProficiencies(),
           this.api.getLearningTier(),
         ]);
-        for (const task of tasks) {
-          this.tasks.set(task.publicId, task);
-        }
+        this.replaceStudyTasks(recommendations, catalog);
         this.mastery = toStudyMastery(proficiencies);
         this.tier = toStudyTier(tier);
         this.state = mergeTaskProgress(this.state, this.tasks.values());
@@ -709,6 +729,20 @@ export class BackendLearningGameClient implements GameClient {
       console.warn("Backend settings update failed", error);
     }
     return { ...this.state.settings };
+  }
+
+  private replaceStudyTasks(recommendations: BackendLearningTask[], catalog: BackendLearningTask[]): void {
+    this.tasks.clear();
+    this.recommendedTaskIds.clear();
+    for (const task of recommendations) {
+      this.tasks.set(task.publicId, task);
+      this.recommendedTaskIds.add(task.publicId);
+    }
+    for (const task of catalog) {
+      if (!this.tasks.has(task.publicId)) {
+        this.tasks.set(task.publicId, task);
+      }
+    }
   }
 
   private applyServerSnapshot(snapshot: BackendGameSnapshot): void {
@@ -988,8 +1022,7 @@ export function gameDateStamp(value: Date): string {
     month: "2-digit",
     day: "2-digit",
   }).formatToParts(value);
-  const read = (type: Intl.DateTimeFormatPartTypes): string =>
-    parts.find((part) => part.type === type)?.value ?? "";
+  const read = (type: Intl.DateTimeFormatPartTypes): string => parts.find((part) => part.type === type)?.value ?? "";
   return `${read("year")}-${read("month")}-${read("day")}`;
 }
 

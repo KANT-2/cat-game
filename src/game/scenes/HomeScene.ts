@@ -332,6 +332,7 @@ export class HomeScene extends Container {
       getMastery: () => this.gameClient.getStudyMastery(),
       getTier: () => this.gameClient.getStudyTier(),
       getCoins: () => this.gameClient.getSnapshot().coins,
+      onPrepareTask: (taskId) => this.gameClient.prepareStudyTask(taskId),
       getQuiz: (quizId) => this.gameClient.getQuiz(quizId),
       getCodeChallenge: (challengeId) => this.gameClient.getCodeChallenge(challengeId),
       onAnswer: (quizId, choiceId) => this.gameClient.answerQuiz(quizId, choiceId),

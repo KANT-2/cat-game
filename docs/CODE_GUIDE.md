@@ -127,6 +127,9 @@ UI는 `reason`을 메시지 키로 변환해 보여 줄 뿐 충돌을 다시 판
 
 백엔드 학습 모드는 dual-mode 문제를 받으면 먼저 `POST /api/v1/attempts/presentations`로 서버가 고른
 표시 유형과 보기 순서를 받는다. 이 공개 presentation UUID는 새로고침과 오답 재시도에도 유지한다.
+학습 대시보드는 추천 10개와 선택 과목의 해금된 전체 문제 목록을 분리해 조회한다. 전체 목록은
+`limit=50`과 `offset`으로 끝까지 읽되 조회 시 presentation을 만들지 않으며, 사용자가 문제 카드를 열 때만
+`prepareStudyTask()`가 표시 세션을 준비한다.
 코드 또는 객관식 답안은 presentation UUID와 함께 `POST /api/v1/attempts`에 제출한 뒤 공개 attempt UUID로
 완료 상태를 폴링한다. `COMPLETED`의 `is_correct`와 `coins_awarded`만 화면 결과로 사용하고, 정답이면
 게임 스냅샷을 다시 읽는다. 서버는 사용자·과제별 최초 정답 원장을 만들어 그때만 과제 보상과 잔액을 같은

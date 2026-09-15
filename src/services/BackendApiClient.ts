@@ -30,6 +30,7 @@ export type BackendLearningTaskQuery = {
   conceptPublicId?: string;
   difficulty?: "BRONZE" | "SILVER" | "GOLD";
   limit?: number;
+  offset?: number;
 };
 
 export type BackendConceptProficiency = {
@@ -268,6 +269,34 @@ export class BackendApiClient {
 
   /** 공개 필터 계약으로 활성 학습 과제를 조회한다. */
   async getLearningTasks(query: BackendLearningTaskQuery = {}): Promise<BackendLearningTask[]> {
+    const tasks = await this.getLearningTaskPage(query);
+    return Promise.all(
+      tasks.map(async (task) => {
+        if (!task.presentationRequired) {
+          return task;
+        }
+        const presented = await this.startLearningPresentation(task.publicId);
+        return { ...presented, completed: task.completed };
+      }),
+    );
+  }
+
+  /** 선택 과목에서 해금된 과제를 presentation 발급 없이 끝까지 페이지 조회한다. */
+  async getLearningTaskCatalog(
+    query: Omit<BackendLearningTaskQuery, "limit" | "offset"> = {},
+  ): Promise<BackendLearningTask[]> {
+    const pageSize = 50;
+    const tasks: BackendLearningTask[] = [];
+    for (let offset = 0; ; offset += pageSize) {
+      const page = await this.getLearningTaskPage({ ...query, limit: pageSize, offset });
+      tasks.push(...page);
+      if (page.length < pageSize) {
+        return tasks;
+      }
+    }
+  }
+
+  private async getLearningTaskPage(query: BackendLearningTaskQuery): Promise<BackendLearningTask[]> {
     const parameters = new URLSearchParams();
     if (query.type) {
       parameters.set("type", query.type);
@@ -282,20 +311,15 @@ export class BackendApiClient {
       parameters.set("difficulty", query.difficulty);
     }
     parameters.set("limit", String(Math.max(1, Math.min(50, Math.trunc(query.limit ?? 20)))));
+    if (query.offset !== undefined) {
+      parameters.set("offset", String(Math.max(0, Math.trunc(query.offset))));
+    }
 
     const payload = await this.request(`/api/v1/learning/tasks?${parameters.toString()}`);
     if (!Array.isArray(payload)) {
       throw new Error("Backend learning tasks response is invalid");
     }
-    return Promise.all(
-      payload.map(parseTask).map(async (task) => {
-        if (!task.presentationRequired) {
-          return task;
-        }
-        const presented = await this.startLearningPresentation(task.publicId);
-        return { ...presented, completed: task.completed };
-      }),
-    );
+    return payload.map(parseTask);
   }
 
   /** 한 논리 문제의 표시 방식과 객관식 보기 순서를 서버에 고정한다. */
