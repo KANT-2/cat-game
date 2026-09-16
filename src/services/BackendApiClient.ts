@@ -61,6 +61,32 @@ export type BackendLearningTier = {
   }>;
 };
 
+export type BackendDailyStatistics = {
+  gameDate: string;
+  dailyActiveUsers: number;
+  gameEntries: number;
+  activeLearners: number;
+  attemptsSubmitted: number;
+  attemptsCompleted: number;
+  correctAttempts: number;
+  incorrectAttempts: number;
+  gradingFailedAttempts: number;
+  hintsUsed: number;
+  coinsAwarded: number;
+};
+
+export type BackendMyDailyStatistics = {
+  gameDate: string;
+  distinctTasksAttempted: number;
+  attemptsSubmitted: number;
+  attemptsCompleted: number;
+  correctAttempts: number;
+  incorrectAttempts: number;
+  gradingFailedAttempts: number;
+  hintsUsed: number;
+  coinsAwarded: number;
+};
+
 export type BackendAttemptSubmission = {
   requestId: string;
   taskPublicId: string;
@@ -382,6 +408,34 @@ export class BackendApiClient {
       throw new Error("Backend proficiencies response is invalid");
     }
     return payload.map(parseConceptProficiency);
+  }
+
+  /** 로그인한 누구나 볼 수 있는 전체 일별 활동 통계를 조회한다. */
+  async getPublicDailyStatistics(dateFrom?: string): Promise<BackendDailyStatistics[]> {
+    const parameters = new URLSearchParams();
+    if (dateFrom) {
+      parameters.set("date_from", dateFrom);
+    }
+    const suffix = parameters.toString() ? `?${parameters.toString()}` : "";
+    const payload = await this.request(`/api/v1/statistics/public/daily${suffix}`);
+    if (!Array.isArray(payload)) {
+      throw new Error("Backend public statistics response is invalid");
+    }
+    return payload.map(parseDailyStatistics);
+  }
+
+  /** 로그인한 본인의 일별 학습 통계만 조회한다. */
+  async getMyDailyStatistics(dateFrom?: string): Promise<BackendMyDailyStatistics[]> {
+    const parameters = new URLSearchParams();
+    if (dateFrom) {
+      parameters.set("date_from", dateFrom);
+    }
+    const suffix = parameters.toString() ? `?${parameters.toString()}` : "";
+    const payload = await this.request(`/api/v1/statistics/me/daily${suffix}`);
+    if (!Array.isArray(payload)) {
+      throw new Error("Backend personal statistics response is invalid");
+    }
+    return payload.map(parseMyDailyStatistics);
   }
 
   async getLearningTier(): Promise<BackendLearningTier> {
@@ -824,6 +878,38 @@ function parseConceptProficiency(value: unknown): BackendConceptProficiency {
     completed: readNumber(record, "completed"),
     total: readNumber(record, "total"),
     proficiencyLevel: readNumber(record, "proficiency_level"),
+  };
+}
+
+function parseDailyStatistics(value: unknown): BackendDailyStatistics {
+  const record = asRecord(value);
+  return {
+    gameDate: readString(record, "game_date"),
+    dailyActiveUsers: readNumber(record, "daily_active_users"),
+    gameEntries: readNumber(record, "game_entries"),
+    activeLearners: readNumber(record, "active_learners"),
+    attemptsSubmitted: readNumber(record, "attempts_submitted"),
+    attemptsCompleted: readNumber(record, "attempts_completed"),
+    correctAttempts: readNumber(record, "correct_attempts"),
+    incorrectAttempts: readNumber(record, "incorrect_attempts"),
+    gradingFailedAttempts: readNumber(record, "grading_failed_attempts"),
+    hintsUsed: readNumber(record, "hints_used"),
+    coinsAwarded: readNumber(record, "coins_awarded"),
+  };
+}
+
+function parseMyDailyStatistics(value: unknown): BackendMyDailyStatistics {
+  const record = asRecord(value);
+  return {
+    gameDate: readString(record, "game_date"),
+    distinctTasksAttempted: readNumber(record, "distinct_tasks_attempted"),
+    attemptsSubmitted: readNumber(record, "attempts_submitted"),
+    attemptsCompleted: readNumber(record, "attempts_completed"),
+    correctAttempts: readNumber(record, "correct_attempts"),
+    incorrectAttempts: readNumber(record, "incorrect_attempts"),
+    gradingFailedAttempts: readNumber(record, "grading_failed_attempts"),
+    hintsUsed: readNumber(record, "hints_used"),
+    coinsAwarded: readNumber(record, "coins_awarded"),
   };
 }
 

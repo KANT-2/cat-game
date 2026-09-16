@@ -49,6 +49,76 @@ describe("backend learning integration", () => {
     });
   });
 
+  it("parses the shared daily activity statistics that any logged-in player can view", async () => {
+    const fetcher = vi.fn(async () =>
+      json([
+        {
+          game_date: "2026-09-14",
+          daily_active_users: 12,
+          game_entries: 20,
+          active_learners: 9,
+          attempts_submitted: 30,
+          attempts_completed: 28,
+          correct_attempts: 21,
+          incorrect_attempts: 7,
+          grading_failed_attempts: 2,
+          hints_used: 4,
+          coins_awarded: 150,
+        },
+      ]),
+    );
+    const api = new BackendApiClient("http://localhost:8000", userId, fetcher);
+
+    await expect(api.getPublicDailyStatistics()).resolves.toEqual([
+      {
+        gameDate: "2026-09-14",
+        dailyActiveUsers: 12,
+        gameEntries: 20,
+        activeLearners: 9,
+        attemptsSubmitted: 30,
+        attemptsCompleted: 28,
+        correctAttempts: 21,
+        incorrectAttempts: 7,
+        gradingFailedAttempts: 2,
+        hintsUsed: 4,
+        coinsAwarded: 150,
+      },
+    ]);
+  });
+
+  it("parses the caller's own daily learning statistics without any other player's data", async () => {
+    const fetcher = vi.fn(async () =>
+      json([
+        {
+          game_date: "2026-09-14",
+          distinct_tasks_attempted: 3,
+          attempts_submitted: 5,
+          attempts_completed: 5,
+          correct_attempts: 4,
+          incorrect_attempts: 1,
+          grading_failed_attempts: 0,
+          hints_used: 1,
+          coins_awarded: 40,
+        },
+      ]),
+    );
+    const api = new BackendApiClient("http://localhost:8000", userId, fetcher);
+
+    await expect(api.getMyDailyStatistics()).resolves.toEqual([
+      {
+        gameDate: "2026-09-14",
+        distinctTasksAttempted: 3,
+        attemptsSubmitted: 5,
+        attemptsCompleted: 5,
+        correctAttempts: 4,
+        incorrectAttempts: 1,
+        gradingFailedAttempts: 0,
+        hintsUsed: 1,
+        coinsAwarded: 40,
+      },
+    ]);
+  });
+
   it("accepts every expanded gacha reward from the server", async () => {
     let rewardId = "furniture.ocean.rug";
     const fetcher = vi.fn(async (input: RequestInfo | URL) => {

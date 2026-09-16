@@ -13,6 +13,7 @@ import type {
   CodeTestRunResult,
   DailyQuestView,
   DailyRewardResult,
+  DailyStatisticsRow,
   GachaDrawResult,
   GachaReward,
   GameClient,
@@ -20,9 +21,12 @@ import type {
   GameStateListener,
   LearningResetResult,
   MoveFurnitureCommand,
+  MyDailyStatisticsResult,
+  MyDailyStatisticsRow,
   PlacementCommand,
   PlacementResult,
   PlayerProfileView,
+  PublicDailyStatisticsResult,
   PurchaseResult,
   QuizAnswerResult,
   QuizView,
@@ -54,9 +58,11 @@ import {
   type BackendApiClient,
   BackendApiError,
   type BackendConceptProficiency,
+  type BackendDailyStatistics,
   type BackendGameSnapshot,
   type BackendLearningTask,
   type BackendLearningTier,
+  type BackendMyDailyStatistics,
   type BackendUser,
 } from "./BackendApiClient";
 import { learningCardSummary, learningDescription } from "./learningDescription";
@@ -439,6 +445,26 @@ export class BackendLearningGameClient implements GameClient {
 
   getStudyTier(): StudyTierView {
     return { ...this.tier, unlockedDifficulties: [...this.tier.unlockedDifficulties] };
+  }
+
+  async getPublicDailyStatistics(): Promise<PublicDailyStatisticsResult> {
+    try {
+      const rows = await this.api.getPublicDailyStatistics(statisticsLookbackStart());
+      return { ok: true, rows: rows.map(toDailyStatisticsRow) };
+    } catch (error) {
+      console.warn("Backend public statistics fetch failed", error);
+      return { ok: false, reason: "server-unavailable" };
+    }
+  }
+
+  async getMyDailyStatistics(): Promise<MyDailyStatisticsResult> {
+    try {
+      const rows = await this.api.getMyDailyStatistics(statisticsLookbackStart());
+      return { ok: true, rows: rows.map(toMyDailyStatisticsRow) };
+    } catch (error) {
+      console.warn("Backend personal statistics fetch failed", error);
+      return { ok: false, reason: "server-unavailable" };
+    }
   }
 
   getCodeChallenge(challengeId: string): CodeChallengeView | null {
@@ -1085,6 +1111,13 @@ export function gameDateStamp(value: Date): string {
   return `${read("year")}-${read("month")}-${read("day")}`;
 }
 
+const STATISTICS_LOOKBACK_DAYS = 365;
+
+/** 서버가 허용하는 최대 조회 범위(366일) 안에서 통계 화면이 요청할 시작일을 계산한다. */
+function statisticsLookbackStart(): string {
+  return gameDateStamp(new Date(Date.now() - STATISTICS_LOOKBACK_DAYS * 24 * 60 * 60 * 1000));
+}
+
 function toStudyTaskView(task: BackendLearningTask): StudyTaskView {
   const presentationType = task.presentationPublicId ? task.type : (task.suggestedPresentationType ?? task.type);
   return {
@@ -1121,6 +1154,14 @@ function splitHintSteps(hintText: string | null): string[] {
 
 function mapConcept(value: string): StudyTaskView["concept"] {
   return value.split(":").at(-1)?.toLowerCase() || "other";
+}
+
+function toDailyStatisticsRow(row: BackendDailyStatistics): DailyStatisticsRow {
+  return { ...row };
+}
+
+function toMyDailyStatisticsRow(row: BackendMyDailyStatistics): MyDailyStatisticsRow {
+  return { ...row };
 }
 
 function toStudyMastery(proficiencies: BackendConceptProficiency[]): StudyMasteryView {
