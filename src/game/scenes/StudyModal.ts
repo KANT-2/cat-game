@@ -17,7 +17,7 @@ import type { StudyConcept, StudyDifficulty, StudyTaskType } from "../../domain/
 import { BackButton } from "../components/BackButton";
 import { CanvasButton, fitWrappedTextHeight } from "../components/CanvasButton";
 import { createCozyPageBackground, createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
-import { createCoinAmount } from "../components/CurrencyBar";
+import { createCoinAmount, createCurrencyBar } from "../components/CurrencyBar";
 import { layoutToFillViewport } from "../components/fullscreenLayout";
 import { StudySubjectButton } from "../components/StudyLandingUi";
 import { applySmoothTextureSampling } from "../components/smoothSprite";
@@ -252,11 +252,12 @@ export class StudyModal extends Container {
   private buildCurrentCoins(): void {
     this.currentCoins?.removeFromParent();
     this.currentCoins?.destroy({ children: true });
-    const coins = createCoinAmount(this.options.coinIcon, this.options.getCoins().toLocaleString("ko-KR"), {
-      fontSize: 21,
-      iconSize: 32,
-    });
-    coins.position.set(1370, 48);
+    // A bordered pill (matching DailyQuestScene's currency bar) so the amount stays readable
+    // against the background instead of floating text blending into it.
+    const { container: coins } = createCurrencyBar(this.options.coinIcon, this.options.getCoins(), 200);
+    // On the landing dashboard the peeking mascot sits at (1400, 126) sized ~145px (see
+    // buildLandingHeader), which overlaps this readout's default spot. Shift it clear there.
+    coins.position.set(this.selectedSubject ? 1370 : 1100, 20);
     this.currentCoins = coins;
     this.body.addChild(coins);
   }
