@@ -123,6 +123,7 @@ export class StudyModal extends Container {
   private viewportWidth = BASE_WIDTH;
   private viewportHeight = BASE_HEIGHT;
   private codeEditor: CodeEditorOverlay | null = null;
+  private currentCoins: Container | null = null;
   private readonly codeDrafts = new Map<string, string>();
   private readonly codeHintDrafts = new Map<string, number>();
   private hintsUsed = 0;
@@ -247,11 +248,14 @@ export class StudyModal extends Container {
   }
 
   private buildCurrentCoins(): void {
+    this.currentCoins?.removeFromParent();
+    this.currentCoins?.destroy({ children: true });
     const coins = createCoinAmount(this.options.coinIcon, this.options.getCoins().toLocaleString("ko-KR"), {
       fontSize: 21,
       iconSize: 32,
     });
     coins.position.set(1370, 48);
+    this.currentCoins = coins;
     this.body.addChild(coins);
   }
 
@@ -747,20 +751,6 @@ export class StudyModal extends Container {
     this.renderQuiz(fallback);
   }
 
-  private reopenCodeOrQuiz(taskId: string, fallback: CodeChallengeView, draftCode: string, hintsUsed: number): void {
-    const challenge = this.options.getCodeChallenge(taskId);
-    if (challenge) {
-      this.renderCode(challenge, draftCode, hintsUsed, true);
-      return;
-    }
-    const quiz = this.options.getQuiz(taskId);
-    if (quiz) {
-      this.renderQuiz(quiz);
-      return;
-    }
-    this.renderCode(fallback, draftCode, hintsUsed, true);
-  }
-
   private renderQuiz(quiz: QuizView): void {
     this.clearBody();
     this.drawBaseHeader(resolveGameText(quiz.title), resolveGameText(quiz.summary), () => this.renderDashboard());
@@ -1079,43 +1069,71 @@ export class StudyModal extends Container {
     const visibleTables = dataset.slice(0, 3);
     visibleTables.forEach((table, tableIndex) => {
       const y = 270 + tableIndex * 158;
+      const gridX = 100;
+      const gridY = y + 39;
+      const gridWidth = 409;
+      const rowHeight = 29;
+      const maximumColumns = 5;
+      const hasHiddenColumns = table.columns.length > maximumColumns;
+      const visibleColumns = hasHiddenColumns ? [...table.columns.slice(0, maximumColumns - 1), "…"] : table.columns;
+      const columnWidth = gridWidth / Math.max(1, visibleColumns.length);
       const frame = new Graphics()
         .roundRect(92, y, 425, 142, 15)
         .fill(tableIndex % 2 === 0 ? 0xefe2ce : 0xf5ead8)
         .stroke({ color: 0xc9aa82, width: 1.5 });
-      const name = new Text({ text: table.name, style: textStyle(18, 0x493022, "800") });
+      const name = new Text({ text: table.name, style: textStyle(17, 0x493022, "800") });
       name.position.set(108, y + 12);
-      const columns = new Text({
-        text: message("study.sqlDatasetColumns", { columns: table.columns.join(" · ") }),
-        style: textStyle(13, 0x76533c, "700"),
+      let rowSummaryValue = table.rowSummary ?? "";
+      if (!rowSummaryValue && table.rows.length > 2) {
+        rowSummaryValue = message("study.sqlDatasetShownRows", { total: table.rows.length, shown: 2 });
+      }
+      const rowSummary = new Text({ text: rowSummaryValue, style: textStyle(11, 0x876147, "700") });
+      rowSummary.anchor.set(1, 0);
+      rowSummary.position.set(500, y + 15);
+      const grid = new Graphics()
+        .roundRect(gridX, gridY, gridWidth, rowHeight * 3, 8)
+        .fill(0xfffbf2)
+        .rect(gridX, gridY, gridWidth, rowHeight)
+        .fill(0xd8c09d)
+        .rect(gridX, gridY + rowHeight * 2, gridWidth, rowHeight)
+        .fill(0xf7edda)
+        .roundRect(gridX, gridY, gridWidth, rowHeight * 3, 8)
+        .stroke({ color: 0xa98561, width: 1.5 });
+      const gridLines = new Graphics();
+      for (let columnIndex = 1; columnIndex < visibleColumns.length; columnIndex += 1) {
+        const x = gridX + columnWidth * columnIndex;
+        gridLines.moveTo(x, gridY).lineTo(x, gridY + rowHeight * 3);
+      }
+      gridLines
+        .moveTo(gridX, gridY + rowHeight)
+        .lineTo(gridX + gridWidth, gridY + rowHeight)
+        .moveTo(gridX, gridY + rowHeight * 2)
+        .lineTo(gridX + gridWidth, gridY + rowHeight * 2)
+        .stroke({ color: 0xb99a76, width: 1 });
+      container.addChild(frame, name, rowSummary, grid, gridLines);
+      visibleColumns.forEach((column, columnIndex) => {
+        const heading = new Text({
+          text: clipSqlTableCell(column, columnWidth),
+          style: textStyle(12, 0x493022, "800"),
+        });
+        heading.anchor.set(0.5);
+        heading.position.set(gridX + columnWidth * (columnIndex + 0.5), gridY + rowHeight / 2);
+        container.addChild(heading);
       });
-      columns.position.set(108, y + 40);
-      container.addChild(frame, name, columns);
       const previewRows = table.rows.slice(0, 2);
       previewRows.forEach((row, rowIndex) => {
-        const text = new Text({
-          text: clipPreviewRow(row),
-          style: textStyle(13, 0x4f443d, "600"),
+        const visibleValues = hasHiddenColumns ? [...row.slice(0, maximumColumns - 1), "…"] : row;
+        visibleColumns.forEach((_, columnIndex) => {
+          const value = visibleValues[columnIndex] ?? "";
+          const cell = new Text({
+            text: clipSqlTableCell(value, columnWidth),
+            style: textStyle(11, 0x4f443d, "600"),
+          });
+          cell.anchor.set(0.5);
+          cell.position.set(gridX + columnWidth * (columnIndex + 0.5), gridY + rowHeight * (rowIndex + 1.5));
+          container.addChild(cell);
         });
-        text.position.set(108, y + 68 + rowIndex * 24);
-        container.addChild(text);
       });
-      if (table.rowSummary) {
-        const range = new Text({
-          text: message("study.sqlDatasetRange", { value: table.rowSummary }),
-          style: textStyle(13, 0x4f443d, "600"),
-        });
-        range.position.set(108, y + 70);
-        container.addChild(range);
-      } else if (table.rows.length > previewRows.length) {
-        const more = new Text({
-          text: message("study.sqlDatasetMoreRows", { count: table.rows.length - previewRows.length }),
-          style: textStyle(12, 0x876147, "700"),
-        });
-        more.anchor.set(1, 0);
-        more.position.set(500, y + 115);
-        container.addChild(more);
-      }
     });
     return container;
   }
@@ -1148,6 +1166,7 @@ export class StudyModal extends Container {
       return;
     }
     const code = this.codeEditor?.getValue() ?? "";
+    this.closeFeedback();
     this.codeDrafts.set(challenge.id, code);
     this.codeHintDrafts.set(challenge.id, this.hintsUsed);
     this.submissionPending = true;
@@ -1157,9 +1176,7 @@ export class StudyModal extends Container {
       result = await this.options.onSubmitCode(challenge.id, code, this.hintsUsed);
     } catch (error) {
       console.error("Code submission failed", error);
-      this.showFeedback(false, message("study.serverGradingUnavailable"), [], () =>
-        this.reopenCodeOrQuiz(challenge.id, challenge, code, this.hintsUsed),
-      );
+      this.showCodeFeedback(false, message("study.serverGradingUnavailable"), []);
       return;
     } finally {
       this.submissionPending = false;
@@ -1169,9 +1186,7 @@ export class StudyModal extends Container {
     }
     if (!result.ok) {
       const feedback = result.reason === "empty-code" ? "study.emptyCode" : "study.serverGradingUnavailable";
-      this.showFeedback(false, message(feedback), [], () =>
-        this.reopenCodeOrQuiz(challenge.id, challenge, code, this.hintsUsed),
-      );
+      this.showCodeFeedback(false, message(feedback), []);
       return;
     }
     let detail = gradingResultText(result.verdict, result.passedTests, result.totalTests, challenge.language);
@@ -1192,16 +1207,9 @@ export class StudyModal extends Container {
     }));
     if (result.passed) {
       this.markTaskCompleted(challenge.id);
-      this.codeDrafts.delete(challenge.id);
-      this.codeHintDrafts.delete(challenge.id);
+      this.buildCurrentCoins();
     }
-    this.showFeedback(result.passed, detail, testRows, () => {
-      if (result.passed) {
-        this.renderDashboard();
-        return;
-      }
-      this.renderCode(challenge, code, this.hintsUsed, true);
-    });
+    this.showCodeFeedback(result.passed, detail, testRows);
   }
 
   private formatRevealedHints(challenge: CodeChallengeView, count: number): string {
@@ -1284,6 +1292,81 @@ export class StudyModal extends Container {
     this.feedbackLayer.addChild(close);
   }
 
+  private showCodeFeedback(passed: boolean, detailValue: string, tests: FeedbackTest[]): void {
+    this.closeFeedback();
+    const panel = createCozyPanel(55, 120, 500, 720, {
+      fill: 0xfff8e8,
+      border: passed ? 0x72945e : 0xb36554,
+      radius: 28,
+    });
+    panel.eventMode = "static";
+    const title = new Text({ text: message("study.feedbackTitle"), style: textStyle(27, 0x3f281c, "800") });
+    title.anchor.set(0.5);
+    title.position.set(305, 166);
+    const subtitle = new Text({
+      text: message(passed ? "study.feedbackSuccessSubtitle" : "study.feedbackRetrySubtitle"),
+      style: {
+        ...textStyle(14, 0x74523d, "600"),
+        align: "center",
+        wordWrap: true,
+        wordWrapWidth: 390,
+        lineHeight: 20,
+      },
+    });
+    subtitle.anchor.set(0.5, 0);
+    subtitle.position.set(305, 193);
+    const statusBadge = new Graphics()
+      .circle(305, 267, 31)
+      .fill(passed ? 0x87a66e : 0xd78b72)
+      .stroke({ color: passed ? 0x5f814f : 0xa54f42, width: 3 });
+    const statusMark = new Text({ text: passed ? "✓" : "!", style: textStyle(32, 0xffffff, "800") });
+    statusMark.anchor.set(0.5);
+    statusMark.position.set(305, 265);
+    const detailPlate = new Graphics()
+      .roundRect(82, 315, 446, 130, 17)
+      .fill(passed ? 0xe8f0dc : 0xf4dfd4)
+      .stroke({ color: passed ? 0x87a66e : 0xd78b72, width: 2 });
+    const detail = new Text({
+      text: detailValue,
+      style: {
+        ...textStyle(17, 0x493022, "700"),
+        align: "center",
+        wordWrap: true,
+        wordWrapWidth: 400,
+        lineHeight: 25,
+      },
+    });
+    detail.anchor.set(0.5, 0);
+    detail.position.set(305, 339);
+    fitWrappedTextHeight(detail, 86, 12, 17, 7);
+    this.feedbackLayer.addChild(panel, title, subtitle, statusBadge, statusMark, detailPlate, detail);
+    tests.slice(0, 4).forEach((test, index) => {
+      const y = 466 + index * 55;
+      const row = new Graphics().roundRect(82, y, 446, 45, 13).fill(test.passed ? 0xe5efd9 : 0xf4dfd4);
+      const label = new Text({
+        text: `${test.passed ? "✓" : "×"}  ${test.label}`,
+        style: { ...textStyle(13, 0x584235, "700"), wordWrap: true, wordWrapWidth: 400, align: "center" },
+      });
+      label.anchor.set(0.5);
+      label.position.set(305, y + 22);
+      fitWrappedTextHeight(label, 38, 10, 13, 5);
+      this.feedbackLayer.addChild(row, label);
+    });
+    const close = new CanvasButton({
+      label: message("study.feedbackClose"),
+      width: 220,
+      height: 58,
+      fontSize: 19,
+      color: passed ? 0x87a66e : 0xe4a05a,
+      onPress: () => {
+        this.closeFeedback();
+        this.codeEditor?.focus();
+      },
+    });
+    close.position.set(195, 754);
+    this.feedbackLayer.addChild(close);
+  }
+
   private closeFeedback(): void {
     this.feedbackLayer.removeChildren().forEach((child) => {
       child.destroy({ children: true });
@@ -1323,6 +1406,7 @@ export class StudyModal extends Container {
     this.closeFeedback();
     this.codeEditor?.destroy();
     this.codeEditor = null;
+    this.currentCoins = null;
     this.body.removeChildren().forEach((child) => {
       child.destroy({ children: true });
     });
@@ -1378,13 +1462,9 @@ function filterLabelText(label: FilterLabel): string {
   return typeof label === "string" ? message(label) : label.text;
 }
 
-function clipPreviewValue(value: string): string {
-  return value.length > 12 ? `${value.slice(0, 11)}…` : value;
-}
-
-function clipPreviewRow(row: readonly string[]): string {
-  const text = row.map((value) => clipPreviewValue(value)).join("  |  ");
-  return text.length > 44 ? `${text.slice(0, 43)}…` : text;
+export function clipSqlTableCell(value: string, cellWidth: number): string {
+  const maximumCharacters = Math.max(2, Math.floor((cellWidth - 12) / 7));
+  return value.length > maximumCharacters ? `${value.slice(0, maximumCharacters - 1)}…` : value;
 }
 
 function gradingResultText(

@@ -13,14 +13,26 @@ export function parseSqlDataset(setupSql: string): SqlDatasetTable[] {
       `INSERT\\s+INTO\\s+${escapeRegExp(name)}\\s+SELECT\\s+generate_series\\(([-\\d]+)\\s*,\\s*([-\\d]+)\\)`,
       "i",
     ).exec(setupSql);
+    const generatedRows = seriesMatch ? generateSeriesPreview(seriesMatch[1], seriesMatch[2]) : [];
     tables.push({
       name,
       columns,
-      rows: valuesMatch ? parseValueRows(valuesMatch[1]) : [],
+      rows: valuesMatch ? parseValueRows(valuesMatch[1]) : generatedRows,
       rowSummary: seriesMatch ? `${seriesMatch[1]} … ${seriesMatch[2]}` : undefined,
     });
   }
   return tables;
+}
+
+function generateSeriesPreview(startValue: string, endValue: string): string[][] {
+  const start = Number(startValue);
+  const end = Number(endValue);
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end)) {
+    return [];
+  }
+  const step = start <= end ? 1 : -1;
+  const count = Math.min(2, Math.abs(end - start) + 1);
+  return Array.from({ length: count }, (_, index) => [String(start + index * step)]);
 }
 
 function parseValueRows(value: string): string[][] {

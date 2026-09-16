@@ -20,7 +20,12 @@ describe("SQL dataset preview", () => {
         ],
         rowSummary: undefined,
       },
-      { name: "nums", columns: ["n"], rows: [], rowSummary: "1 … 10" },
+      {
+        name: "nums",
+        columns: ["n"],
+        rows: [["1"], ["2"]],
+        rowSummary: "1 … 10",
+      },
     ]);
   });
 
@@ -31,5 +36,14 @@ describe("SQL dataset preview", () => {
       ["1", "hi, cat"],
       ["2", "it's ok"],
     ]);
+  });
+
+  it("shows the first generated values for descending ranges", () => {
+    const setup = "CREATE TABLE nums (n int); INSERT INTO nums SELECT generate_series(3,1);";
+
+    expect(parseSqlDataset(setup)[0]).toMatchObject({
+      rows: [["3"], ["2"]],
+      rowSummary: "3 … 1",
+    });
   });
 });

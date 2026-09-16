@@ -2,7 +2,7 @@ import type { Text } from "pixi.js";
 import { describe, expect, it } from "vitest";
 import { fitWrappedTextHeight } from "../src/game/components/CanvasButton";
 import { formatStudyDetails } from "../src/game/presentation/studyPresentation";
-import { quizChoiceLayout } from "../src/game/scenes/StudyModal";
+import { clipSqlTableCell, quizChoiceLayout } from "../src/game/scenes/StudyModal";
 
 describe("long multiple-choice layout", () => {
   it("keeps the full wrapped scenario, question and four choices inside the page", () => {
@@ -41,6 +41,11 @@ describe("long multiple-choice layout", () => {
 
     expect(prompt.height).toBeLessThanOrEqual(155);
     expect(hints.height).toBeLessThanOrEqual(165);
+  });
+
+  it("clips SQL table cells to their visual column width", () => {
+    expect(clipSqlTableCell("Korean Shorthair", 82)).toBe("Korean Sh…");
+    expect(clipSqlTableCell("92", 82)).toBe("92");
   });
 });
 
