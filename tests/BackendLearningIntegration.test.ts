@@ -918,7 +918,14 @@ describe("backend learning integration", () => {
           task_public_id: taskId,
           submitted_code: "select 1;",
         });
-        return json({ verdict: "ACCEPTED", passed: 1, total: 1 });
+        return json({
+          verdict: "ACCEPTED",
+          passed: 1,
+          total: 1,
+          sample_input: null,
+          sample_expected_output: null,
+          sample_actual_output: null,
+        });
       }
       if (pathname === "/api/v1/attempts" && init?.method === "POST") {
         const body = JSON.parse(String(init.body)) as Record<string, unknown>;
@@ -971,6 +978,79 @@ describe("backend learning integration", () => {
       passedTests: 0,
       totalTests: 1,
       serverAuthoritative: true,
+    });
+  });
+
+  it("shows the public sample case's input/expected/actual from a test run, but never from a real submission", async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const pathname = new URL(String(input)).pathname;
+      if (pathname === "/health") {
+        return json({ status: "ok" });
+      }
+      if (pathname === "/api/v1/session/me") {
+        return json(userPayload());
+      }
+      if (pathname === "/api/v1/learning/recommendations") {
+        return json([{ ...learningTask(taskId, "PYTHON"), type: "CODE", options: null }]);
+      }
+      if (pathname === "/api/v1/learning/tasks") {
+        return json([]);
+      }
+      if (pathname === "/api/v1/learning/proficiencies") {
+        return json([]);
+      }
+      if (pathname === "/api/v1/learning/tier") {
+        return json(learningTier("PYTHON"));
+      }
+      if (pathname === "/api/v1/game/snapshot") {
+        return json(gameSnapshot(1_000, 0));
+      }
+      if (pathname === "/api/v1/attempts/test" && init?.method === "POST") {
+        return json({
+          verdict: "WRONG_ANSWER",
+          passed: 0,
+          total: 6,
+          sample_input: "4\n",
+          sample_expected_output: "\uc57c\uc639~\n",
+          sample_actual_output: "\uac38\uc6b0\ub6b1...\n",
+        });
+      }
+      if (pathname === "/api/v1/attempts" && init?.method === "POST") {
+        return json({ public_id: attemptId, status: "PENDING" }, 202);
+      }
+      if (pathname === `/api/v1/attempts/${attemptId}`) {
+        return json({
+          public_id: attemptId,
+          task_public_id: taskId,
+          context_type: "LEARNING",
+          status: "COMPLETED",
+          is_correct: false,
+          used_hint: false,
+          attempted_at: "2026-09-16T00:00:00Z",
+          // A persisted attempt's result must stay aggregate-only - no per-case detail here.
+          result_detail: { verdict: "WRONG_ANSWER", passed: 0, total: 6 },
+          coins_awarded: 0,
+        });
+      }
+      return json({ detail: "not found" }, 404);
+    });
+    const client = await BackendLearningGameClient.create(
+      new LocalGameClient(new MemoryRepository()),
+      new BackendApiClient("http://localhost:8000", userId, fetcher),
+    );
+
+    await expect(client.runCodeChallengeTests(taskId, "print('\uac38\uc6b0\ub6b1...')")).resolves.toMatchObject({
+      ok: true,
+      passed: false,
+      verdict: "WRONG_ANSWER",
+      tests: [{ input: "4\n", expected: "\uc57c\uc639~\n", actual: "\uac38\uc6b0\ub6b1...\n", passed: false }],
+    });
+
+    await expect(client.submitCodeChallenge(taskId, "print('\uac38\uc6b0\ub6b1...')", 0)).resolves.toMatchObject({
+      ok: true,
+      passed: false,
+      verdict: "WRONG_ANSWER",
+      tests: [],
     });
   });
 
