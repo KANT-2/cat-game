@@ -31,6 +31,7 @@ import type {
   StudyTierView,
   UseConsumableResult,
 } from "../core/GameClient";
+import type { CodeTestResult } from "../domain/study";
 import {
   ATTENDANCE_DAILY_COINS,
   attendanceRewardForCycleDay,
@@ -485,10 +486,21 @@ export class BackendLearningGameClient implements GameClient {
         presentationPublicId: task.presentationPublicId ?? undefined,
         submittedCode,
       });
+      const tests: CodeTestResult[] =
+        result.sampleInput !== null && result.sampleExpectedOutput !== null
+          ? [
+              {
+                input: result.sampleInput,
+                expected: result.sampleExpectedOutput,
+                actual: result.sampleActualOutput,
+                passed: result.sampleActualOutput?.trim() === result.sampleExpectedOutput.trim(),
+              },
+            ]
+          : [];
       return {
         ok: true,
         passed: result.verdict === "ACCEPTED",
-        tests: [],
+        tests,
         verdict: result.verdict,
         passedTests: result.passed,
         totalTests: result.total,

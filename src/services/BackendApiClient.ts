@@ -98,6 +98,13 @@ export type BackendGradingResult = {
   total: number;
 };
 
+/** 실제 제출 채점과 동일하지만, 공개(1번) 테스트 케이스에 한해 입력/기대값/내 출력을 함께 내려준다. */
+export type BackendCodeTestRunResult = BackendGradingResult & {
+  sampleInput: string | null;
+  sampleExpectedOutput: string | null;
+  sampleActualOutput: string | null;
+};
+
 export type BackendGameCat = {
   publicId: string;
   assetPublicId: string | null;
@@ -618,8 +625,8 @@ export class BackendApiClient {
   }
 
   /** 학습 기록이나 보상을 만들지 않고 동일한 격리 채점기에서 코드를 시험한다. */
-  async testCode(submission: BackendCodeTestSubmission, timeoutMs = 15_000): Promise<BackendGradingResult> {
-    const result = parseGradingResult(
+  async testCode(submission: BackendCodeTestSubmission, timeoutMs = 15_000): Promise<BackendCodeTestRunResult> {
+    return parseCodeTestRunResult(
       await this.request(
         "/api/v1/attempts/test",
         {
@@ -635,10 +642,6 @@ export class BackendApiClient {
         timeoutMs,
       ),
     );
-    if (!result) {
-      throw new Error("Backend test run returned no result");
-    }
-    return result;
   }
 
   private async request(
@@ -853,6 +856,27 @@ function parseGradingResult(value: unknown): BackendGradingResult | null {
     ] as const),
     passed: readNumber(record, "passed"),
     total: readNumber(record, "total"),
+  };
+}
+
+function parseCodeTestRunResult(value: unknown): BackendCodeTestRunResult {
+  const record = asRecord(value);
+  return {
+    verdict: readEnum(record, "verdict", [
+      "ACCEPTED",
+      "WRONG_ANSWER",
+      "SYNTAX_ERROR",
+      "RUNTIME_ERROR",
+      "TIMEOUT",
+      "OUTPUT_LIMIT",
+      "MEMORY_LIMIT",
+      "SYSTEM_ERROR",
+    ] as const),
+    passed: readNumber(record, "passed"),
+    total: readNumber(record, "total"),
+    sampleInput: readNullableString(record, "sample_input"),
+    sampleExpectedOutput: readNullableString(record, "sample_expected_output"),
+    sampleActualOutput: readNullableString(record, "sample_actual_output"),
   };
 }
 
