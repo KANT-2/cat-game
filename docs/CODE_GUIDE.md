@@ -123,6 +123,11 @@ UI는 `reason`을 메시지 키로 변환해 보여 줄 뿐 충돌을 다시 판
 코드 과제를 열 때만 CodeMirror 런타임을 불러와 Canvas의 논리 편집 영역에 맞춰 배치한다. 현재 모드의 초기값과 학습자가 편집한 전체 문서가 제출된다. 학습 화면 전환이나 피드백 표시 때 오버레이를 숨기거나 폐기하여 다른 Canvas 입력을
 가리지 않도록 한다.
 
+풀이 화면의 왼쪽 패널은 Python에서 `문제 / 공개 예시 / 힌트`, SQL에서 `문제 / 데이터 / 힌트` 탭으로
+나뉜다. SQL의 공개 setup SQL은 `services/sqlDataset.ts`가 테이블·열·샘플 행으로 변환하며 정답 쿼리는
+클라이언트에 전달하지 않는다. 편집 중 답안과 공개한 힌트 단계는 학습 창을 닫기 전까지 문제별로 자동
+보관한다.
+
 백엔드 학습 모드는 dual-mode 문제를 받으면 서버가 목록 응답의 `suggested_presentation_type`으로 제안한
 표시 유형을 `POST /api/v1/attempts/presentations`에 전달하고, 서버가 그 유형과 보기 순서를 고정한다.
 이 공개 presentation UUID는 새로고침과 오답 재시도에도 유지한다. BRONZE·SILVER 목록의 제안은 서버 정책의
@@ -131,11 +136,12 @@ Python·SQL의 해금된 전체 문제 목록을 분리해 조회한다. 전체 
 `limit=50`과 `offset`으로 끝까지 읽되 조회 시 presentation을 만들지 않으며, 사용자가 문제 카드를 열 때만
 `prepareStudyTask()`가 표시 세션을 준비한다.
 코드 또는 객관식 답안은 presentation UUID와 함께 `POST /api/v1/attempts`에 제출한 뒤 공개 attempt UUID로
-완료 상태를 폴링한다. `COMPLETED`의 `is_correct`와 `coins_awarded`만 화면 결과로 사용하고, 정답이면
+완료 상태를 폴링한다. `COMPLETED`의 `is_correct`, `coins_awarded`, 공개 `result_detail`을 화면 결과로 사용하고, 정답이면
 게임 스냅샷을 다시 읽는다. 서버는 사용자·과제별 최초 정답 원장을 만들어 그때만 과제 보상과 잔액을 같은
 트랜잭션으로 반영한다. `FAILED`나 연결 시간 초과는 사용자 문구 키로 변환한다.
 
-완료 응답의 `result_detail`은 공개 판정값과 통과한 테스트 수만 포함하는 구조화된 객체다. 제출 코드,
+완료 응답의 `result_detail`은 공개 판정값과 통과한 테스트 수만 포함하는 구조화된 객체다. UI는 이를
+Python/SQL 문법 오류, 실행 오류, 시간·출력·메모리 제한과 단순 결과 불일치로 구분해 안내한다. 제출 코드,
 테스트 케이스, 표준 오류 같은 채점기 내부 정보는 응답하지 않는다.
 
 ```json

@@ -58,6 +58,7 @@ import {
   type BackendUser,
 } from "./BackendApiClient";
 import { learningCardSummary, learningDescription } from "./learningDescription";
+import { parseSqlDataset } from "./sqlDataset";
 
 /** FastAPI 상태와 명령을 권위 있게 사용하며 로컬 클라이언트는 초기 상태 형태에만 사용한다. */
 export class BackendLearningGameClient implements GameClient {
@@ -462,6 +463,7 @@ export class BackendLearningGameClient implements GameClient {
             }),
           }
         : { messageId: "study.serverExamples" },
+      dataset: task.domain === "SQL" && task.publicExample ? parseSqlDataset(task.publicExample.input) : [],
       hints: splitHintSteps(task.hintText).map((text) => ({ text })),
       bonusCoins: 0,
     };
@@ -504,6 +506,9 @@ export class BackendLearningGameClient implements GameClient {
         ok: true,
         passed: attempt.correct,
         tests: [],
+        verdict: attempt.resultDetail?.verdict,
+        passedTests: attempt.resultDetail?.passed,
+        totalTests: attempt.resultDetail?.total,
         firstCompletion: attempt.coinsAwarded > 0,
         coinsAwarded: attempt.coinsAwarded,
         serverAuthoritative: true,

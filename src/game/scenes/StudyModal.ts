@@ -3,6 +3,7 @@ import { type MessageId, message } from "../../content/messages";
 import type {
   Awaitable,
   CodeChallengeView,
+  CodeGradingVerdict,
   CodeSubmissionResult,
   GameText,
   QuizAnswerResult,
@@ -122,6 +123,8 @@ export class StudyModal extends Container {
   private viewportWidth = BASE_WIDTH;
   private viewportHeight = BASE_HEIGHT;
   private codeEditor: CodeEditorOverlay | null = null;
+  private readonly codeDrafts = new Map<string, string>();
+  private readonly codeHintDrafts = new Map<string, number>();
   private hintsUsed = 0;
   private submissionPending = false;
   private taskOpening = false;
@@ -244,7 +247,7 @@ export class StudyModal extends Container {
   }
 
   private buildCurrentCoins(): void {
-    const coins = createCoinAmount(this.options.coinIcon, String(this.options.getCoins()), {
+    const coins = createCoinAmount(this.options.coinIcon, this.options.getCoins().toLocaleString("ko-KR"), {
       fontSize: 21,
       iconSize: 32,
     });
@@ -712,7 +715,13 @@ export class StudyModal extends Container {
       }
       const challenge = this.options.getCodeChallenge(task.id);
       if (challenge) {
-        this.renderCode(challenge);
+        const draft = this.codeDrafts.get(challenge.id);
+        this.renderCode(
+          challenge,
+          draft ?? challenge.starterCode,
+          this.codeHintDrafts.get(challenge.id) ?? 0,
+          draft !== undefined,
+        );
       }
     } catch (error) {
       console.warn("Study task preparation failed", error);
@@ -755,6 +764,7 @@ export class StudyModal extends Container {
   private renderQuiz(quiz: QuizView): void {
     this.clearBody();
     this.drawBaseHeader(resolveGameText(quiz.title), resolveGameText(quiz.summary), () => this.renderDashboard());
+    this.buildCurrentCoins();
     const problem = createCozyPanel(70, 115, 1460, 750, { fill: 0xfff9ec, border: 0xb77a4f, radius: 28 });
     const prompt = new Text({
       text: formatStudyDetails(resolveGameText(quiz.prompt)),
@@ -849,30 +859,38 @@ export class StudyModal extends Container {
   ): void {
     this.clearBody();
     this.hintsUsed = initialHintsUsed;
-    this.drawBaseHeader(resolveGameText(challenge.title), resolveGameText(challenge.summary), () =>
-      this.renderDashboard(),
-    );
+    this.drawBaseHeader(resolveGameText(challenge.title), resolveGameText(challenge.summary), () => {
+      this.persistCodeDraft(challenge.id);
+      this.renderDashboard();
+    });
+    this.buildCurrentCoins();
     const problemPanel = createCozyPanel(55, 120, 500, 720, { fill: 0xfff8e9, border: 0xb77a4f, radius: 28 });
     const editorPanel = createCozyPanel(580, 120, 965, 720, { fill: 0xfff8e9, border: 0xb77a4f, radius: 28 });
-    const problemTitle = new Text({ text: message("study.problemTitle"), style: textStyle(24, 0x493022, "800") });
-    problemTitle.position.set(92, 155);
+
+    const problemPane = new Container();
+    const referencePane = new Container();
+    const hintPane = new Container();
     const prompt = new Text({
       text: formatStudyDetails(resolveGameText(challenge.prompt)),
       style: {
-        ...textStyle(16, 0x5f4434, "600"),
+        ...textStyle(18, 0x5f4434, "600"),
         breakWords: true,
         wordWrap: true,
         wordWrapWidth: 420,
-        lineHeight: 23,
+        lineHeight: 27,
       },
     });
-    prompt.position.set(92, 198);
-    fitWrappedTextHeight(prompt, 155, 12, 16, 7);
-    const examplesTitleY = 368;
-    const examplesTitle = new Text({ text: message("study.examplesTitle"), style: textStyle(20, 0x493022, "800") });
-    examplesTitle.position.set(92, examplesTitleY);
-    const examplesBoxY = 402;
-    const examplesBox = new Graphics().roundRect(92, examplesBoxY, 425, 92, 16).fill(0xefe2ce);
+    prompt.position.set(92, 235);
+    fitWrappedTextHeight(prompt, 535, 13, 18, 9);
+    problemPane.addChild(prompt);
+
+    const referenceTitle = new Text({
+      text: message(challenge.language === "sql" ? "study.sqlDatasetTitle" : "study.examplesTitle"),
+      style: textStyle(20, 0x493022, "800"),
+    });
+    referenceTitle.position.set(92, 232);
+    referencePane.addChild(referenceTitle);
+    const examplesBox = new Graphics().roundRect(92, 270, 425, 480, 16).fill(0xefe2ce);
     const examples = new Text({
       text: resolveGameText(challenge.examples),
       style: {
@@ -880,12 +898,17 @@ export class StudyModal extends Container {
         breakWords: true,
         lineHeight: 27,
         wordWrap: true,
-        wordWrapWidth: 365,
+        wordWrapWidth: 375,
       },
     });
-    examples.position.set(118, examplesBoxY + 22);
-    fitWrappedTextHeight(examples, 52, 11, 16, 7);
-    const hintNoticeY = 512;
+    examples.position.set(116, 296);
+    fitWrappedTextHeight(examples, 420, 12, 16, 8);
+    if (challenge.language === "sql" && challenge.dataset.length > 0) {
+      referencePane.addChild(this.buildSqlDatasetPreview(challenge.dataset));
+    } else {
+      referencePane.addChild(examplesBox, examples);
+    }
+
     const hintNotice = new Text({
       text: message("study.hintRewardNotice"),
       style: {
@@ -896,8 +919,8 @@ export class StudyModal extends Container {
         lineHeight: 23,
       },
     });
-    hintNotice.position.set(92, hintNoticeY);
-    fitWrappedTextHeight(hintNotice, 46, 12, 15, 8);
+    hintNotice.position.set(92, 235);
+    fitWrappedTextHeight(hintNotice, 70, 12, 15, 8);
     const hintText = new Text({
       text: this.formatRevealedHints(challenge, initialHintsUsed),
       style: {
@@ -908,9 +931,9 @@ export class StudyModal extends Container {
         lineHeight: 25,
       },
     });
-    const hintButtonY = 572;
-    hintText.position.set(92, 642);
-    fitWrappedTextHeight(hintText, 165, 11, 16, 9);
+    const hintButtonY = 325;
+    hintText.position.set(92, 400);
+    fitWrappedTextHeight(hintText, 350, 12, 16, 9);
     const revealedHints = new Set<number>(Array.from({ length: initialHintsUsed }, (_, index) => index));
     const hintButtons = challenge.hints.map((_, index) => {
       const hintButton = new CanvasButton({
@@ -923,13 +946,44 @@ export class StudyModal extends Container {
             revealedHints.add(hintIndex);
           }
           this.hintsUsed = revealedHints.size;
+          this.codeHintDrafts.set(challenge.id, this.hintsUsed);
           hintText.text = this.formatRevealedHints(challenge, this.hintsUsed);
-          fitWrappedTextHeight(hintText, 165, 11, 16, 9);
+          fitWrappedTextHeight(hintText, 350, 12, 16, 9);
         },
       });
       hintButton.position.set(92 + index * 140, hintButtonY);
       return hintButton;
     });
+    hintPane.addChild(hintNotice, ...hintButtons, hintText);
+
+    const panes = [problemPane, referencePane, hintPane];
+    const tabLabels = [
+      message("study.problemTitle"),
+      message(challenge.language === "sql" ? "study.sqlDataTab" : "study.examplesTitle"),
+      message("study.hintsTab"),
+    ];
+    const tabButtons: CanvasButton[] = [];
+    const activateTab = (selectedIndex: number) => {
+      panes.forEach((pane, index) => {
+        pane.visible = index === selectedIndex;
+      });
+      tabButtons.forEach((button, index) => {
+        button.alpha = index === selectedIndex ? 1 : 0.72;
+      });
+    };
+    tabLabels.forEach((label, index) => {
+      const tab = new CanvasButton({
+        label,
+        width: 132,
+        height: 48,
+        fontSize: 15,
+        color: index === 0 ? 0xe8a65e : 0xd9c5aa,
+        onPress: () => activateTab(index),
+      });
+      tab.position.set(82 + index * 148, 158);
+      tabButtons.push(tab);
+    });
+    activateTab(0);
     const editorTitle = new Text({
       text: message(challenge.language === "sql" ? "study.sqlEditorTitle" : "study.editorTitle"),
       style: textStyle(24, 0x493022, "800"),
@@ -954,6 +1008,9 @@ export class StudyModal extends Container {
           editorStatus.text = message(focused ? "study.editorFocused" : "study.editorIdle");
         }
       },
+      onChange: (value) => {
+        this.codeDrafts.set(challenge.id, value);
+      },
       onLoadError: () => {
         if (!editorStatus.destroyed) {
           editorStatus.text = message("study.editorUnavailable");
@@ -968,7 +1025,10 @@ export class StudyModal extends Container {
       fontSize: 14,
       color: 0xd9c5aa,
       onPress: () => {
+        this.hintsUsed = 0;
         this.codeEditor?.setValue(challenge.starterCode);
+        this.codeDrafts.delete(challenge.id);
+        this.codeHintDrafts.delete(challenge.id);
         this.codeEditor?.focus();
         editorStatus.text = message("study.codeReset");
       },
@@ -996,14 +1056,10 @@ export class StudyModal extends Container {
     this.body.addChild(
       problemPanel,
       editorPanel,
-      problemTitle,
-      prompt,
-      examplesTitle,
-      examplesBox,
-      examples,
-      hintNotice,
-      ...hintButtons,
-      hintText,
+      problemPane,
+      referencePane,
+      hintPane,
+      ...tabButtons,
       editorTitle,
       editorHelp,
       reset,
@@ -1016,6 +1072,60 @@ export class StudyModal extends Container {
       reward.position.set(1370, 150);
       this.body.addChild(reward);
     }
+  }
+
+  private buildSqlDatasetPreview(dataset: CodeChallengeView["dataset"]): Container {
+    const container = new Container();
+    const visibleTables = dataset.slice(0, 3);
+    visibleTables.forEach((table, tableIndex) => {
+      const y = 270 + tableIndex * 158;
+      const frame = new Graphics()
+        .roundRect(92, y, 425, 142, 15)
+        .fill(tableIndex % 2 === 0 ? 0xefe2ce : 0xf5ead8)
+        .stroke({ color: 0xc9aa82, width: 1.5 });
+      const name = new Text({ text: table.name, style: textStyle(18, 0x493022, "800") });
+      name.position.set(108, y + 12);
+      const columns = new Text({
+        text: message("study.sqlDatasetColumns", { columns: table.columns.join(" · ") }),
+        style: textStyle(13, 0x76533c, "700"),
+      });
+      columns.position.set(108, y + 40);
+      container.addChild(frame, name, columns);
+      const previewRows = table.rows.slice(0, 2);
+      previewRows.forEach((row, rowIndex) => {
+        const text = new Text({
+          text: clipPreviewRow(row),
+          style: textStyle(13, 0x4f443d, "600"),
+        });
+        text.position.set(108, y + 68 + rowIndex * 24);
+        container.addChild(text);
+      });
+      if (table.rowSummary) {
+        const range = new Text({
+          text: message("study.sqlDatasetRange", { value: table.rowSummary }),
+          style: textStyle(13, 0x4f443d, "600"),
+        });
+        range.position.set(108, y + 70);
+        container.addChild(range);
+      } else if (table.rows.length > previewRows.length) {
+        const more = new Text({
+          text: message("study.sqlDatasetMoreRows", { count: table.rows.length - previewRows.length }),
+          style: textStyle(12, 0x876147, "700"),
+        });
+        more.anchor.set(1, 0);
+        more.position.set(500, y + 115);
+        container.addChild(more);
+      }
+    });
+    return container;
+  }
+
+  private persistCodeDraft(challengeId: string): void {
+    if (!this.codeEditor) {
+      return;
+    }
+    this.codeDrafts.set(challengeId, this.codeEditor.getValue());
+    this.codeHintDrafts.set(challengeId, this.hintsUsed);
   }
 
   private async pasteIntoCodeEditor(status: Text): Promise<void> {
@@ -1038,6 +1148,8 @@ export class StudyModal extends Container {
       return;
     }
     const code = this.codeEditor?.getValue() ?? "";
+    this.codeDrafts.set(challenge.id, code);
+    this.codeHintDrafts.set(challenge.id, this.hintsUsed);
     this.submissionPending = true;
     status.text = message("study.gradingInProgress");
     let result: CodeSubmissionResult;
@@ -1062,7 +1174,7 @@ export class StudyModal extends Container {
       );
       return;
     }
-    let detail = message("study.gradingFailed");
+    let detail = gradingResultText(result.verdict, result.passedTests, result.totalTests, challenge.language);
     if (result.passed && result.firstCompletion) {
       detail = `${message(result.serverAuthoritative ? "study.serverGradingPassed" : "study.gradingPassed")}\n${message("study.gradingReward", { amount: result.coinsAwarded })}`;
     } else if (result.passed && result.serverAuthoritative) {
@@ -1080,6 +1192,8 @@ export class StudyModal extends Container {
     }));
     if (result.passed) {
       this.markTaskCompleted(challenge.id);
+      this.codeDrafts.delete(challenge.id);
+      this.codeHintDrafts.delete(challenge.id);
     }
     this.showFeedback(result.passed, detail, testRows, () => {
       if (result.passed) {
@@ -1262,6 +1376,38 @@ function conceptFilterLabel(conceptName: string): FilterLabel {
 
 function filterLabelText(label: FilterLabel): string {
   return typeof label === "string" ? message(label) : label.text;
+}
+
+function clipPreviewValue(value: string): string {
+  return value.length > 12 ? `${value.slice(0, 11)}…` : value;
+}
+
+function clipPreviewRow(row: readonly string[]): string {
+  const text = row.map((value) => clipPreviewValue(value)).join("  |  ");
+  return text.length > 44 ? `${text.slice(0, 43)}…` : text;
+}
+
+function gradingResultText(
+  verdict: CodeGradingVerdict | undefined,
+  passed: number | undefined,
+  total: number | undefined,
+  language: CodeChallengeView["language"],
+): string {
+  const messageByVerdict: Record<CodeGradingVerdict, MessageId> = {
+    ACCEPTED: "study.gradingPassed",
+    WRONG_ANSWER: language === "sql" ? "study.sqlWrongAnswer" : "study.pythonWrongAnswer",
+    SYNTAX_ERROR: language === "sql" ? "study.sqlSyntaxError" : "study.pythonSyntaxError",
+    RUNTIME_ERROR: language === "sql" ? "study.sqlRuntimeError" : "study.pythonRuntimeError",
+    TIMEOUT: "study.gradingTimeout",
+    OUTPUT_LIMIT: "study.gradingOutputLimit",
+    MEMORY_LIMIT: "study.gradingMemoryLimit",
+    SYSTEM_ERROR: "study.serverGradingUnavailable",
+  };
+  const detail = message(verdict ? messageByVerdict[verdict] : "study.gradingFailed");
+  if (!total || passed === undefined) {
+    return detail;
+  }
+  return `${detail}\n${message("study.gradingProgress", { passed, total })}`;
 }
 
 /** Shrink a wrapped quiz prompt only as much as needed to reserve space for all four choices. */

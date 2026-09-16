@@ -503,6 +503,7 @@ export class LocalGameClient implements GameClient {
       completed: this.state.completedCodeChallengeIds.includes(challengeId),
       starterCode: challenge.starterCode,
       examples: { messageId: challenge.examplesMessage },
+      dataset: challenge.language === "sql" ? localSqlDataset : [],
       hints: challenge.hintMessages.map((messageId) => ({ messageId })),
       bonusCoins: challenge.bonusCoins,
     };
@@ -519,7 +520,16 @@ export class LocalGameClient implements GameClient {
     }
     const grade = gradeCodeChallenge(challenge.grader, code);
     if (!grade.passed) {
-      return { ok: true, passed: false, tests: grade.tests, firstCompletion: false, coinsAwarded: 0 };
+      return {
+        ok: true,
+        passed: false,
+        tests: grade.tests,
+        verdict: "WRONG_ANSWER",
+        passedTests: grade.tests.filter((test) => test.passed).length,
+        totalTests: grade.tests.length,
+        firstCompletion: false,
+        coinsAwarded: 0,
+      };
     }
     const alreadyCompleted = this.state.completedCodeChallengeIds.includes(challengeId);
     const completedToday = this.state.dailyCompletedTaskIds.includes(challengeId);
@@ -528,7 +538,16 @@ export class LocalGameClient implements GameClient {
         this.state = { ...this.state, dailyCompletedTaskIds: [...this.state.dailyCompletedTaskIds, challengeId] };
         this.commit();
       }
-      return { ok: true, passed: true, tests: grade.tests, firstCompletion: false, coinsAwarded: 0 };
+      return {
+        ok: true,
+        passed: true,
+        tests: grade.tests,
+        verdict: "ACCEPTED",
+        passedTests: grade.tests.length,
+        totalTests: grade.tests.length,
+        firstCompletion: false,
+        coinsAwarded: 0,
+      };
     }
     const safeHintsUsed = Math.max(0, Math.min(challenge.hintMessages.length, Math.floor(hintsUsed)));
     const bonus = Math.max(0, challenge.bonusCoins - safeHintsUsed * 10);
@@ -542,7 +561,16 @@ export class LocalGameClient implements GameClient {
       coins: this.state.coins + coinsAwarded,
     };
     this.commit();
-    return { ok: true, passed: true, tests: grade.tests, firstCompletion: true, coinsAwarded };
+    return {
+      ok: true,
+      passed: true,
+      tests: grade.tests,
+      verdict: "ACCEPTED",
+      passedTests: grade.tests.length,
+      totalTests: grade.tests.length,
+      firstCompletion: true,
+      coinsAwarded,
+    };
   }
 
   getDailyQuests(): DailyQuestView[] {
@@ -772,6 +800,26 @@ export class LocalGameClient implements GameClient {
     }
   }
 }
+
+const localSqlDataset: CodeChallengeView["dataset"] = [
+  {
+    name: "cats",
+    columns: ["id", "name", "breed", "owner_id", "active"],
+    rows: [
+      ["1", "Miso", "Korean Shorthair", "1", "true"],
+      ["2", "Nabi", "Siamese", "2", "false"],
+      ["3", "Bori", "Korean Shorthair", "1", "true"],
+    ],
+  },
+  {
+    name: "owners",
+    columns: ["id", "name"],
+    rows: [
+      ["1", "Min"],
+      ["2", "Joon"],
+    ],
+  },
+];
 
 function cloneState(state: GameState): GameState {
   return {

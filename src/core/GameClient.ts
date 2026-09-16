@@ -146,6 +146,13 @@ export type StudyTierView = {
   concepts: StudyTierConceptProgress[];
 };
 
+export type SqlDatasetTable = {
+  name: string;
+  columns: string[];
+  rows: string[][];
+  rowSummary?: string;
+};
+
 export type CodeChallengeView = StudyTaskView & {
   type: "code";
   language: StudyCodeLanguage;
@@ -153,6 +160,7 @@ export type CodeChallengeView = StudyTaskView & {
   prompt: GameText;
   starterCode: string;
   examples: GameText;
+  dataset: readonly SqlDatasetTable[];
   hints: readonly GameText[];
   bonusCoins: number;
 };
@@ -162,6 +170,9 @@ export type CodeSubmissionResult =
       ok: true;
       passed: boolean;
       tests: CodeTestResult[];
+      verdict?: CodeGradingVerdict;
+      passedTests?: number;
+      totalTests?: number;
       firstCompletion: boolean;
       coinsAwarded: number;
       serverAuthoritative?: boolean;
@@ -170,6 +181,16 @@ export type CodeSubmissionResult =
       ok: false;
       reason: "challenge-not-found" | "empty-code" | "server-unavailable" | "grading-failed";
     };
+
+export type CodeGradingVerdict =
+  | "ACCEPTED"
+  | "WRONG_ANSWER"
+  | "SYNTAX_ERROR"
+  | "RUNTIME_ERROR"
+  | "TIMEOUT"
+  | "OUTPUT_LIMIT"
+  | "MEMORY_LIMIT"
+  | "SYSTEM_ERROR";
 
 export type Awaitable<T> = T | Promise<T>;
 

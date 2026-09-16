@@ -13,6 +13,7 @@ export type CodeEditorOverlayOptions = {
   initialValue: string;
   ariaLabel: string;
   onFocusChange: (focused: boolean) => void;
+  onChange?: (value: string) => void;
   onLoadError: () => void;
 };
 

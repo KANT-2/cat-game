@@ -891,6 +891,10 @@ describe("backend learning integration", () => {
             options: null,
             hint_text: null,
             reward_coins: 30,
+            public_example: {
+              input: "CREATE TABLE students (id int, name text); INSERT INTO students VALUES (1,'Miso');",
+              output: "",
+            },
             is_active: true,
             completed: false,
           },
@@ -937,9 +941,16 @@ describe("backend learning integration", () => {
       new BackendApiClient("http://localhost:8000", userId, fetcher),
     );
 
+    expect(client.getCodeChallenge(taskId)?.dataset).toEqual([
+      { name: "students", columns: ["id", "name"], rows: [["1", "Miso"]] },
+    ]);
+
     await expect(client.submitCodeChallenge(taskId, "select\u00a01;", 0)).resolves.toMatchObject({
       ok: true,
       passed: false,
+      verdict: "WRONG_ANSWER",
+      passedTests: 0,
+      totalTests: 1,
       serverAuthoritative: true,
     });
   });

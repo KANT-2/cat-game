@@ -43,7 +43,11 @@ class LazyCodeMirrorEditorOverlay implements CodeEditorOverlay {
 
   setValue(value: string): void {
     this.pendingValue = value.slice(0, MAX_EDITOR_CHARACTERS);
-    this.runtime?.setValue(this.pendingValue);
+    if (this.runtime) {
+      this.runtime.setValue(this.pendingValue);
+    } else {
+      this.options.onChange?.(this.pendingValue);
+    }
   }
 
   append(value: string): void {
@@ -52,6 +56,7 @@ class LazyCodeMirrorEditorOverlay implements CodeEditorOverlay {
       return;
     }
     this.pendingValue = `${this.pendingValue}${value}`.slice(0, MAX_EDITOR_CHARACTERS);
+    this.options.onChange?.(this.pendingValue);
     this.focusRequested = true;
   }
 

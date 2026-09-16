@@ -51,6 +51,9 @@ export class CodeMirrorEditorRuntime implements CodeEditorOverlay {
         EditorView.lineWrapping,
         characterLimit,
         EditorView.updateListener.of((update) => {
+          if (update.docChanged) {
+            options.onChange?.(update.state.doc.toString());
+          }
           if (update.focusChanged) {
             options.onFocusChange(update.view.hasFocus);
           }
