@@ -5,6 +5,7 @@ import type {
   CodeChallengeView,
   CodeGradingVerdict,
   CodeSubmissionResult,
+  CodeTestRunResult,
   GameText,
   QuizAnswerResult,
   QuizView,
@@ -59,6 +60,7 @@ type StudyModalOptions = {
   getQuiz: (quizId: string) => QuizView | null;
   getCodeChallenge: (challengeId: string) => CodeChallengeView | null;
   onAnswer: (quizId: string, choiceId: string) => Awaitable<QuizAnswerResult>;
+  onRunCodeTests: (challengeId: string, code: string) => Awaitable<CodeTestRunResult>;
   onSubmitCode: (challengeId: string, code: string, hintsUsed: number) => Awaitable<CodeSubmissionResult>;
   onClose: () => void;
   backIcon: string;
@@ -1035,8 +1037,16 @@ export class StudyModal extends Container {
       },
     });
     paste.position.set(1240, 174);
-    const submit = new CanvasButton({
+    const test = new CanvasButton({
       label: message("study.runTests"),
+      width: 210,
+      height: 62,
+      color: 0xa8bb84,
+      onPress: () => this.runCodeTests(challenge, editorStatus),
+    });
+    test.position.set(1040, 750);
+    const submit = new CanvasButton({
+      label: message("study.submitAnswer"),
       width: 210,
       height: 62,
       color: 0xe99b45,
@@ -1055,6 +1065,7 @@ export class StudyModal extends Container {
       reset,
       paste,
       editorStatus,
+      test,
       submit,
     );
     if (challenge.rewardCoins > 0) {
@@ -1159,6 +1170,48 @@ export class StudyModal extends Container {
       console.warn("Study editor clipboard read failed", error);
       status.text = message("study.clipboardUnavailable");
     }
+  }
+
+  private async runCodeTests(challenge: CodeChallengeView, status: Text): Promise<void> {
+    if (this.submissionPending) {
+      return;
+    }
+    const code = this.codeEditor?.getValue() ?? "";
+    this.closeFeedback();
+    this.codeDrafts.set(challenge.id, code);
+    this.codeHintDrafts.set(challenge.id, this.hintsUsed);
+    this.submissionPending = true;
+    status.text = message("study.testingInProgress");
+    let result: CodeTestRunResult;
+    try {
+      result = await this.options.onRunCodeTests(challenge.id, code);
+    } catch (error) {
+      console.error("Code test run failed", error);
+      this.showCodeFeedback(false, message("study.serverGradingUnavailable"), [], "test");
+      return;
+    } finally {
+      this.submissionPending = false;
+      if (!status.destroyed) {
+        status.text = message("study.editorIdle");
+      }
+    }
+    if (!result.ok) {
+      const feedback = result.reason === "empty-code" ? "study.emptyCode" : "study.serverGradingUnavailable";
+      this.showCodeFeedback(false, message(feedback), [], "test");
+      return;
+    }
+    const detail = result.passed
+      ? message("study.testRunPassed")
+      : gradingResultText(result.verdict, result.passedTests, result.totalTests, challenge.language);
+    const testRows = result.tests.map((test) => ({
+      label: message("study.testCase", {
+        input: test.input,
+        expected: test.expected,
+        actual: test.actual ?? message("study.noResult"),
+      }),
+      passed: test.passed,
+    }));
+    this.showCodeFeedback(result.passed, detail, testRows, "test");
   }
 
   private async submitCode(challenge: CodeChallengeView, status: Text): Promise<void> {
@@ -1292,7 +1345,12 @@ export class StudyModal extends Container {
     this.feedbackLayer.addChild(close);
   }
 
-  private showCodeFeedback(passed: boolean, detailValue: string, tests: FeedbackTest[]): void {
+  private showCodeFeedback(
+    passed: boolean,
+    detailValue: string,
+    tests: FeedbackTest[],
+    mode: "test" | "submit" = "submit",
+  ): void {
     this.closeFeedback();
     const panel = createCozyPanel(55, 120, 500, 720, {
       fill: 0xfff8e8,
@@ -1300,11 +1358,18 @@ export class StudyModal extends Container {
       radius: 28,
     });
     panel.eventMode = "static";
-    const title = new Text({ text: message("study.feedbackTitle"), style: textStyle(27, 0x3f281c, "800") });
+    const title = new Text({
+      text: message(mode === "test" ? "study.testFeedbackTitle" : "study.feedbackTitle"),
+      style: textStyle(27, 0x3f281c, "800"),
+    });
+    let subtitleMessage: MessageId = passed ? "study.feedbackSuccessSubtitle" : "study.feedbackRetrySubtitle";
+    if (mode === "test") {
+      subtitleMessage = "study.testFeedbackSubtitle";
+    }
     title.anchor.set(0.5);
     title.position.set(305, 166);
     const subtitle = new Text({
-      text: message(passed ? "study.feedbackSuccessSubtitle" : "study.feedbackRetrySubtitle"),
+      text: message(subtitleMessage),
       style: {
         ...textStyle(14, 0x74523d, "600"),
         align: "center",

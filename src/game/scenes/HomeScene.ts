@@ -341,6 +341,7 @@ export class HomeScene extends Container {
       getQuiz: (quizId) => this.gameClient.getQuiz(quizId),
       getCodeChallenge: (challengeId) => this.gameClient.getCodeChallenge(challengeId),
       onAnswer: (quizId, choiceId) => this.gameClient.answerQuiz(quizId, choiceId),
+      onRunCodeTests: (challengeId, code) => this.gameClient.runCodeChallengeTests(challengeId, code),
       onSubmitCode: (challengeId, code, hintsUsed) => this.gameClient.submitCodeChallenge(challengeId, code, hintsUsed),
       onClose: () => this.closeStudy(),
       backIcon: this.iconSources.back,

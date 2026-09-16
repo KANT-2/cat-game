@@ -182,6 +182,21 @@ export type CodeSubmissionResult =
       reason: "challenge-not-found" | "empty-code" | "server-unavailable" | "grading-failed";
     };
 
+export type CodeTestRunResult =
+  | {
+      ok: true;
+      passed: boolean;
+      tests: CodeTestResult[];
+      verdict?: CodeGradingVerdict;
+      passedTests?: number;
+      totalTests?: number;
+      serverAuthoritative?: boolean;
+    }
+  | {
+      ok: false;
+      reason: "challenge-not-found" | "empty-code" | "server-unavailable" | "grading-failed";
+    };
+
 export type CodeGradingVerdict =
   | "ACCEPTED"
   | "WRONG_ANSWER"
@@ -433,6 +448,9 @@ export interface GameClient {
 
   /** 전체 시작 코드를 자유롭게 편집할 수 있는 코드 과제를 조회한다. */
   getCodeChallenge(challengeId: string): CodeChallengeView | null;
+
+  /** 코드 과제를 보상·완료·숙련도에 반영하지 않고 안전한 샌드박스에서 테스트한다. */
+  runCodeChallengeTests(challengeId: string, code: string): Awaitable<CodeTestRunResult>;
 
   /** 안전한 로컬 채점기를 통해 코드 과제를 채점하고 최초 완료 보상을 반영한다. */
   submitCodeChallenge(challengeId: string, code: string, hintsUsed: number): Awaitable<CodeSubmissionResult>;

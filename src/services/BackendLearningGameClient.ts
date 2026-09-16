@@ -10,6 +10,7 @@ import type {
   CatSelectionResult,
   CodeChallengeView,
   CodeSubmissionResult,
+  CodeTestRunResult,
   DailyQuestView,
   DailyRewardResult,
   GachaDrawResult,
@@ -467,6 +468,36 @@ export class BackendLearningGameClient implements GameClient {
       hints: splitHintSteps(task.hintText).map((text) => ({ text })),
       bonusCoins: 0,
     };
+  }
+
+  async runCodeChallengeTests(challengeId: string, code: string): Promise<CodeTestRunResult> {
+    const task = this.tasks.get(challengeId);
+    if (task?.type !== "CODE") {
+      return { ok: false, reason: "challenge-not-found" };
+    }
+    if (!code.trim()) {
+      return { ok: false, reason: "empty-code" };
+    }
+    const submittedCode = task.domain === "SQL" ? normalizeSqlWhitespace(code) : code;
+    try {
+      const result = await this.api.testCode({
+        taskPublicId: challengeId,
+        presentationPublicId: task.presentationPublicId ?? undefined,
+        submittedCode,
+      });
+      return {
+        ok: true,
+        passed: result.verdict === "ACCEPTED",
+        tests: [],
+        verdict: result.verdict,
+        passedTests: result.passed,
+        totalTests: result.total,
+        serverAuthoritative: true,
+      };
+    } catch (error) {
+      console.warn("Backend code test run failed", error);
+      return { ok: false, reason: "server-unavailable" };
+    }
   }
 
   async submitCodeChallenge(challengeId: string, code: string, hintsUsed: number): Promise<CodeSubmissionResult> {

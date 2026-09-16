@@ -221,15 +221,15 @@ await page.keyboard.press("Control+A");
 await page.keyboard.type("def sum_to(n):\n    return 0");
 await page.mouse.click(442, 182);
 await page.mouse.click(154, 350);
-await page.mouse.click(1380, 780);
+await page.mouse.click(1145, 780);
 await page.waitForTimeout(200);
-await page.screenshot({ path: screenshotPath("cat-game-study-code-failed.png") });
+await page.screenshot({ path: screenshotPath("cat-game-study-code-test-failed.png") });
 await codeEditor.waitFor({ state: "visible" });
 if ((await codeEditorRoot.getAttribute("data-smoke-instance")) !== "preserved") {
-  throw new Error("code editor instance was recreated after failed grading");
+  throw new Error("code editor instance was recreated after failed test run");
 }
 if (!(await codeEditor.textContent())?.includes("return 0")) {
-  throw new Error("code draft changed while failed grading feedback was open");
+  throw new Error("code draft changed while failed test feedback was open");
 }
 await page.mouse.click(305, 783);
 await page.waitForTimeout(150);
@@ -238,6 +238,15 @@ await codeEditor.waitFor({ state: "visible" });
 await codeEditor.click();
 await page.keyboard.press("Control+A");
 await page.keyboard.type("def sum_to(n):\n    return n * (n + 1) // 2");
+await page.mouse.click(1145, 780);
+await page.waitForTimeout(200);
+await page.screenshot({ path: screenshotPath("cat-game-study-code-test-passed.png") });
+await codeEditor.waitFor({ state: "visible" });
+if ((await codeEditorRoot.getAttribute("data-smoke-instance")) !== "preserved") {
+  throw new Error("code editor instance was recreated after successful test run");
+}
+await page.mouse.click(305, 783);
+await page.waitForTimeout(150);
 await page.mouse.click(1380, 780);
 await page.waitForTimeout(200);
 await page.screenshot({ path: screenshotPath("cat-game-study-code-passed.png") });

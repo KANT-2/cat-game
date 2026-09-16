@@ -912,6 +912,14 @@ describe("backend learning integration", () => {
       if (pathname === "/api/v1/game/snapshot") {
         return json(gameSnapshot(1_000, 0));
       }
+      if (pathname === "/api/v1/attempts/test" && init?.method === "POST") {
+        const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+        expect(body).toEqual({
+          task_public_id: taskId,
+          submitted_code: "select 1;",
+        });
+        return json({ verdict: "ACCEPTED", passed: 1, total: 1 });
+      }
       if (pathname === "/api/v1/attempts" && init?.method === "POST") {
         const body = JSON.parse(String(init.body)) as Record<string, unknown>;
         expect(body).toMatchObject({
@@ -944,6 +952,17 @@ describe("backend learning integration", () => {
     expect(client.getCodeChallenge(taskId)?.dataset).toEqual([
       { name: "students", columns: ["id", "name"], rows: [["1", "Miso"]] },
     ]);
+
+    const beforeTest = client.getSnapshot();
+    await expect(client.runCodeChallengeTests(taskId, "select\u00a01;")).resolves.toMatchObject({
+      ok: true,
+      passed: true,
+      verdict: "ACCEPTED",
+      passedTests: 1,
+      totalTests: 1,
+      serverAuthoritative: true,
+    });
+    expect(client.getSnapshot()).toEqual(beforeTest);
 
     await expect(client.submitCodeChallenge(taskId, "select\u00a01;", 0)).resolves.toMatchObject({
       ok: true,

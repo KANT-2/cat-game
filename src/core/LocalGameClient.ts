@@ -35,6 +35,7 @@ import type {
   CatSelectionResult,
   CodeChallengeView,
   CodeSubmissionResult,
+  CodeTestRunResult,
   DailyQuestView,
   DailyRewardResult,
   GachaDrawResult,
@@ -506,6 +507,26 @@ export class LocalGameClient implements GameClient {
       dataset: challenge.language === "sql" ? localSqlDataset : [],
       hints: challenge.hintMessages.map((messageId) => ({ messageId })),
       bonusCoins: challenge.bonusCoins,
+    };
+  }
+
+  runCodeChallengeTests(challengeId: string, code: string): CodeTestRunResult {
+    const challenge = codeChallengeDefinitions[challengeId];
+    if (!challenge) {
+      return { ok: false, reason: "challenge-not-found" };
+    }
+    if (!code.trim()) {
+      return { ok: false, reason: "empty-code" };
+    }
+    const grade = gradeCodeChallenge(challenge.grader, code);
+    return {
+      ok: true,
+      passed: grade.passed,
+      tests: grade.tests,
+      verdict: grade.passed ? "ACCEPTED" : "WRONG_ANSWER",
+      passedTests: grade.tests.filter((test) => test.passed).length,
+      totalTests: grade.tests.length,
+      serverAuthoritative: false,
     };
   }
 

@@ -390,6 +390,21 @@ describe("LocalGameClient", () => {
     expect(client.getSnapshot().dailyCompletedTaskIds).toEqual(["python-sum-001"]);
   });
 
+  it("runs code tests without completing the task, awarding coins, or saving state", () => {
+    const repository = new MemoryRepository();
+    const client = new LocalGameClient(repository);
+    const before = client.getSnapshot();
+
+    expect(client.runCodeChallengeTests(PYTHON_SQUARE_CODE_ID, "    return n * n")).toMatchObject({
+      ok: true,
+      passed: true,
+      verdict: "ACCEPTED",
+    });
+
+    expect(client.getSnapshot()).toEqual(before);
+    expect(repository.save).not.toHaveBeenCalled();
+  });
+
   it("tracks daily missions and pays each reward only once", () => {
     const repository = new MemoryRepository();
     const client = new LocalGameClient(

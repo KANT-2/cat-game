@@ -70,6 +70,12 @@ export type BackendAttemptSubmission = {
   usedHint: boolean;
 };
 
+export type BackendCodeTestSubmission = {
+  taskPublicId: string;
+  presentationPublicId?: string;
+  submittedCode: string;
+};
+
 export type BackendAttempt = {
   publicId: string;
   status: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
@@ -609,6 +615,30 @@ export class BackendApiClient {
       await delay(250);
     }
     throw new Error("Backend grading timed out");
+  }
+
+  /** 학습 기록이나 보상을 만들지 않고 동일한 격리 채점기에서 코드를 시험한다. */
+  async testCode(submission: BackendCodeTestSubmission, timeoutMs = 15_000): Promise<BackendGradingResult> {
+    const result = parseGradingResult(
+      await this.request(
+        "/api/v1/attempts/test",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            task_public_id: submission.taskPublicId,
+            presentation_public_id: submission.presentationPublicId,
+            submitted_code: submission.submittedCode,
+          }),
+        },
+        true,
+        timeoutMs,
+      ),
+    );
+    if (!result) {
+      throw new Error("Backend test run returned no result");
+    }
+    return result;
   }
 
   private async request(
