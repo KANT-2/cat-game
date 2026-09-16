@@ -3,7 +3,10 @@ import { textStyle } from "../config";
 import { applySmoothTextureSampling } from "./smoothSprite";
 
 export type HomeMenuButtonOptions = {
-  iconSrc: string;
+  /** 이미지 아이콘의 경로다. `drawIcon`과 함께 쓰지 않는다. */
+  iconSrc?: string;
+  /** 이미지 아트가 없을 때 지정한 크기에 맞춰 직접 그리는 아이콘이다. */
+  drawIcon?: (size: number) => Graphics;
   label: string;
   medallion?: boolean;
   size?: number;
@@ -26,13 +29,19 @@ export class HomeMenuButton extends Container {
     this.visualScale = options.visualScale ?? 1;
     this.drawBackground(false);
 
-    const icon = Sprite.from(options.iconSrc);
-    applySmoothTextureSampling(icon);
-    icon.anchor.set(0.5);
-    icon.position.set(this.size / 2, this.visualY(44));
     const iconSize = (this.medallion ? 78 : 94) * this.visualScale;
-    icon.width = iconSize;
-    icon.height = iconSize;
+    let icon: Container;
+    if (options.iconSrc) {
+      const sprite = Sprite.from(options.iconSrc);
+      applySmoothTextureSampling(sprite);
+      sprite.anchor.set(0.5);
+      sprite.width = iconSize;
+      sprite.height = iconSize;
+      icon = sprite;
+    } else {
+      icon = (options.drawIcon ?? (() => new Graphics()))(iconSize);
+    }
+    icon.position.set(this.size / 2, this.visualY(44));
 
     const label = new Text({
       text: options.label,

@@ -267,6 +267,40 @@ export type CatMemoryClearResult =
   | { ok: true; removed: number }
   | { ok: false; reason: "cat-not-owned" | "server-unavailable" };
 
+export type DailyStatisticsRow = {
+  gameDate: string;
+  dailyActiveUsers: number;
+  gameEntries: number;
+  activeLearners: number;
+  attemptsSubmitted: number;
+  attemptsCompleted: number;
+  correctAttempts: number;
+  incorrectAttempts: number;
+  gradingFailedAttempts: number;
+  hintsUsed: number;
+  coinsAwarded: number;
+};
+
+export type MyDailyStatisticsRow = {
+  gameDate: string;
+  distinctTasksAttempted: number;
+  attemptsSubmitted: number;
+  attemptsCompleted: number;
+  correctAttempts: number;
+  incorrectAttempts: number;
+  gradingFailedAttempts: number;
+  hintsUsed: number;
+  coinsAwarded: number;
+};
+
+export type PublicDailyStatisticsResult =
+  | { ok: true; rows: DailyStatisticsRow[] }
+  | { ok: false; reason: "server-unavailable" };
+
+export type MyDailyStatisticsResult =
+  | { ok: true; rows: MyDailyStatisticsRow[] }
+  | { ok: false; reason: "server-unavailable" };
+
 export type CatConversationResult =
   | { ok: true; catVariant: CatVariant; topic: CatConversationTopic; memoryCount: number }
   | { ok: false; reason: "cat-not-owned" | "server-unavailable" };
@@ -445,6 +479,12 @@ export interface GameClient {
   /** 누적 정답 문제 범위로 서버 또는 로컬 저장소가 계산한 개념별 숙련도를 반환한다. */
   getStudyMastery(): StudyMasteryView;
   getStudyTier(): StudyTierView;
+
+  /** 로그인한 누구나 볼 수 있는 최근 전체 일별 활동 통계를 조회한다. */
+  getPublicDailyStatistics(): Awaitable<PublicDailyStatisticsResult>;
+
+  /** 로그인한 본인의 최근 일별 학습 통계만 조회한다. */
+  getMyDailyStatistics(): Awaitable<MyDailyStatisticsResult>;
 
   /** 전체 시작 코드를 자유롭게 편집할 수 있는 코드 과제를 조회한다. */
   getCodeChallenge(challengeId: string): CodeChallengeView | null;

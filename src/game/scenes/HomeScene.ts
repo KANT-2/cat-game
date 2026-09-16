@@ -6,6 +6,7 @@ import type { FurnitureKind, GameState, PlacedFurniture } from "../../domain/roo
 import type { ShopItemId } from "../../domain/shop";
 import { CanvasButton } from "../components/CanvasButton";
 import { CatConversationModal } from "../components/CatConversationModal";
+import { drawStatsIcon } from "../components/HomeIcons";
 import { HomeMenuButton } from "../components/HomeMenuButton";
 import { PLACEMENT_TRAY_HEIGHT, PLACEMENT_TRAY_WIDTH, PlacementTray } from "../components/PlacementTray";
 import { applySmoothTextureSampling } from "../components/smoothSprite";
@@ -22,6 +23,7 @@ import { DailyQuestScene } from "./DailyQuestScene";
 import { type FeaturePageKind, FeaturePageModal } from "./FeaturePageModal";
 import { GachaScene } from "./GachaScene";
 import { ShopScene } from "./ShopScene";
+import { StatisticsScene } from "./StatisticsScene";
 import { StudyModal } from "./StudyModal";
 
 export type HomeIconSources = {
@@ -68,6 +70,7 @@ export class HomeScene extends Container {
   private shopScene: ShopScene | null = null;
   private dailyQuestScene: DailyQuestScene | null = null;
   private gachaScene: GachaScene | null = null;
+  private statisticsScene: StatisticsScene | null = null;
   private featurePageModal: FeaturePageModal | null = null;
   private placementPanel: Container | null = null;
   private roomEditPanel: PlacementTray | null = null;
@@ -155,6 +158,7 @@ export class HomeScene extends Container {
       !this.shopScene &&
       !this.dailyQuestScene &&
       !this.gachaScene &&
+      !this.statisticsScene &&
       !this.featurePageModal
     ) {
       this.clearing.update(deltaSeconds);
@@ -172,13 +176,14 @@ export class HomeScene extends Container {
     );
 
     this.profilePanel.position.set(24, 20);
-    this.sideMenu.position.set(Math.max(24, width - 572), height - 128);
+    this.sideMenu.position.set(Math.max(24, width - 680), height - 128);
     this.settingsMenu.position.set(24, height - 132);
     this.pageBackground.clear().rect(0, 0, width, height).fill(0xf8e7ca);
     this.studyModal?.layout(width, height);
     this.shopScene?.layout(width, height);
     this.dailyQuestScene?.layout(width, height);
     this.gachaScene?.layout(width, height);
+    this.statisticsScene?.layout(width, height);
     this.featurePageModal?.layout(width, height);
     this.attendanceModal?.layout(width, height);
     this.catConversationModal?.layout(width, height);
@@ -224,6 +229,14 @@ export class HomeScene extends Container {
   private buildSideMenu(): void {
     this.shopOptions.visible = false;
 
+    const statistics = new HomeMenuButton({
+      drawIcon: (size) => drawStatsIcon(size),
+      label: message("stats.homeShortcut"),
+      medallion: true,
+      visualScale: 0.75,
+      hitAreaHeight: 108,
+      onPress: () => this.openStatistics(),
+    });
     const study = this.createIconButton(
       this.iconSources.study,
       message("home.study"),
@@ -254,10 +267,11 @@ export class HomeScene extends Container {
       onPress: () => this.enterRoomEditMode(),
     });
     placement.position.set(112, 40);
-    dailyQuest.x = 108;
-    attendance.x = 216;
-    gacha.x = 324;
-    home.x = 432;
+    study.x = 108;
+    dailyQuest.x = 216;
+    attendance.x = 324;
+    gacha.x = 432;
+    home.x = 540;
     const shop = new CanvasButton({
       label: message("shop.title"),
       width: 126,
@@ -273,10 +287,10 @@ export class HomeScene extends Container {
       onPress: () => this.openFeaturePage("owned"),
     });
     owned.y = 56;
-    this.shopOptions.position.set(427, -112);
+    this.shopOptions.position.set(535, -112);
     this.shopOptions.addChild(shop, owned);
 
-    this.sideMenu.addChild(study, dailyQuest, attendance, gacha, home, this.shopOptions);
+    this.sideMenu.addChild(statistics, study, dailyQuest, attendance, gacha, home, this.shopOptions);
     this.settingsMenu.addChild(settings, placement);
   }
 
@@ -473,6 +487,32 @@ export class HomeScene extends Container {
     this.leavePage();
   }
 
+  private openStatistics(): void {
+    if (this.statisticsScene) {
+      return;
+    }
+    this.clearOpenPages();
+    this.enterPage();
+    this.statisticsScene = new StatisticsScene({
+      getState: () => this.state,
+      onBack: () => this.closeStatistics(),
+      onFetchPublicStatistics: () => this.gameClient.getPublicDailyStatistics(),
+      onFetchMyStatistics: () => this.gameClient.getMyDailyStatistics(),
+      backIcon: this.iconSources.back,
+      coinIcon: this.iconSources.coin,
+    });
+    this.pageLayer.addChild(this.statisticsScene);
+    this.statisticsScene.layout(this.screenWidth, this.screenHeight);
+  }
+
+  private closeStatistics(): void {
+    if (!this.statisticsScene) {
+      return;
+    }
+    this.clearOpenPages();
+    this.leavePage();
+  }
+
   private openGacha(): void {
     if (this.gachaScene) {
       return;
@@ -567,7 +607,14 @@ export class HomeScene extends Container {
   }
 
   private clearOpenPages(): void {
-    const pages = [this.studyModal, this.shopScene, this.dailyQuestScene, this.gachaScene, this.featurePageModal];
+    const pages = [
+      this.studyModal,
+      this.shopScene,
+      this.dailyQuestScene,
+      this.gachaScene,
+      this.statisticsScene,
+      this.featurePageModal,
+    ];
     for (const page of pages) {
       if (!page) {
         continue;
@@ -581,6 +628,7 @@ export class HomeScene extends Container {
     this.shopScene = null;
     this.dailyQuestScene = null;
     this.gachaScene = null;
+    this.statisticsScene = null;
     this.featurePageModal = null;
     this.closePurchaseChoice();
   }

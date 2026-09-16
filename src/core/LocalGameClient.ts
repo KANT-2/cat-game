@@ -485,6 +485,14 @@ export class LocalGameClient implements GameClient {
     };
   }
 
+  async getPublicDailyStatistics(): Promise<import("./GameClient").PublicDailyStatisticsResult> {
+    return { ok: false, reason: "server-unavailable" };
+  }
+
+  async getMyDailyStatistics(): Promise<import("./GameClient").MyDailyStatisticsResult> {
+    return { ok: false, reason: "server-unavailable" };
+  }
+
   getCodeChallenge(challengeId: string): CodeChallengeView | null {
     const challenge = codeChallengeDefinitions[challengeId];
     if (!challenge) {
