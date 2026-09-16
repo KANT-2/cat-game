@@ -121,8 +121,18 @@ export type StudyTaskView = {
 export type StudyMasteryView = ReadonlyArray<{
   conceptName: string;
   attempts: number;
+  completed: number;
+  total: number;
   proficiencyLevel: number;
 }>;
+
+export type StudyTierConceptProgress = {
+  conceptName: string;
+  completed: number;
+  total: number;
+  required: number;
+  isMet: boolean;
+};
 
 export type StudyTierView = {
   domain: "PYTHON" | "SQL";
@@ -132,6 +142,8 @@ export type StudyTierView = {
   completed: number;
   total: number;
   required: number;
+  conceptRequiredPercent: number;
+  concepts: StudyTierConceptProgress[];
 };
 
 export type CodeChallengeView = StudyTaskView & {
@@ -394,7 +406,7 @@ export interface GameClient {
   /** 사용자가 선택한 과제를 열기 직전에 표시 세션을 준비하고 최신 표시 모델을 반환한다. */
   prepareStudyTask(taskId: string): Awaitable<StudyTaskView | null>;
 
-  /** 최근 채점 기록으로 서버 또는 로컬 저장소가 계산한 개념별 숙련도를 반환한다. */
+  /** 누적 정답 문제 범위로 서버 또는 로컬 저장소가 계산한 개념별 숙련도를 반환한다. */
   getStudyMastery(): StudyMasteryView;
   getStudyTier(): StudyTierView;
 

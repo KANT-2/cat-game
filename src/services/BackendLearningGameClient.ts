@@ -80,6 +80,7 @@ export class BackendLearningGameClient implements GameClient {
     catalog: BackendLearningTask[],
     snapshot: BackendGameSnapshot,
     proficiencies: BackendConceptProficiency[],
+    tier: BackendLearningTier | null,
     private readonly profileImageUrl: string | null,
     private readonly playerProfile: PlayerProfileView,
   ) {
@@ -89,7 +90,7 @@ export class BackendLearningGameClient implements GameClient {
     this.stateVersion = snapshot.stateVersion;
     this.syncCatAssetPublicIds(snapshot);
     this.mastery = toStudyMastery(proficiencies);
-    this.tier = defaultStudyTier(snapshot.settings.learningDomain);
+    this.tier = tier ? toStudyTier(tier) : defaultStudyTier(snapshot.settings.learningDomain);
   }
 
   /** 서버 연결과 추천 과제 초기화를 마친 원격 학습 클라이언트를 만든다. */
@@ -104,10 +105,14 @@ export class BackendLearningGameClient implements GameClient {
     api: BackendApiClient,
     user: BackendUser | null = null,
   ): Promise<BackendLearningGameClient> {
-    const [recommendations, snapshot, proficiencies] = await Promise.all([
+    const [recommendations, snapshot, proficiencies, tier] = await Promise.all([
       api.getLearningRecommendations(10),
       api.getGameSnapshot(),
       api.getLearningProficiencies(),
+      api.getLearningTier().catch((error) => {
+        console.warn("Backend learning tier initialization failed", error);
+        return null;
+      }),
     ]);
     const catalog = await api.getLearningTaskCatalog();
     return new BackendLearningGameClient(
@@ -117,6 +122,7 @@ export class BackendLearningGameClient implements GameClient {
       catalog,
       snapshot,
       proficiencies,
+      tier,
       user?.profileImageUrl ?? null,
       {
         displayName: user?.username ?? null,
@@ -153,10 +159,11 @@ export class BackendLearningGameClient implements GameClient {
    */
   async refreshFromServer(): Promise<boolean> {
     const generation = this.snapshotGeneration;
-    const [recommendations, snapshot, proficiencies] = await Promise.all([
+    const [recommendations, snapshot, proficiencies, tier] = await Promise.all([
       this.api.getLearningRecommendations(10),
       this.api.getGameSnapshot(),
       this.api.getLearningProficiencies(),
+      this.api.getLearningTier(),
     ]);
     const catalog = await this.api.getLearningTaskCatalog();
     if (generation !== this.snapshotGeneration || snapshot.stateVersion < this.stateVersion) {
@@ -164,6 +171,7 @@ export class BackendLearningGameClient implements GameClient {
     }
     this.replaceStudyTasks(recommendations, catalog);
     this.mastery = toStudyMastery(proficiencies);
+    this.tier = toStudyTier(tier);
     this.applyServerSnapshot(snapshot);
     return true;
   }
@@ -406,8 +414,7 @@ export class BackendLearningGameClient implements GameClient {
   }
 
   async prepareStudy(): Promise<void> {
-    const [, tier] = await Promise.all([this.refreshFromServer(), this.api.getLearningTier()]);
-    this.tier = toStudyTier(tier);
+    await this.refreshFromServer();
   }
 
   async prepareStudyTask(taskId: string): Promise<StudyTaskView | null> {
@@ -416,7 +423,7 @@ export class BackendLearningGameClient implements GameClient {
       return null;
     }
     if (task.presentationRequired) {
-      const presented = await this.api.startLearningPresentation(taskId);
+      const presented = await this.api.startLearningPresentation(taskId, task.suggestedPresentationType ?? task.type);
       this.tasks.set(taskId, { ...presented, completed: task.completed });
     }
     const prepared = this.tasks.get(taskId);
@@ -1031,9 +1038,10 @@ export function gameDateStamp(value: Date): string {
 }
 
 function toStudyTaskView(task: BackendLearningTask): StudyTaskView {
+  const presentationType = task.presentationPublicId ? task.type : (task.suggestedPresentationType ?? task.type);
   return {
     id: task.publicId,
-    type: task.type === "CODE" ? "code" : "quiz",
+    type: presentationType === "CODE" ? "code" : "quiz",
     language: mapStudyLanguage(task.domain),
     concept: mapConcept(task.conceptName),
     difficulty: mapDifficulty(task.difficulty),
@@ -1064,17 +1072,15 @@ function splitHintSteps(hintText: string | null): string[] {
 }
 
 function mapConcept(value: string): StudyTaskView["concept"] {
-  const name = value.split(":").at(-1)?.toLowerCase();
-  if (name === "variables" || name === "conditionals" || name === "loops" || name === "functions") {
-    return name;
-  }
-  return "other";
+  return value.split(":").at(-1)?.toLowerCase() || "other";
 }
 
 function toStudyMastery(proficiencies: BackendConceptProficiency[]): StudyMasteryView {
   return proficiencies.map((proficiency) => ({
     conceptName: proficiency.conceptName,
     attempts: proficiency.attempts,
+    completed: proficiency.completed,
+    total: proficiency.total,
     proficiencyLevel: proficiency.proficiencyLevel,
   }));
 }
@@ -1088,6 +1094,8 @@ function toStudyTier(tier: BackendLearningTier): StudyTierView {
     completed: tier.completed,
     total: tier.total,
     required: tier.required,
+    conceptRequiredPercent: tier.conceptRequiredPercent,
+    concepts: tier.concepts.map((concept) => ({ ...concept })),
   };
 }
 
@@ -1100,6 +1108,8 @@ function defaultStudyTier(domain: "PYTHON" | "SQL"): StudyTierView {
     completed: 0,
     total: 50,
     required: 40,
+    conceptRequiredPercent: 50,
+    concepts: [],
   };
 }
 

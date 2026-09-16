@@ -1,6 +1,12 @@
 import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
-import type { Awaitable, GameSaveStatus, PlayerProfileView } from "../../core/GameClient";
+import type {
+  Awaitable,
+  GameSaveStatus,
+  PlayerProfileView,
+  StudyMasteryView,
+  StudyTierView,
+} from "../../core/GameClient";
 import { type CatVariant, catVariants } from "../../domain/cats";
 import type { FurnitureKind, GameSettings, GameState } from "../../domain/room";
 import { type ShopItemId, shopItemDefinitions } from "../../domain/shop";
@@ -36,6 +42,8 @@ type Options = {
   profileImageUrl: string | null;
   playerProfile: PlayerProfileView;
   getSaveStatus: () => GameSaveStatus;
+  getStudyMastery: () => StudyMasteryView;
+  getStudyTier: () => StudyTierView;
   onUpdateSettings: (patch: Partial<GameSettings>) => Awaitable<GameSettings>;
   onLogout: (() => Awaitable<boolean>) | null;
   catAnimations: CatAnimationLibrary;
@@ -153,6 +161,8 @@ export class FeaturePageModal extends Container {
         fallbackProfileTexture: this.options.catAnimations.fluffy.idle.textures[0],
         playerProfile: this.options.playerProfile,
         getSaveStatus: this.options.getSaveStatus,
+        getStudyMastery: this.options.getStudyMastery,
+        getStudyTier: this.options.getStudyTier,
         getState: this.options.getState,
         onUpdateSettings: (patch) => this.options.onUpdateSettings(patch),
         onLogout: this.options.onLogout,

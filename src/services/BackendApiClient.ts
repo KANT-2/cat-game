@@ -10,6 +10,7 @@ export type BackendLearningTask = {
   publicId: string;
   presentationPublicId: string | null;
   presentationRequired: boolean;
+  suggestedPresentationType: "CODE" | "MULTIPLE_CHOICE" | null;
   conceptName: string;
   title: string;
   type: "CODE" | "MULTIPLE_CHOICE";
@@ -37,6 +38,8 @@ export type BackendConceptProficiency = {
   domain: "PYTHON" | "SQL";
   conceptName: string;
   attempts: number;
+  completed: number;
+  total: number;
   proficiencyLevel: number;
 };
 
@@ -48,6 +51,14 @@ export type BackendLearningTier = {
   completed: number;
   total: number;
   required: number;
+  conceptRequiredPercent: number;
+  concepts: Array<{
+    conceptName: string;
+    completed: number;
+    total: number;
+    required: number;
+    isMet: boolean;
+  }>;
 };
 
 export type BackendAttemptSubmission = {
@@ -261,7 +272,10 @@ export class BackendApiClient {
         if (!task.presentationRequired) {
           return task;
         }
-        const presented = await this.startLearningPresentation(task.publicId);
+        const presented = await this.startLearningPresentation(
+          task.publicId,
+          task.suggestedPresentationType ?? undefined,
+        );
         return { ...presented, completed: task.completed };
       }),
     );
@@ -275,7 +289,10 @@ export class BackendApiClient {
         if (!task.presentationRequired) {
           return task;
         }
-        const presented = await this.startLearningPresentation(task.publicId);
+        const presented = await this.startLearningPresentation(
+          task.publicId,
+          task.suggestedPresentationType ?? undefined,
+        );
         return { ...presented, completed: task.completed };
       }),
     );
@@ -360,6 +377,10 @@ export class BackendApiClient {
     if (!Array.isArray(unlocked)) {
       throw new Error("Backend learning tier response is invalid");
     }
+    const concepts = record.concepts;
+    if (!Array.isArray(concepts)) {
+      throw new Error("Backend learning tier concepts response is invalid");
+    }
     return {
       domain: readEnum(record, "domain", ["PYTHON", "SQL"] as const),
       currentTier: readEnum(record, "current_tier", ["BRONZE", "SILVER", "GOLD"] as const),
@@ -373,6 +394,17 @@ export class BackendApiClient {
       completed: readNumber(record, "completed"),
       total: readNumber(record, "total"),
       required: readNumber(record, "required"),
+      conceptRequiredPercent: readNumber(record, "concept_required_percent"),
+      concepts: concepts.map((value) => {
+        const concept = asRecord(value);
+        return {
+          conceptName: readString(concept, "name"),
+          completed: readNumber(concept, "completed"),
+          total: readNumber(concept, "total"),
+          required: readNumber(concept, "required"),
+          isMet: readBoolean(concept, "is_met"),
+        };
+      }),
     };
   }
 
@@ -731,6 +763,10 @@ function parseTask(value: unknown): BackendLearningTask {
     publicId: readString(record, "public_id"),
     presentationPublicId: record.presentation_public_id == null ? null : readString(record, "presentation_public_id"),
     presentationRequired: record.presentation_required === true,
+    suggestedPresentationType:
+      record.suggested_presentation_type == null
+        ? null
+        : readEnum(record, "suggested_presentation_type", ["CODE", "MULTIPLE_CHOICE"] as const),
     conceptName: readString(record, "concept_name"),
     title: readString(record, "title"),
     type,
@@ -752,6 +788,8 @@ function parseConceptProficiency(value: unknown): BackendConceptProficiency {
     domain: readEnum(record, "domain", ["PYTHON", "SQL"] as const),
     conceptName: readString(record, "name"),
     attempts: readNumber(record, "attempts"),
+    completed: readNumber(record, "completed"),
+    total: readNumber(record, "total"),
     proficiencyLevel: readNumber(record, "proficiency_level"),
   };
 }

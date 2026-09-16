@@ -22,20 +22,7 @@ export const ML_METRIC_QUIZ_ID = "machine-learning-metric-001";
 export type StudyTaskType = "quiz" | "code";
 export type StudyLanguage = "python" | "sql" | "machine-learning";
 export type StudyCodeLanguage = Exclude<StudyLanguage, "machine-learning">;
-export type StudyConcept =
-  | "variables"
-  | "conditionals"
-  | "loops"
-  | "functions"
-  | "sql-select"
-  | "sql-filter"
-  | "sql-aggregate"
-  | "sql-join"
-  | "ml-foundations"
-  | "ml-validation"
-  | "ml-generalization"
-  | "ml-evaluation"
-  | "other";
+export type StudyConcept = string;
 export type StudyDifficulty = "basic" | "applied" | "challenge";
 export type StudyCodeGrader =
   | "python-sum"

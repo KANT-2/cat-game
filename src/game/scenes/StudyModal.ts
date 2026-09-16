@@ -7,7 +7,9 @@ import type {
   GameText,
   QuizAnswerResult,
   QuizView,
+  StudyMasteryView,
   StudyTaskView,
+  StudyTierView,
 } from "../../core/GameClient";
 import type { StudyConcept, StudyDifficulty, StudyTaskType } from "../../domain/study";
 import { BackButton } from "../components/BackButton";
@@ -23,6 +25,7 @@ import { formatStudyDetails, summarizeStudyText } from "../presentation/studyPre
 
 type FilterValue<T extends string> = "all" | T;
 type FilterSelectId = "type" | "concept" | "difficulty";
+type FilterLabel = MessageId | { text: string };
 type StudySubject = StudyTaskView["language"];
 const studySubjects: readonly StudySubject[] = ["python", "sql", "machine-learning"];
 const subjectMessages: Record<StudySubject, MessageId> = {
@@ -45,6 +48,11 @@ const subjectPageSize = 3;
 type FeedbackTest = { label: string; passed: boolean };
 type StudyModalOptions = {
   tasks: StudyTaskView[];
+  getTasks: () => StudyTaskView[];
+  getCoins: () => number;
+  getMastery: () => StudyMasteryView;
+  getTier: () => StudyTierView;
+  onSelectSubject: (subject: StudySubject) => Awaitable<void>;
   mascot: string;
   onPrepareTask: (taskId: string) => Awaitable<StudyTaskView | null>;
   getQuiz: (quizId: string) => QuizView | null;
@@ -57,11 +65,23 @@ type StudyModalOptions = {
   codeEditorFactory: CodeEditorOverlayFactory;
 };
 
-const conceptMessages: Record<StudyConcept, MessageId> = {
+const conceptMessages: Record<string, MessageId> = {
+  basics: "study.masteryConceptBasics",
   variables: "study.conceptVariables",
   conditionals: "study.conceptConditionals",
   loops: "study.conceptLoops",
+  strings: "study.masteryConceptStrings",
+  collections: "study.masteryConceptCollections",
   functions: "study.conceptFunctions",
+  exceptions: "study.masteryConceptExceptions",
+  filtering: "study.masteryConceptFiltering",
+  aggregation: "study.masteryConceptAggregation",
+  joins: "study.masteryConceptJoins",
+  subqueries: "study.masteryConceptSubqueries",
+  advanced_queries: "study.masteryConceptAdvancedQueries",
+  data_manipulation: "study.masteryConceptDataManipulation",
+  schema: "study.masteryConceptSchema",
+  transactions: "study.masteryConceptTransactions",
   "sql-select": "study.conceptSqlSelect",
   "sql-filter": "study.conceptSqlFilter",
   "sql-aggregate": "study.conceptSqlAggregate",
@@ -98,6 +118,7 @@ export class StudyModal extends Container {
   private openFilterSelect: FilterSelectId | null = null;
   private taskPage = 0;
   private subjectPage = 0;
+  private masteryPage = 0;
   private viewportWidth = BASE_WIDTH;
   private viewportHeight = BASE_HEIGHT;
   private codeEditor: CodeEditorOverlay | null = null;
@@ -136,6 +157,7 @@ export class StudyModal extends Container {
       this.buildMasteryPanel();
       this.buildRecommendation();
       this.buildSubjectSelection();
+      this.buildCurrentCoins();
       this.layout(this.viewportWidth, this.viewportHeight);
       return;
     }
@@ -144,6 +166,8 @@ export class StudyModal extends Container {
       this.openFilterSelect = null;
       this.renderDashboard();
     });
+    this.buildTierStatus();
+    this.buildCurrentCoins();
     this.buildFilters();
     this.buildTaskList();
     this.layout(this.viewportWidth, this.viewportHeight);
@@ -170,25 +194,18 @@ export class StudyModal extends Container {
     const help = new Text({ text: message("study.subjectSelectionHelp"), style: textStyle(21, 0x76533c, "600") });
     help.position.set(490, 522);
     this.body.addChild(panel, title, help);
-    const pageCount = Math.max(1, Math.ceil(studySubjects.length / subjectPageSize));
+    const availableSubjects = this.availableSubjects();
+    const pageCount = Math.max(1, Math.ceil(availableSubjects.length / subjectPageSize));
     this.subjectPage = Math.min(this.subjectPage, pageCount - 1);
     const start = this.subjectPage * subjectPageSize;
-    studySubjects.slice(start, start + subjectPageSize).forEach((subject, index) => {
+    availableSubjects.slice(start, start + subjectPageSize).forEach((subject, index) => {
       const button = new StudySubjectButton({
         label: message(subjectMessages[subject]),
         description: message(subjectDescriptionMessages[subject]),
         color: subjectColors[subject],
         width: 320,
         height: 155,
-        onPress: () => {
-          this.selectedSubject = subject;
-          this.typeFilter = "all";
-          this.conceptFilter = "all";
-          this.difficultyFilter = "all";
-          this.taskPage = 0;
-          this.openFilterSelect = null;
-          this.renderDashboard();
-        },
+        onPress: () => void this.selectSubject(subject),
       });
       button.position.set(480 + index * 350, 565);
       this.body.addChild(button);
@@ -203,6 +220,44 @@ export class StudyModal extends Container {
       },
       true,
     );
+  }
+
+  private availableSubjects(): StudySubject[] {
+    return studySubjects.filter((subject) => this.tasks.some((task) => task.language === subject));
+  }
+
+  private async selectSubject(subject: StudySubject): Promise<void> {
+    this.selectedSubject = subject;
+    this.typeFilter = "all";
+    this.conceptFilter = "all";
+    this.difficultyFilter = "all";
+    this.taskPage = 0;
+    this.openFilterSelect = null;
+    this.renderDashboard();
+    try {
+      await this.options.onSelectSubject(subject);
+      this.tasks = this.options.getTasks().map((task) => ({ ...task }));
+    } catch (error) {
+      console.warn("Study subject selection refresh failed", error);
+    }
+    this.renderDashboard();
+  }
+
+  private buildCurrentCoins(): void {
+    const coins = createCoinAmount(this.options.coinIcon, String(this.options.getCoins()), {
+      fontSize: 21,
+      iconSize: 32,
+    });
+    coins.position.set(1370, 48);
+    this.body.addChild(coins);
+  }
+
+  private buildTierStatus(): void {
+    const tier = this.options.getTier();
+    const status = new Text({ text: tierProgressText(tier), style: textStyle(16, 0x76533c, "700") });
+    status.anchor.set(1, 0);
+    status.position.set(1325, 28);
+    this.body.addChild(status);
   }
 
   private drawBaseHeader(titleValue: string, subtitleValue: string | null, onBack: () => void): void {
@@ -226,76 +281,97 @@ export class StudyModal extends Container {
 
   private buildMasteryPanel(): void {
     const panel = createCozyPanel(55, 125, 360, 710, { fill: 0xfff4df, border: 0xa66b43, radius: 28 });
-    const title = new Text({ text: message("study.subjectMasteryTitle"), style: textStyle(23, 0x493022, "800") });
+    const tier = this.options.getTier();
+    const mastery = this.options.getMastery();
+    const title = new Text({
+      text: message("study.conceptMasteryTitle", { subject: message(subjectMessages[domainSubject(tier.domain)]) }),
+      style: textStyle(21, 0x493022, "800"),
+    });
     title.anchor.set(0.5);
     title.position.set(235, 170);
     const headingRule = new Graphics().moveTo(90, 202).lineTo(380, 202).stroke({ color: 0xc3a382, width: 1.3 });
-    this.body.addChild(panel, title, headingRule);
-    const start = this.subjectPage * subjectPageSize;
-    studySubjects.slice(start, start + subjectPageSize).forEach((subject, index) => {
-      const related = this.tasks.filter((task) => task.language === subject);
-      const completed = related.filter((task) => task.completed).length;
-      const mastery = related.length === 0 ? 0 : Math.round((completed / related.length) * 100);
-      const y = 220 + index * 115;
-      const label = new Text({ text: message(subjectMessages[subject]), style: textStyle(22, 0x4a3023, "700") });
+    const tierText = new Text({ text: tierProgressText(tier), style: textStyle(15, 0x76533c, "700") });
+    tierText.anchor.set(0.5);
+    tierText.position.set(235, 225);
+    this.body.addChild(panel, title, headingRule, tierText);
+
+    const pageSize = 4;
+    const pageCount = Math.max(1, Math.ceil(mastery.length / pageSize));
+    this.masteryPage = Math.min(this.masteryPage, pageCount - 1);
+    const start = this.masteryPage * pageSize;
+    mastery.slice(start, start + pageSize).forEach((entry, index) => {
+      const y = 260 + index * 84;
+      const label = new Text({ text: conceptText(entry.conceptName), style: textStyle(17, 0x4a3023, "700") });
       label.position.set(90, y);
-      const track = new Graphics()
-        .roundRect(90, y + 48, 290, 22, 11)
-        .fill({ color: 0xe5d5bd, alpha: 0.8 })
-        .stroke({ color: 0xb79874, width: 1.5 });
-      if (mastery > 0) {
-        const fillWidth = Math.max(22, (290 * mastery) / 100);
-        track
-          .roundRect(90, y + 48, fillWidth, 22, 11)
-          .fill(0x88aa5e)
-          .stroke({ color: 0x57783b, width: 1.5 })
-          .roundRect(94, y + 51, Math.max(8, fillWidth - 8), 7, 4)
-          .fill({ color: 0xcde3a3, alpha: 0.4 });
-      }
-      const value = new Text({
-        text: message("study.masteryValue", { value: mastery }),
-        style: textStyle(22, 0x604333, "800"),
-      });
+      const valueText =
+        entry.attempts === 0
+          ? message("study.masteryUnassessed")
+          : message("study.masteryValue", { value: entry.proficiencyLevel });
+      const value = new Text({ text: valueText, style: textStyle(16, 0x604333, "800") });
       value.anchor.set(1, 0);
       value.position.set(380, y);
-      this.body.addChild(label, track, value);
+      const track = new Graphics()
+        .roundRect(90, y + 28, 290, 16, 8)
+        .fill({ color: 0xe5d5bd, alpha: 0.8 })
+        .stroke({ color: 0xb79874, width: 1.5 });
+      if (entry.proficiencyLevel > 0) {
+        const fillWidth = Math.max(16, (290 * entry.proficiencyLevel) / 100);
+        track
+          .roundRect(90, y + 28, fillWidth, 16, 8)
+          .fill(0x88aa5e)
+          .stroke({ color: 0x57783b, width: 1.5 });
+      }
+      const tierConcept = tier.concepts.find((concept) => concept.conceptName === entry.conceptName);
+      const detailText =
+        tier.nextTier && tierConcept
+          ? message("study.masteryPromotionProgress", {
+              completed: entry.completed,
+              total: entry.total,
+              tierCompleted: tierConcept.completed,
+              tierRequired: tierConcept.required,
+            })
+          : message("study.masteryProgress", { completed: entry.completed, total: entry.total });
+      const detail = new Text({
+        text: detailText,
+        style: textStyle(13, 0x76533c, "600"),
+      });
+      detail.position.set(90, y + 50);
+      this.body.addChild(label, value, track, detail);
     });
-    const pageCount = Math.max(1, Math.ceil(studySubjects.length / subjectPageSize));
-    this.subjectPage = Math.min(this.subjectPage, pageCount - 1);
     const previous = new CanvasButton({
       label: message("study.previousPage"),
       width: 82,
       height: 34,
       fontSize: 13,
-      color: this.subjectPage > 0 ? 0xd9b184 : 0xd8d0c5,
-      disabled: this.subjectPage === 0,
+      color: this.masteryPage > 0 ? 0xd9b184 : 0xd8d0c5,
+      disabled: this.masteryPage === 0,
       onPress: () => {
-        this.subjectPage -= 1;
+        this.masteryPage -= 1;
         this.renderDashboard();
       },
     });
-    previous.position.set(90, 560);
+    previous.position.set(90, 610);
     const page = new Text({
-      text: message("study.pageStatus", { current: this.subjectPage + 1, total: pageCount }),
+      text: message("study.pageStatus", { current: this.masteryPage + 1, total: pageCount }),
       style: textStyle(15, 0x55382a, "800"),
     });
     page.anchor.set(0.5);
-    page.position.set(235, 577);
+    page.position.set(235, 627);
     const next = new CanvasButton({
       label: message("study.nextPage"),
       width: 82,
       height: 34,
       fontSize: 13,
-      color: this.subjectPage < pageCount - 1 ? 0xe5a153 : 0xd8d0c5,
-      disabled: this.subjectPage >= pageCount - 1,
+      color: this.masteryPage < pageCount - 1 ? 0xe5a153 : 0xd8d0c5,
+      disabled: this.masteryPage >= pageCount - 1,
       onPress: () => {
-        this.subjectPage += 1;
+        this.masteryPage += 1;
         this.renderDashboard();
       },
     });
-    next.position.set(298, 560);
+    next.position.set(298, 610);
     const noticePanel = new Graphics()
-      .roundRect(90, 635, 290, 105, 20)
+      .roundRect(90, 675, 290, 105, 20)
       .fill(0xffe8bf)
       .stroke({ color: 0xd39b5d, width: 2 });
     const notice = new Text({
@@ -303,7 +379,7 @@ export class StudyModal extends Container {
       style: { ...textStyle(15, 0x76533c, "600"), align: "center", wordWrap: true, wordWrapWidth: 248, lineHeight: 22 },
     });
     notice.anchor.set(0.5);
-    notice.position.set(235, 687);
+    notice.position.set(235, 727);
     this.body.addChild(previous, page, next, noticePanel, notice);
   }
 
@@ -348,7 +424,7 @@ export class StudyModal extends Container {
     });
     summary.position.set(490, 275);
     const metadata = new Text({
-      text: `${message(conceptMessages[recommended.concept])}  ·  ${message(difficultyMessages[recommended.difficulty])}`,
+      text: `${conceptText(recommended.concept)}  ·  ${message(difficultyMessages[recommended.difficulty])}`,
       style: textStyle(20, 0x7b5336, "700"),
     });
     metadata.position.set(490, 365);
@@ -439,33 +515,11 @@ export class StudyModal extends Container {
     );
   }
 
-  private conceptEntriesForSelectedSubject(): ReadonlyArray<readonly [FilterValue<StudyConcept>, MessageId]> {
-    if (this.selectedSubject === "sql") {
-      return [
-        ["all", "study.filterAll"],
-        ["sql-select", "study.conceptSqlSelect"],
-        ["sql-filter", "study.conceptSqlFilter"],
-        ["sql-aggregate", "study.conceptSqlAggregate"],
-        ["sql-join", "study.conceptSqlJoin"],
-      ];
-    }
-    if (this.selectedSubject === "machine-learning") {
-      return [
-        ["all", "study.filterAll"],
-        ["ml-foundations", "study.conceptMlFoundations"],
-        ["ml-validation", "study.conceptMlValidation"],
-        ["ml-generalization", "study.conceptMlGeneralization"],
-        ["ml-evaluation", "study.conceptMlEvaluation"],
-      ];
-    }
-    return [
-      ["all", "study.filterAll"],
-      ["variables", "study.filterVariables"],
-      ["conditionals", "study.filterConditionals"],
-      ["loops", "study.filterLoops"],
-      ["functions", "study.filterFunctions"],
-      ["other", "study.conceptOther"],
-    ];
+  private conceptEntriesForSelectedSubject(): ReadonlyArray<readonly [FilterValue<StudyConcept>, FilterLabel]> {
+    const concepts = [
+      ...new Set(this.tasks.filter((task) => task.language === this.selectedSubject).map((task) => task.concept)),
+    ].sort((left, right) => left.localeCompare(right));
+    return [["all", "study.filterAll"], ...concepts.map((concept) => [concept, conceptFilterLabel(concept)] as const)];
   }
 
   private addFilterSelect<T extends string>(
@@ -474,7 +528,7 @@ export class StudyModal extends Container {
     y: number,
     width: number,
     labelId: MessageId,
-    entries: ReadonlyArray<readonly [FilterValue<T>, MessageId]>,
+    entries: ReadonlyArray<readonly [FilterValue<T>, FilterLabel]>,
     selected: FilterValue<T>,
     setSelected: (value: FilterValue<T>) => void,
   ): void {
@@ -487,7 +541,7 @@ export class StudyModal extends Container {
     box.eventMode = "static";
     box.cursor = "pointer";
     const selectedEntry = entries.find(([value]) => value === selected) ?? entries[0];
-    const selectedText = new Text({ text: message(selectedEntry[1]), style: textStyle(17, 0x493022, "700") });
+    const selectedText = new Text({ text: filterLabelText(selectedEntry[1]), style: textStyle(17, 0x493022, "700") });
     selectedText.position.set(18, 15);
     const arrow = new Graphics().poly([width - 35, 20, width - 17, 20, width - 26, 31]).fill(0x765039);
     box.on("pointertap", (event) => {
@@ -507,7 +561,7 @@ export class StudyModal extends Container {
       menu.addChild(menuBackground);
       entries.forEach(([value, optionLabel], index) => {
         const option = new CanvasButton({
-          label: message(optionLabel),
+          label: filterLabelText(optionLabel),
           width: width - 12,
           height: 34,
           color: value === selected ? 0xb6ca91 : 0xffefd6,
@@ -559,7 +613,7 @@ export class StudyModal extends Container {
       });
       summary.position.set(x + 24, y + 67);
       const meta = new Text({
-        text: `${message(conceptMessages[task.concept])} · ${message(difficultyMessages[task.difficulty])}`,
+        text: `${conceptText(task.concept)} · ${message(difficultyMessages[task.difficulty])}`,
         style: textStyle(14, 0x876147, "700"),
       });
       meta.position.set(x + 24, y + 118);
@@ -1179,6 +1233,35 @@ export class StudyModal extends Container {
       scale,
     });
   }
+}
+
+function domainSubject(domain: StudyTierView["domain"]): StudySubject {
+  return domain === "SQL" ? "sql" : "python";
+}
+
+function tierProgressText(tier: StudyTierView): string {
+  if (!tier.nextTier) {
+    return message("study.tierHighest", { tier: tier.currentTier });
+  }
+  return message("study.tierProgressDetail", {
+    tier: tier.currentTier,
+    completed: tier.completed,
+    required: tier.required,
+    percent: tier.conceptRequiredPercent,
+  });
+}
+
+function conceptText(conceptName: string): string {
+  const messageId = conceptMessages[conceptName];
+  return messageId ? message(messageId) : conceptName.replaceAll("_", " ");
+}
+
+function conceptFilterLabel(conceptName: string): FilterLabel {
+  return conceptMessages[conceptName] ?? { text: conceptText(conceptName) };
+}
+
+function filterLabelText(label: FilterLabel): string {
+  return typeof label === "string" ? message(label) : label.text;
 }
 
 /** Shrink a wrapped quiz prompt only as much as needed to reserve space for all four choices. */

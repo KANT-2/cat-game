@@ -44,6 +44,8 @@ describe("backend learning integration", () => {
       completed: 39,
       total: 50,
       required: 40,
+      conceptRequiredPercent: 50,
+      concepts: [],
     });
   });
 
@@ -53,6 +55,9 @@ describe("backend learning integration", () => {
       const path = new URL(String(input)).pathname;
       if (path === "/api/v1/game/snapshot") {
         return json(gameSnapshot(1000, 0));
+      }
+      if (path === "/api/v1/learning/tier") {
+        return json(learningTier("PYTHON"));
       }
       if (path === "/api/v1/game/gacha") {
         return json({
@@ -90,6 +95,9 @@ describe("backend learning integration", () => {
       if (path === "/api/v1/game/snapshot") {
         return json(gameSnapshot(1000, 0));
       }
+      if (path === "/api/v1/learning/tier") {
+        return json(learningTier("PYTHON"));
+      }
       if (path === "/api/v1/game/gacha") {
         return json({ detail: "resource-not-found" }, 404);
       }
@@ -110,6 +118,9 @@ describe("backend learning integration", () => {
       const path = new URL(String(input)).pathname;
       if (path === "/api/v1/game/snapshot") {
         return json(gameSnapshot(1000, 0));
+      }
+      if (path === "/api/v1/learning/tier") {
+        return json(learningTier("PYTHON"));
       }
       if (path.includes("proficien")) {
         return json([]);
@@ -135,6 +146,9 @@ describe("backend learning integration", () => {
       const path = new URL(String(input)).pathname;
       if (path === "/api/v1/game/snapshot") {
         return json(gameSnapshot(1000, 0));
+      }
+      if (path === "/api/v1/learning/tier") {
+        return json(learningTier("PYTHON"));
       }
       if (path.includes("proficien")) {
         return json([]);
@@ -392,8 +406,28 @@ describe("backend learning integration", () => {
         proficiencyReads += 1;
         return json(
           proficiencyReads === 1
-            ? [{ concept_public_id: taskId, domain: "PYTHON", name: "loops", attempts: 2, proficiency_level: 50 }]
-            : [{ concept_public_id: sqlTaskId, domain: "SQL", name: "joins", attempts: 0, proficiency_level: 0 }],
+            ? [
+                {
+                  concept_public_id: taskId,
+                  domain: "PYTHON",
+                  name: "loops",
+                  attempts: 2,
+                  completed: 1,
+                  total: 2,
+                  proficiency_level: 50,
+                },
+              ]
+            : [
+                {
+                  concept_public_id: sqlTaskId,
+                  domain: "SQL",
+                  name: "joins",
+                  attempts: 0,
+                  completed: 0,
+                  total: 10,
+                  proficiency_level: 0,
+                },
+              ],
         );
       }
       if (pathname === "/api/v1/learning/tier") {
@@ -426,7 +460,9 @@ describe("backend learning integration", () => {
 
     expect(recommendationReads).toBe(2);
     expect(proficiencyReads).toBe(2);
-    expect(client.getStudyMastery()).toEqual([{ conceptName: "joins", attempts: 0, proficiencyLevel: 0 }]);
+    expect(client.getStudyMastery()).toEqual([
+      { conceptName: "joins", attempts: 0, completed: 0, total: 10, proficiencyLevel: 0 },
+    ]);
     expect(client.getQuiz(taskId)).toBeNull();
     expect(client.getCodeChallenge(sqlTaskId)).toMatchObject({ language: "sql", editorMode: "query" });
   });
@@ -478,6 +514,8 @@ describe("backend learning integration", () => {
             domain: "PYTHON",
             name: "variables",
             attempts: 10,
+            completed: 7,
+            total: 10,
             proficiency_level: 70,
           },
         ]);
@@ -570,7 +608,9 @@ describe("backend learning integration", () => {
     expect(client.getStudyTasks()).toMatchObject([
       { id: taskId, type: "quiz", concept: "variables", title: { text: "두 수의 합" }, completed: false },
     ]);
-    expect(client.getStudyMastery()).toEqual([{ conceptName: "variables", attempts: 10, proficiencyLevel: 70 }]);
+    expect(client.getStudyMastery()).toEqual([
+      { conceptName: "variables", attempts: 10, completed: 7, total: 10, proficiencyLevel: 70 },
+    ]);
     expect(client.getSnapshot().catMemories.fluffy).toEqual(["반복문을 연습했어요"]);
     await expect(client.clearCatMemories()).resolves.toEqual({ ok: true, removed: 1 });
     expect(client.getSnapshot().catMemories).toEqual({});
@@ -672,6 +712,43 @@ describe("backend learning integration", () => {
     ).resolves.toMatchObject([{ publicId: taskId, title: "[SAMPLE:PYTHON:BRONZE:001] 야옹이 간식 세기" }]);
   });
 
+  it("uses the server presentation suggestion for a dual-mode recommendation", async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input));
+      if (url.pathname === "/api/v1/learning/recommendations") {
+        return json([
+          {
+            ...learningTask(taskId, "PYTHON"),
+            type: "CODE",
+            presentation_required: true,
+            suggested_presentation_type: "MULTIPLE_CHOICE",
+          },
+        ]);
+      }
+      if (url.pathname === "/api/v1/attempts/presentations") {
+        expect(JSON.parse(String(init?.body))).toEqual({
+          task_public_id: taskId,
+          preferred_presentation_type: "MULTIPLE_CHOICE",
+        });
+        return json({
+          presentation_public_id: presentationId,
+          task: {
+            ...learningTask(taskId, "PYTHON"),
+            presentation_public_id: presentationId,
+            presentation_required: false,
+            suggested_presentation_type: "MULTIPLE_CHOICE",
+          },
+        });
+      }
+      return json({ detail: "not found" }, 404);
+    });
+    const api = new BackendApiClient("http://localhost:8000", userId, fetcher);
+
+    await expect(api.getLearningRecommendations()).resolves.toMatchObject([
+      { publicId: taskId, type: "MULTIPLE_CHOICE", suggestedPresentationType: "MULTIPLE_CHOICE" },
+    ]);
+  });
+
   it("pages through the complete task catalog without creating presentations", async () => {
     const offsets: string[] = [];
     const fetcher = vi.fn(async (input: RequestInfo | URL) => {
@@ -719,6 +796,9 @@ describe("backend learning integration", () => {
       }
       if (url.pathname === "/api/v1/learning/proficiencies") {
         return json([]);
+      }
+      if (url.pathname === "/api/v1/learning/tier") {
+        return json(learningTier("PYTHON"));
       }
       if (url.pathname === "/api/v1/attempts/presentations") {
         presentationStarts += 1;
@@ -769,6 +849,9 @@ describe("backend learning integration", () => {
       if (url.pathname === "/api/v1/learning/proficiencies") {
         return json([]);
       }
+      if (url.pathname === "/api/v1/learning/tier") {
+        return json(learningTier("SQL"));
+      }
       return json({ detail: "not found" }, 404);
     });
     const client = await BackendLearningGameClient.createConnected(
@@ -818,6 +901,9 @@ describe("backend learning integration", () => {
       }
       if (pathname === "/api/v1/learning/proficiencies") {
         return json([]);
+      }
+      if (pathname === "/api/v1/learning/tier") {
+        return json(learningTier("PYTHON"));
       }
       if (pathname === "/api/v1/game/snapshot") {
         return json(gameSnapshot(1_000, 0));
@@ -877,6 +963,9 @@ describe("backend learning integration", () => {
       if (pathname === "/api/v1/learning/proficiencies") {
         return json([]);
       }
+      if (pathname === "/api/v1/learning/tier") {
+        return json(learningTier("PYTHON"));
+      }
       if (pathname === "/api/v1/game/snapshot") {
         return json(gameSnapshot(1_000, 0, { memories }));
       }
@@ -926,6 +1015,9 @@ describe("backend learning integration", () => {
       }
       if (pathname === "/api/v1/learning/proficiencies") {
         return json([]);
+      }
+      if (pathname === "/api/v1/learning/tier") {
+        return json(learningTier("PYTHON"));
       }
       if (pathname === "/api/v1/game/snapshot") {
         snapshotReads += 1;

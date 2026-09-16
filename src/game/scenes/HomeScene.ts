@@ -326,6 +326,16 @@ export class HomeScene extends Container {
     this.enterPage();
     this.studyModal = new StudyModal({
       tasks: this.gameClient.getStudyTasks(),
+      getTasks: () => this.gameClient.getStudyTasks(),
+      getCoins: () => this.gameClient.getSnapshot().coins,
+      getMastery: () => this.gameClient.getStudyMastery(),
+      getTier: () => this.gameClient.getStudyTier(),
+      onSelectSubject: async (subject) => {
+        if (subject === "machine-learning") {
+          return;
+        }
+        await this.gameClient.updateSettings({ learningDomain: subject === "sql" ? "SQL" : "PYTHON" });
+      },
       mascot: this.iconSources.studyMascot,
       onPrepareTask: (taskId) => this.gameClient.prepareStudyTask(taskId),
       getQuiz: (quizId) => this.gameClient.getQuiz(quizId),
@@ -532,6 +542,8 @@ export class HomeScene extends Container {
       profileImageUrl: this.profileImageUrl,
       playerProfile: this.playerProfile,
       getSaveStatus: (): GameSaveStatus => this.gameClient.getSaveStatus(),
+      getStudyMastery: () => this.gameClient.getStudyMastery(),
+      getStudyTier: () => this.gameClient.getStudyTier(),
       catAnimations: this.catAnimations,
       furnitureArt: this.furnitureArt,
       consumableArt: this.consumableArt,

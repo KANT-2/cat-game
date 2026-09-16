@@ -1,6 +1,12 @@
 import { Container, Graphics, Sprite, Text, type Texture } from "pixi.js";
 import { type MessageId, message } from "../../content/messages";
-import type { Awaitable, GameSaveStatus, PlayerProfileView } from "../../core/GameClient";
+import type {
+  Awaitable,
+  GameSaveStatus,
+  PlayerProfileView,
+  StudyMasteryView,
+  StudyTierView,
+} from "../../core/GameClient";
 import type { GameSettings, GameState } from "../../domain/room";
 import { CanvasButton } from "../components/CanvasButton";
 import { createCozyPanel, createTitleOrnament } from "../components/CozyGameUi";
@@ -18,6 +24,8 @@ type SettingsPageOptions = {
   fallbackProfileTexture: Texture;
   playerProfile: PlayerProfileView;
   getSaveStatus: () => GameSaveStatus;
+  getStudyMastery: () => StudyMasteryView;
+  getStudyTier: () => StudyTierView;
   getState: () => GameState;
   onUpdateSettings: (patch: Partial<GameSettings>) => Awaitable<GameSettings>;
   onLogout: (() => Awaitable<boolean>) | null;
@@ -127,28 +135,30 @@ export class SettingsPage extends Container {
     this.addLabel("settings.email", 1060, 245, 20);
     this.addValue(this.options.playerProfile.email, "settings.profileInfoUnavailable", 1060, 280);
 
-    this.addCard(70, 370, 1450, 75);
-    this.addLabel("settings.lastSync", 100, 390, 18);
+    this.renderLearningStats();
+
+    this.addCard(70, 535, 1450, 65);
+    this.addLabel("settings.lastSync", 100, 553, 18);
     const saveStatus = this.options.getSaveStatus();
     const saveStatusText = formatSaveStatus(saveStatus);
     const saveDetail = new Text({ text: saveStatusText, style: textStyle(15, 0x76533c, "600") });
-    saveDetail.position.set(420, 391);
+    saveDetail.position.set(420, 554);
     this.addChild(saveDetail);
 
-    const sessionPanel = createCozyPanel(70, 465, 1450, 185, {
+    const sessionPanel = createCozyPanel(70, 620, 1450, 185, {
       fill: 0xfff8e9,
       border: 0xc38a58,
       radius: 24,
     });
     const title = new Text({ text: message("settings.sessionManagement"), style: textStyle(21, 0x493022, "800") });
-    title.position.set(100, 485);
+    title.position.set(100, 640);
     const detail = new Text({ text: message("settings.sessionDescription"), style: textStyle(15, 0x76533c, "600") });
-    detail.position.set(100, 522);
+    detail.position.set(100, 677);
     this.addChild(sessionPanel, title, detail);
     this.addActionButton(
       "settings.logout",
       670,
-      570,
+      725,
       250,
       () => {
         if (!this.options.onLogout) {
@@ -159,6 +169,37 @@ export class SettingsPage extends Container {
       },
       0xe7b080,
     );
+  }
+
+  private renderLearningStats(): void {
+    const mastery = this.options.getStudyMastery();
+    const tier = this.options.getStudyTier();
+    const completed = mastery.reduce((sum, entry) => sum + entry.completed, 0);
+    const total = mastery.reduce((sum, entry) => sum + entry.total, 0);
+    const attempts = mastery.reduce((sum, entry) => sum + entry.attempts, 0);
+    const masteryPercent = total === 0 ? 0 : Math.round((completed / total) * 100);
+    const panel = createCozyPanel(70, 370, 1450, 145, { fill: 0xfff8e9, border: 0xc38a58, radius: 22 });
+    const subject = message(tier.domain === "SQL" ? "settings.subjectSql" : "settings.subjectPython");
+    const title = new Text({
+      text: message("settings.learningStats", { subject }),
+      style: textStyle(19, 0x493022, "800"),
+    });
+    title.position.set(100, 389);
+    this.addChild(panel, title);
+    const stats = [
+      ["settings.learningTier", tier.currentTier],
+      ["settings.learningCompleted", message("settings.learningCompletedValue", { completed, total })],
+      ["settings.learningAttempts", String(attempts)],
+      ["settings.learningMastery", message("settings.percent", { value: masteryPercent })],
+    ] as const;
+    stats.forEach(([labelId, value], index) => {
+      const x = 100 + index * 350;
+      const label = new Text({ text: message(labelId), style: textStyle(14, 0x76533c, "700") });
+      label.position.set(x, 430);
+      const text = new Text({ text: value, style: textStyle(23, 0x493022, "800") });
+      text.position.set(x, 461);
+      this.addChild(label, text);
+    });
   }
 
   private renderSound(): void {

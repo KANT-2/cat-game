@@ -463,6 +463,8 @@ export class LocalGameClient implements GameClient {
       return {
         conceptName,
         attempts: completed,
+        completed,
+        total: related.length,
         proficiencyLevel: related.length === 0 ? 0 : Math.round((completed / related.length) * 100),
       };
     });
@@ -477,6 +479,8 @@ export class LocalGameClient implements GameClient {
       completed: 0,
       total: 50,
       required: 40,
+      conceptRequiredPercent: 50,
+      concepts: [],
     };
   }
 
