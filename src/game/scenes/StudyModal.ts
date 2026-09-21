@@ -1419,13 +1419,17 @@ export class StudyModal extends Container {
       this.feedbackLayer.addChild(row, label);
     });
     const close = new CanvasButton({
-      label: message("study.feedbackClose"),
+      label: message(mode === "submit" && passed ? "study.backToTasks" : "study.feedbackClose"),
       width: 220,
       height: 58,
       fontSize: 19,
       color: passed ? 0x87a66e : 0xe4a05a,
       onPress: () => {
         this.closeFeedback();
+        if (mode === "submit" && passed) {
+          this.renderDashboard();
+          return;
+        }
         this.codeEditor?.focus();
       },
     });
